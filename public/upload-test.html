@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Occaz Upload Test</title>
+  <style>
+    body { font-family: system-ui; max-width: 600px; margin: 40px auto; padding: 20px; background: #0f0f0f; color: #fff; }
+    button { background: #7c3aed; color: #fff; border: 0; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; margin-right: 8px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    pre { background: #000; padding: 12px; border-radius: 8px; overflow: auto; font-size: 12px; max-height: 400px; }
+    .ok { color: #4ade80; }
+    .err { color: #f87171; }
+    .info { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <h1>Occaz Upload &amp; Insert Test</h1>
+  <p>This page tests the full pipeline that the admin form uses, in a clean isolated context.</p>
+  <p><a href="https://f5e5q7jkyjpxc.space.minimax.io/admin" style="color:#a78bfa">Go to admin panel →</a></p>
+
+  <hr>
+
+  <h2>Step 1: Pick an image</h2>
+  <input type="file" id="fileInput" accept="image/*">
+  <button id="uploadBtn" disabled>Upload to Supabase Storage</button>
+
+  <h2>Step 2: After upload, insert into opportunities</h2>
+  <button id="insertBtn" disabled>Insert into opportunities table</button>
+
+  <h2>Output</h2>
+  <pre id="log">[ready]</pre>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const url = "https://qetuofjmndavndhioott.supabase.co";
+    const anon = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFldHVvZmptbmRhdm5kaGlvb3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMzMzNDIsImV4cCI6MjEwNTkwOTM0Mn0.ANYIChCvzL94bEG359j3WmecAVg1UgdV8TzDsmhenp0";
+    const supabase = createClient(url, anon);
+
+    const log = document.getElementById("log");
+    const fileInput = document.getElementById("fileInput");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const insertBtn = document.getElementById("insertBtn");
+
+    function out(text, cls = "") {
+      const line = document.createElement("div");
+      if (cls) line.className = cls;
+      line.textContent = text;
+      log.appendChild(line);
+    }
+
+    let uploadedPath = null;
+    let uploadedUrl = null;
+
+    fileInput.addEventListener("change", () => {
+      uploadBtn.disabled = !fileInput.files[0];
+    });
+
+    uploadBtn.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      uploadBtn.disabled = true;
+      out(`\n=== Upload step ===`, "info");
+      out(`File: ${file.name}, ${file.size} bytes`);
+      const path = `test/${Date.now()}-${file.name}`;
+      out(`Uploading to bucket=occaz, path=${path}`);
+      const { data, error } = await supabase.storage
+        .from("occaz")
+        .upload(path, file, { contentType: file.type });
+      if (error) {
+        out(`UPLOAD ERROR: ${error.message}`, "err");
+        uploadBtn.disabled = false;
+        return;
+      }
+      out(`Upload OK: ${JSON.stringify(data)}`, "ok");
+      uploadedPath = data.path;
+      const { data: pub } = supabase.storage.from("occaz").getPublicUrl(data.path);
+      uploadedUrl = pub.publicUrl;
+      out(`Public URL: ${uploadedUrl}`, "ok");
+      insertBtn.disabled = false;
+      uploadBtn.disabled = false;
+    });
+
+    insertBtn.addEventListener("click", async () => {
+      if (!uploadedUrl) {
+        out("Upload first!", "err");
+        return;
+      }
+      insertBtn.disabled = true;
+      out(`\n=== Insert step ===`, "info");
+      const id = "test_browser_" + Date.now();
+      out(`Inserting opp id=${id}, image=${uploadedUrl}`);
+      const { data, error } = await supabase.from("opportunities").insert({
+        id,
+        title: "browser test " + id,
+        image: uploadedUrl,
+        description: "from upload-test.html",
+      });
+      if (error) {
+        out(`INSERT ERROR: ${error.message}`, "err");
+        out(`Code: ${error.code}, hint: ${error.hint}`, "err");
+      } else {
+        out(`Insert OK: ${JSON.stringify(data)}`, "ok");
+        out(`Now reading back...`, "info");
+        const { data: r, error: re } = await supabase
+          .from("opportunities")
+          .select("id, title, image")
+          .eq("id", id)
+          .single();
+        if (re) {
+          out(`Read-back ERROR: ${re.message}`, "err");
+        } else {
+          out(`Read-back: ${JSON.stringify(r)}`, "ok");
+        }
+      }
+      insertBtn.disabled = false;
+    });
+
+    out("Page loaded. Pick a file and try uploading.");
+    out(`Bucket: occaz, Supabase URL: ${url}`);
+  </script>
+</body>
+</html>

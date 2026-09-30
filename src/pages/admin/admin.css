@@ -1,0 +1,19 @@
+.input {
+  width: 100%;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  outline: none;
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--border-default);
+  transition: box-shadow 200ms;
+}
+
+.input:focus {
+  box-shadow: inset 0 0 0 1px var(--accent-500);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}

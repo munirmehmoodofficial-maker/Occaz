@@ -1,0 +1,1439 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Eye,
+  Trash2,
+  Check,
+  X,
+  Send,
+  Mail,
+  TicketPercent,
+  Plus,
+  CreditCard,
+  Download,
+  Globe,
+  Database,
+  LifeBuoy,
+  Inbox,
+  Star,
+  Copy,
+  Edit3,
+  Sparkles,
+  FileText,
+  Bell,
+} from "lucide-react";
+import clsx from "clsx";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+
+// =====================================================
+// ANALYTICS
+// =====================================================
+export function AdminAnalytics() {
+  const series = {
+    visitors: [120, 180, 240, 320, 280, 380, 420, 510, 480, 560, 620, 720],
+    signups: [8, 12, 18, 22, 19, 28, 35, 42, 38, 51, 58, 68],
+    conversions: [3.2, 3.8, 4.1, 4.5, 4.0, 4.8, 5.1, 5.6, 5.2, 6.0, 6.4, 7.1],
+  };
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          Analytics
+        </h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+          Deep-dive into platform performance
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Page views", value: "184,239", delta: "+18%" },
+          { label: "Unique visitors", value: "62,418", delta: "+12%" },
+          { label: "Sign-ups", value: "1,284", delta: "+24%" },
+          { label: "Conversion", value: "3.8%", delta: "+0.6pt" },
+        ].map((s, i) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="rounded-2xl bg-[var(--bg-card)] p-5 ring-1 ring-[var(--border-subtle)]"
+          >
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{s.value}</div>
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-sm text-[var(--text-tertiary)]">{s.label}</span>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                {s.delta}
+              </span>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+      >
+        <h2 className="text-base font-semibold text-[var(--text-primary)]">Traffic overview</h2>
+        <p className="text-xs text-[var(--text-tertiary)]">Last 12 months</p>
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+          {Object.entries(series).map(([key, values]) => {
+            const max = Math.max(...values);
+            return (
+              <div key={key}>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                  {key}
+                </div>
+                <div className="flex h-32 items-end gap-1">
+                  {values.map((v, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ height: 0 }}
+                      animate={{ height: `${(v / max) * 100}%` }}
+                      transition={{ delay: 0.3 + i * 0.04, duration: 0.5 }}
+                      className="flex-1 rounded-t bg-gradient-to-t from-accent-500/40 to-accent-500"
+                    />
+                  ))}
+                </div>
+                <div className="mt-2 text-xs text-[var(--text-tertiary)]">
+                  Peak {max.toLocaleString()}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Top sources</h2>
+          <ul className="mt-4 space-y-3">
+            {[
+              { name: "Direct", pct: 42, count: "26,210" },
+              { name: "Google", pct: 28, count: "17,480" },
+              { name: "Social", pct: 18, count: "11,235" },
+              { name: "Referral", pct: 8, count: "4,990" },
+              { name: "Email", pct: 4, count: "2,503" },
+            ].map((s) => (
+              <li key={s.name}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[var(--text-primary)]">{s.name}</span>
+                  <span className="text-[var(--text-tertiary)]">
+                    {s.count} · {s.pct}%
+                  </span>
+                </div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--bg-card-hover)]">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${s.pct * 2}%` }}
+                    transition={{ delay: 0.4, duration: 0.6 }}
+                    className="h-full bg-gradient-to-r from-accent-500 to-pink-500"
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Top cities</h2>
+          <ul className="mt-4 space-y-3 text-sm">
+            {[
+              ["New York, USA", "32k"],
+              ["London, UK", "28k"],
+              ["San Francisco, USA", "21k"],
+              ["Berlin, Germany", "18k"],
+              ["Lahore, Pakistan", "14k"],
+              ["Tokyo, Japan", "11k"],
+            ].map(([city, count]) => (
+              <li
+                key={city}
+                className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2 last:border-0"
+              >
+                <span className="text-[var(--text-primary)]">{city}</span>
+                <span className="font-medium text-[var(--text-secondary)]">{count}</span>
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// REGISTRATIONS
+// =====================================================
+const pendingRegs = [
+  {
+    id: "r1",
+    name: "Sana Malik",
+    email: "sana@gmail.com",
+    role: "Organizer",
+    org: "Karachi Arts Council",
+    when: "12m ago",
+    location: "Karachi, Pakistan",
+    requestedPlan: "Occaz Pro",
+    message: "We host a monthly arts & literature festival and would love to reach a wider audience through Occaz.",
+    submittedDocs: ["Business registration (SECP)", "Past event portfolio"],
+  },
+  {
+    id: "r2",
+    name: "James O'Connor",
+    email: "james@trinity.edu",
+    role: "User",
+    when: "1h ago",
+    location: "Dublin, Ireland",
+    requestedPlan: null,
+    message: "Just signed up to attend events.",
+    submittedDocs: [],
+  },
+  {
+    id: "r3",
+    name: "Aiko Tanaka",
+    email: "aiko@tanaka.io",
+    role: "Organizer",
+    org: "Tokyo Tech Meetup",
+    when: "3h ago",
+    location: "Tokyo, Japan",
+    requestedPlan: "Occaz Business",
+    message: "We organize 30+ tech events per year. Looking for advanced analytics and the multi-organizer support.",
+    submittedDocs: ["Corporate registration", "Tax ID", "Sample event reports"],
+  },
+  {
+    id: "r4",
+    name: "Léa Bernard",
+    email: "lea@bernard.fr",
+    role: "User",
+    when: "5h ago",
+    location: "Lyon, France",
+    requestedPlan: null,
+    message: "",
+    submittedDocs: [],
+  },
+  {
+    id: "r5",
+    name: "Kenji Nakamura",
+    email: "kenji@nakamura.io",
+    role: "Organizer",
+    org: "Osaka Events",
+    when: "1d ago",
+    location: "Osaka, Japan",
+    requestedPlan: "Occaz Pro",
+    message: "Small but growing. Currently running 4 events / month.",
+    submittedDocs: ["Personal ID", "Tax document"],
+  },
+  {
+    id: "r6",
+    name: "Olivia Carter",
+    email: "olivia@carter.co",
+    role: "User",
+    when: "2d ago",
+    location: "Cape Town, South Africa",
+    requestedPlan: null,
+    message: "",
+    submittedDocs: [],
+  },
+];
+
+export function AdminRegistrations() {
+  const [list, setList] = useState(pendingRegs);
+  const [filter, setFilter] = useState<"all" | "User" | "Organizer">("all");
+  const [viewing, setViewing] = useState<typeof pendingRegs[number] | null>(null);
+
+  const filtered = filter === "all" ? list : list.filter((r) => r.role === filter);
+
+  const approve = (id: string) => {
+    setList((p) => p.filter((r) => r.id !== id));
+    if (viewing?.id === id) setViewing(null);
+  };
+  const reject = (id: string) => {
+    setList((p) => p.filter((r) => r.id !== id));
+    if (viewing?.id === id) setViewing(null);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            Registrations
+          </h1>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+            {list.length} pending approval
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 rounded-full bg-[var(--bg-card)] p-1 ring-1 ring-[var(--border-subtle)] w-fit">
+        {(["all", "User", "Organizer"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={clsx(
+              "rounded-full px-4 py-1.5 text-sm font-medium transition",
+              filter === f
+                ? "bg-white text-black"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+            )}
+          >
+            {f === "all" ? "All" : f + "s"}
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
+        {filtered.length === 0 ? (
+          <div className="p-16 text-center">
+            <Inbox className="mx-auto h-10 w-10 text-[var(--text-tertiary)]" />
+            <p className="mt-4 text-sm text-[var(--text-tertiary)]">
+              No pending registrations. You're all caught up.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[var(--border-subtle)]">
+            {filtered.map((r, i) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-accent-500 to-pink-500 text-sm font-semibold text-white">
+                    {r.name.split(" ").map((n) => n[0]).join("")}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+                      {r.name}
+                      <Badge tone={r.role === "Organizer" ? "accent" : "blue"}>
+                        {r.role}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-[var(--text-tertiary)]">
+                      {r.email}
+                      {r.org && ` · ${r.org}`}
+                      {" · "}
+                      {r.when}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 sm:shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Eye className="h-3.5 w-3.5" />}
+                    onClick={() => setViewing(r)}
+                  >
+                    View
+                  </Button>
+                  <Button
+                    size="sm"
+                    leftIcon={<Check className="h-3.5 w-3.5" />}
+                    onClick={() => approve(r.id)}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    leftIcon={<X className="h-3.5 w-3.5" />}
+                    onClick={() => reject(r.id)}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Side drawer with full registration details */}
+      <AnimatePresence>
+        {viewing && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setViewing(null)}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.aside
+              initial={{ x: 480, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 480, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 320, damping: 30 }}
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-md overflow-y-auto border-l border-[var(--border-subtle)] bg-[var(--bg-base)] p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-accent-500 to-pink-500 text-base font-semibold text-white">
+                    {viewing.name.split(" ").map((n) => n[0]).join("")}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">{viewing.name}</h2>
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+                      <Badge tone={viewing.role === "Organizer" ? "accent" : "blue"}>
+                        {viewing.role}
+                      </Badge>
+                      <span>·</span>
+                      <span>Applied {viewing.when}</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setViewing(null)}
+                  aria-label="Close"
+                  className="grid h-9 w-9 place-items-center rounded-full bg-[var(--bg-card)] text-[var(--text-tertiary)] transition hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <DrawerRow label="Email">
+                  <a
+                    href={`mailto:${viewing.email}`}
+                    className="text-accent-400 hover:underline"
+                  >
+                    {viewing.email}
+                  </a>
+                </DrawerRow>
+                {viewing.org && (
+                  <DrawerRow label="Organization">
+                    <span className="font-medium">{viewing.org}</span>
+                  </DrawerRow>
+                )}
+                {viewing.location && (
+                  <DrawerRow label="Location">
+                    <span>{viewing.location}</span>
+                  </DrawerRow>
+                )}
+                {viewing.requestedPlan && (
+                  <DrawerRow label="Requested plan">
+                    <Badge tone="amber">
+                      <Sparkles className="mr-1 h-2.5 w-2.5" /> {viewing.requestedPlan}
+                    </Badge>
+                  </DrawerRow>
+                )}
+                {viewing.message && (
+                  <DrawerRow label="Message from applicant">
+                    <p className="rounded-lg bg-[var(--bg-card)] p-3 text-sm text-[var(--text-secondary)]">
+                      {viewing.message}
+                    </p>
+                  </DrawerRow>
+                )}
+                {viewing.submittedDocs.length > 0 && (
+                  <DrawerRow label="Documents submitted">
+                    <ul className="space-y-1.5">
+                      {viewing.submittedDocs.map((d) => (
+                        <li
+                          key={d}
+                          className="flex items-center gap-2 rounded-lg bg-[var(--bg-card)] px-3 py-2 text-sm"
+                        >
+                          <FileText className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                          {d}
+                          <a
+                            href="#"
+                            onClick={(e) => e.preventDefault()}
+                            className="ml-auto text-xs text-accent-400 hover:underline"
+                          >
+                            View
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </DrawerRow>
+                )}
+              </div>
+
+              <div className="mt-8 flex gap-2">
+                <Button
+                  fullWidth
+                  leftIcon={<Check className="h-3.5 w-3.5" />}
+                  onClick={() => approve(viewing.id)}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="danger"
+                  fullWidth
+                  leftIcon={<X className="h-3.5 w-3.5" />}
+                  onClick={() => reject(viewing.id)}
+                >
+                  Reject
+                </Button>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function DrawerRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+        {label}
+      </div>
+      <div className="text-sm">{children}</div>
+    </div>
+  );
+}
+
+// =====================================================
+// REVIEWS
+// =====================================================
+const reviews = [
+  { id: "rv1", event: "Aurora Live: The Mirror Tour", user: "Sarah J.", rating: 5, body: "Absolutely magical night. The sound was perfect.", when: "2h ago", status: "approved" },
+  { id: "rv2", event: "DevConf 2026", user: "Ahmed K.", rating: 4, body: "Great speakers but coffee was weak.", when: "5h ago", status: "approved" },
+  { id: "rv3", event: "Stand-Up Night", user: "Anonymous", rating: 1, body: "this is spam content with bad words", when: "1d ago", status: "flagged" },
+  { id: "rv4", event: "Watercolor Workshop", user: "Maya P.", rating: 5, body: "Loved every minute. The instructor was wonderful.", when: "2d ago", status: "pending" },
+];
+
+export function AdminReviews() {
+  const [list, setList] = useState(reviews);
+  const [tab, setTab] = useState<"all" | "pending" | "flagged" | "approved">("all");
+
+  const filtered = tab === "all" ? list : list.filter((r) => r.status === tab);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Reviews</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+          Moderate user reviews across the platform
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-4">
+        {[
+          { label: "Total", value: list.length, tone: "default" as const },
+          { label: "Pending", value: list.filter((r) => r.status === "pending").length, tone: "amber" as const },
+          { label: "Approved", value: list.filter((r) => r.status === "approved").length, tone: "emerald" as const },
+          { label: "Flagged", value: list.filter((r) => r.status === "flagged").length, tone: "red" as const },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]">
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{s.value}</div>
+            <div className="mt-1">
+              <Badge tone={s.tone}>{s.label}</Badge>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2 rounded-full bg-[var(--bg-card)] p-1 ring-1 ring-[var(--border-subtle)] w-fit">
+        {(["all", "pending", "approved", "flagged"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={clsx(
+              "rounded-full px-4 py-1.5 text-sm font-medium capitalize transition",
+              tab === t
+                ? "bg-white text-black"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+            )}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {filtered.map((r, i) => (
+          <motion.div
+            key={r.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04 }}
+            className="rounded-2xl bg-[var(--bg-card)] p-5 ring-1 ring-[var(--border-subtle)]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-[var(--text-primary)]">{r.user}</span>
+                  <span className="text-[var(--text-tertiary)]">on</span>
+                  <span className="font-medium text-[var(--text-primary)]">{r.event}</span>
+                </div>
+                <div className="mt-1 flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={clsx(
+                        "h-3.5 w-3.5",
+                        i < r.rating ? "fill-amber-400 text-amber-400" : "text-[var(--text-tertiary)]",
+                      )}
+                    />
+                  ))}
+                  <span className="ml-2 text-xs text-[var(--text-tertiary)]">{r.when}</span>
+                </div>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">{r.body}</p>
+              </div>
+              <Badge tone={r.status === "approved" ? "emerald" : r.status === "flagged" ? "red" : "amber"}>
+                {r.status}
+              </Badge>
+            </div>
+            {r.status !== "approved" && (
+              <div className="mt-4 flex gap-2">
+                <Button
+                  size="sm"
+                  leftIcon={<Check className="h-3.5 w-3.5" />}
+                  onClick={() => setList((p) => p.map((x) => x.id === r.id ? { ...x, status: "approved" } : x))}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                  onClick={() => setList((p) => p.filter((x) => x.id !== r.id))}
+                >
+                  Remove
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// NOTIFICATIONS
+// =====================================================
+export function AdminNotifications() {
+  const [push, setPush] = useState(true);
+  const [email, setEmail] = useState(true);
+  const [sms, setSms] = useState(false);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Notifications</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Configure platform-wide alerts</p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Channels</h2>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">Choose how users receive alerts</p>
+          <div className="mt-5 space-y-3">
+            <Channel label="Push notifications" desc="Real-time alerts on mobile and web" on={push} onChange={setPush} />
+            <Channel label="Email" desc="Transactional and digest emails" on={email} onChange={setEmail} />
+            <Channel label="SMS" desc="Time-sensitive reminders (carrier fees apply)" on={sms} onChange={setSms} />
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Triggers</h2>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">When to send notifications</p>
+          <div className="mt-5 space-y-3">
+            {[
+              { label: "Event saved", desc: "Confirm when a user bookmarks an event" },
+              { label: "Event starting soon", desc: "Reminder 24h before saved events" },
+              { label: "New opportunities", desc: "Alerts for new scholarships and programs" },
+              { label: "Registration approved", desc: "Notify when admin approves account" },
+              { label: "Price drop", desc: "Alert when a saved event's price drops" },
+            ].map((t, i) => (
+              <div key={t.label} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]">
+                <div>
+                  <div className="text-sm font-medium text-[var(--text-primary)]">{t.label}</div>
+                  <div className="text-xs text-[var(--text-tertiary)]">{t.desc}</div>
+                </div>
+                <Toggle on={i % 2 === 0} />
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline">Reset</Button>
+        <Button>Save changes</Button>
+      </div>
+    </div>
+  );
+}
+
+function Channel({ label, desc, on, onChange }: any) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]">
+      <div>
+        <div className="text-sm font-medium text-[var(--text-primary)]">{label}</div>
+        <div className="text-xs text-[var(--text-tertiary)]">{desc}</div>
+      </div>
+      <Toggle on={on} onChange={onChange} />
+    </div>
+  );
+}
+
+function Toggle({ on, onChange }: { on: boolean; onChange?: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange?.(!on)}
+      className={clsx(
+        "relative h-6 w-11 rounded-full transition",
+        on ? "bg-accent-500" : "bg-[var(--bg-card-hover)]",
+      )}
+    >
+      <span
+        className={clsx(
+          "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all",
+          on ? "left-5" : "left-0.5",
+        )}
+      />
+    </button>
+  );
+}
+
+// =====================================================
+// EMAIL CAMPAIGNS
+// =====================================================
+const campaigns = [
+  { id: "c1", name: "Welcome series", audience: "New users", sent: 1284, opened: 72, clicked: 28, status: "active", when: "Ongoing" },
+  { id: "c2", name: "Lahore Music Festival", audience: "Pakistan users", sent: 4218, opened: 64, clicked: 22, status: "active", when: "Last sent 2d ago" },
+  { id: "c3", name: "Scholarship digest", audience: "Students", sent: 8420, opened: 58, clicked: 18, status: "draft", when: "Draft" },
+  { id: "c4", name: "Win-back", audience: "Inactive 60d+", sent: 0, opened: 0, clicked: 0, status: "scheduled", when: "Scheduled for Oct 30" },
+];
+
+export function AdminEmailCampaigns() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Email campaigns</h1>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">Send blasts, automations, and digests</p>
+        </div>
+        <Button leftIcon={<Plus className="h-4 w-4" />}>New campaign</Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-4">
+        {[
+          { label: "Total sent", value: "13.9k" },
+          { label: "Open rate", value: "64%" },
+          { label: "Click rate", value: "21%" },
+          { label: "Active campaigns", value: "2" },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]">
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{s.value}</div>
+            <div className="mt-1 text-sm text-[var(--text-tertiary)]">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/40 text-left text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
+              <tr>
+                <th className="px-5 py-3 font-medium">Campaign</th>
+                <th className="px-5 py-3 font-medium">Audience</th>
+                <th className="px-5 py-3 font-medium">Sent</th>
+                <th className="px-5 py-3 font-medium">Open</th>
+                <th className="px-5 py-3 font-medium">Click</th>
+                <th className="px-5 py-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {campaigns.map((c, i) => (
+                <motion.tr
+                  key={c.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--bg-card-hover)]"
+                >
+                  <td className="px-5 py-3">
+                    <div className="font-medium text-[var(--text-primary)]">{c.name}</div>
+                    <div className="text-xs text-[var(--text-tertiary)]">{c.when}</div>
+                  </td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{c.audience}</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{c.sent.toLocaleString()}</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{c.opened}%</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{c.clicked}%</td>
+                  <td className="px-5 py-3">
+                    <Badge tone={c.status === "active" ? "emerald" : c.status === "scheduled" ? "blue" : "default"}>
+                      {c.status}
+                    </Badge>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// COUPONS
+// =====================================================
+const coupons = [
+  { id: "co1", code: "WELCOME20", discount: "20% off", uses: 142, limit: 500, expires: "Dec 31, 2026" },
+  { id: "co2", code: "FESTIVAL10", discount: "$10 off", uses: 89, limit: 200, expires: "Oct 18, 2026" },
+  { id: "co3", code: "STUDENT15", discount: "15% off", uses: 412, limit: "∞", expires: "Never" },
+  { id: "co4", code: "EARLYBIRD", discount: "25% off", uses: 0, limit: 100, expires: "Nov 1, 2026" },
+];
+
+export function AdminCoupons() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Coupons</h1>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">Discount codes and promotions</p>
+        </div>
+        <Button leftIcon={<Plus className="h-4 w-4" />}>New coupon</Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {coupons.map((c, i) => (
+          <motion.div
+            key={c.id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            whileHover={{ y: -3 }}
+            className="overflow-hidden rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]"
+          >
+            <div className="bg-gradient-to-br from-accent-500/15 to-pink-500/10 p-5">
+              <div className="flex items-center justify-between">
+                <Badge tone="accent">{c.discount}</Badge>
+                <TicketPercent className="h-4 w-4 text-accent-400" />
+              </div>
+              <div className="mt-3 font-mono text-lg font-bold text-[var(--text-primary)]">{c.code}</div>
+            </div>
+            <div className="p-5">
+              <div className="flex justify-between text-xs text-[var(--text-tertiary)]">
+                <span>Used</span>
+                <span>{c.uses} / {c.limit}</span>
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--bg-card-hover)]">
+                <div
+                  className="h-full bg-gradient-to-r from-accent-500 to-pink-500"
+                  style={{ width: c.limit === "∞" ? "20%" : `${(c.uses / (c.limit as number)) * 100}%` }}
+                />
+              </div>
+              <div className="mt-3 text-xs text-[var(--text-tertiary)]">Expires {c.expires}</div>
+              <div className="mt-4 flex gap-2">
+                <Button variant="outline" size="sm" fullWidth leftIcon={<Copy className="h-3.5 w-3.5" />}>Copy</Button>
+                <Button variant="outline" size="sm" leftIcon={<Edit3 className="h-3.5 w-3.5" />}>Edit</Button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// AUDIT LOG
+// =====================================================
+const audit = [
+  { id: "a1", actor: "Marcus Chen", action: "Approved user", target: "Sana Malik", when: "2m ago", ip: "192.168.1.4" },
+  { id: "a2", actor: "System", action: "Published event", target: "DevConf 2026", when: "1h ago", ip: "—" },
+  { id: "a3", actor: "Priya Patel", action: "Created event", target: "Lahore Music Festival", when: "3h ago", ip: "10.0.0.2" },
+  { id: "a4", actor: "Marcus Chen", action: "Suspended user", target: "Diego Lopez", when: "5h ago", ip: "192.168.1.4" },
+  { id: "a5", actor: "System", action: "Backup completed", target: "Daily snapshot", when: "8h ago", ip: "—" },
+  { id: "a6", actor: "Marcus Chen", action: "Updated settings", target: "Email SMTP", when: "1d ago", ip: "192.168.1.4" },
+];
+
+export function AdminAuditLog() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Audit log</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Every admin action, fully traceable</p>
+      </div>
+
+      <div className="rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/40 text-left text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
+              <tr>
+                <th className="px-5 py-3 font-medium">Actor</th>
+                <th className="px-5 py-3 font-medium">Action</th>
+                <th className="px-5 py-3 font-medium">Target</th>
+                <th className="px-5 py-3 font-medium">IP</th>
+                <th className="px-5 py-3 font-medium">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              {audit.map((a, i) => (
+                <motion.tr
+                  key={a.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--bg-card-hover)]"
+                >
+                  <td className="px-5 py-3 font-medium text-[var(--text-primary)]">{a.actor}</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{a.action}</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{a.target}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-[var(--text-tertiary)]">{a.ip}</td>
+                  <td className="px-5 py-3 text-[var(--text-tertiary)]">{a.when}</td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// SUPPORT
+// =====================================================
+const tickets = [
+  { id: "t1", user: "Sarah Johnson", subject: "Refund for cancelled event", priority: "high", status: "open", when: "12m ago" },
+  { id: "t2", user: "Ahmed Khan", subject: "Can't access my tickets", priority: "high", status: "open", when: "1h ago" },
+  { id: "t3", user: "Maya P.", subject: "How to become an organizer", priority: "low", status: "pending", when: "4h ago" },
+  { id: "t4", user: "Diego L.", subject: "Feature request: dark mode for emails", priority: "low", status: "resolved", when: "1d ago" },
+];
+
+export function AdminSupport() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Support</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">User support tickets</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-4">
+        {[
+          { label: "Open", value: tickets.filter((t) => t.status === "open").length, tone: "amber" as const },
+          { label: "Pending", value: tickets.filter((t) => t.status === "pending").length, tone: "blue" as const },
+          { label: "Resolved", value: tickets.filter((t) => t.status === "resolved").length, tone: "emerald" as const },
+          { label: "Avg response", value: "2.4h", tone: "default" as const },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]">
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{s.value}</div>
+            <div className="mt-1"><Badge tone={s.tone}>{s.label}</Badge></div>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {tickets.map((t, i) => (
+          <motion.div
+            key={t.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04 }}
+            className="flex flex-col gap-3 rounded-2xl bg-[var(--bg-card)] p-5 ring-1 ring-[var(--border-subtle)] sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <LifeBuoy className={clsx("h-5 w-5 shrink-0", t.priority === "high" ? "text-red-400" : "text-[var(--text-tertiary)]")} />
+              <div>
+                <div className="text-sm font-medium text-[var(--text-primary)]">{t.subject}</div>
+                <div className="text-xs text-[var(--text-tertiary)]">From {t.user} · {t.when}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge tone={t.priority === "high" ? "red" : "default"}>{t.priority}</Badge>
+              <Badge tone={t.status === "open" ? "amber" : t.status === "pending" ? "blue" : "emerald"}>{t.status}</Badge>
+              <Button size="sm" variant="outline">Open</Button>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// PAYOUTS
+// =====================================================
+export function AdminPayouts() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Payouts</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Organizer earnings and withdrawals</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-4">
+        {[
+          { label: "Pending", value: "$48,210" },
+          { label: "Paid this month", value: "$184,000" },
+          { label: "Organizers paid", value: "118" },
+          { label: "Next payout", value: "Oct 30" },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]">
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{s.value}</div>
+            <div className="mt-1 text-sm text-[var(--text-tertiary)]">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/40 text-left text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
+              <tr>
+                <th className="px-5 py-3 font-medium">Organizer</th>
+                <th className="px-5 py-3 font-medium">Amount</th>
+                <th className="px-5 py-3 font-medium">Method</th>
+                <th className="px-5 py-3 font-medium">Status</th>
+                <th className="px-5 py-3 font-medium">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { org: "Stellar Entertainment", amount: "$24,800", method: "ACH", status: "paid", when: "Oct 15" },
+                { org: "Heritage Music Co.", amount: "$12,400", method: "PayPal", status: "pending", when: "Queued" },
+                { org: "Y Combinator", amount: "$48,210", method: "Wire", status: "processing", when: "Today" },
+                { org: "MIT Media Lab", amount: "$8,400", method: "ACH", status: "paid", when: "Oct 12" },
+                { org: "Reforge", amount: "$6,200", method: "Stripe", status: "pending", when: "Queued" },
+              ].map((p, i) => (
+                <motion.tr
+                  key={p.org}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--bg-card-hover)]"
+                >
+                  <td className="px-5 py-3 font-medium text-[var(--text-primary)]">{p.org}</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{p.amount}</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{p.method}</td>
+                  <td className="px-5 py-3">
+                    <Badge tone={p.status === "paid" ? "emerald" : p.status === "pending" ? "amber" : "blue"}>
+                      {p.status}
+                    </Badge>
+                  </td>
+                  <td className="px-5 py-3 text-[var(--text-tertiary)]">{p.when}</td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// REVENUE
+// =====================================================
+export function AdminRevenue() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Revenue</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Platform-wide financial overview</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Gross revenue", value: "$284k", delta: "+22%" },
+          { label: "Platform fee", value: "$42k", delta: "+18%" },
+          { label: "Refunds", value: "$3.2k", delta: "-12%" },
+          { label: "Net revenue", value: "$238k", delta: "+24%" },
+        ].map((s, i) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="rounded-2xl bg-[var(--bg-card)] p-5 ring-1 ring-[var(--border-subtle)]"
+          >
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{s.value}</div>
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-sm text-[var(--text-tertiary)]">{s.label}</span>
+              <span className={clsx("rounded-full px-2 py-0.5 text-xs font-medium", s.delta.startsWith("+") ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400")}>
+                {s.delta}
+              </span>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Revenue by month</h2>
+          <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>Export</Button>
+        </div>
+        <div className="mt-6 grid grid-cols-12 items-end gap-2 h-48">
+          {[42, 38, 55, 62, 48, 70, 65, 78, 82, 75, 90, 96].map((v, i) => (
+            <motion.div
+              key={i}
+              initial={{ height: 0 }}
+              animate={{ height: `${v}%` }}
+              transition={{ delay: 0.3 + i * 0.04, duration: 0.6 }}
+              className="rounded-t bg-gradient-to-t from-accent-500/40 to-accent-500"
+            />
+          ))}
+        </div>
+        <div className="mt-2 flex justify-between text-xs text-[var(--text-tertiary)]">
+          {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m) => (
+            <span key={m}>{m}</span>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// =====================================================
+// INTEGRATIONS
+// =====================================================
+const integrations = [
+  { name: "Stripe", desc: "Payments and payouts", connected: true, Icon: CreditCard },
+  { name: "SendGrid", desc: "Transactional email", connected: true, Icon: Mail },
+  { name: "Twilio", desc: "SMS notifications", connected: false, Icon: Send },
+  { name: "Google Maps", desc: "Venue lookups", connected: true, Icon: Globe },
+  { name: "Slack", desc: "Admin alerts", connected: false, Icon: Bell },
+  { name: "Supabase", desc: "Database and auth", connected: true, Icon: Database },
+];
+
+export function AdminIntegrations() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Integrations</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Connect third-party services</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {integrations.map((i, idx) => (
+          <motion.div
+            key={i.name}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+            className="rounded-2xl bg-[var(--bg-card)] p-5 ring-1 ring-[var(--border-subtle)]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-accent-500/20 to-pink-500/10 ring-1 ring-accent-500/30 text-accent-400">
+                <i.Icon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-[var(--text-primary)]">{i.name}</div>
+                <div className="text-xs text-[var(--text-tertiary)]">{i.desc}</div>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              {i.connected ? (
+                <Badge tone="emerald">Connected</Badge>
+              ) : (
+                <Badge tone="default">Not connected</Badge>
+              )}
+              <Button size="sm" variant={i.connected ? "outline" : "primary"}>
+                {i.connected ? "Manage" : "Connect"}
+              </Button>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// DOMAINS & SEO
+// =====================================================
+export function AdminDomains() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Domains & SEO</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Custom domains and search engine metadata</p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Custom domains</h2>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">Map your own domain to Occaz</p>
+          <div className="mt-5 space-y-3">
+            {["events.acme.com", "tickets.acme.com"].map((d) => (
+              <div key={d} className="flex items-center justify-between rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-accent-400" />
+                  <span className="font-mono text-sm text-[var(--text-primary)]">{d}</span>
+                </div>
+                <Badge tone="emerald">Verified</Badge>
+              </div>
+            ))}
+            <Button variant="outline" leftIcon={<Plus className="h-4 w-4" />}>Add domain</Button>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Default SEO</h2>
+          <div className="mt-5 space-y-4">
+            <Field label="Site title">
+              <input defaultValue="Occaz — Events, Tickets & Opportunities" className="input" />
+            </Field>
+            <Field label="Meta description">
+              <textarea
+                defaultValue="Discover events, tickets and life-changing opportunities — beautifully curated."
+                className="input resize-none"
+                rows={2}
+              />
+            </Field>
+            <Field label="OG image">
+              <input defaultValue="https://occaz.app/og.png" className="input" />
+            </Field>
+            <Field label="Twitter handle">
+              <input defaultValue="@occaz" className="input" />
+            </Field>
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline">Reset</Button>
+        <Button>Save</Button>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-xs font-medium text-[var(--text-tertiary)]">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+// =====================================================
+// BACKUP & DATA
+// =====================================================
+export function AdminBackup() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Backup & Data</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Snapshots, exports, and retention</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Last backup", value: "2h ago" },
+          { label: "Total size", value: "4.2 GB" },
+          { label: "Backups kept", value: "30" },
+          { label: "Region", value: "us-east-1" },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]">
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{s.value}</div>
+            <div className="mt-1 text-sm text-[var(--text-tertiary)]">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Manual backup</h2>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">Trigger a full snapshot now</p>
+          <Button className="mt-4" leftIcon={<Database className="h-4 w-4" />}>Start backup</Button>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Data export</h2>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">Download all platform data</p>
+          <div className="mt-4 flex gap-2">
+            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>CSV</Button>
+            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>JSON</Button>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// ROLES & PERMISSIONS
+// =====================================================
+const permissions = [
+  { name: "Manage events", admin: true, organizer: true, user: false },
+  { name: "Manage opportunities", admin: true, organizer: true, user: false },
+  { name: "Approve registrations", admin: true, organizer: false, user: false },
+  { name: "Manage users", admin: true, organizer: false, user: false },
+  { name: "Send notifications", admin: true, organizer: true, user: false },
+  { name: "View analytics", admin: true, organizer: true, user: false },
+  { name: "Process refunds", admin: true, organizer: true, user: false },
+  { name: "Submit support tickets", admin: true, organizer: true, user: true },
+];
+
+export function AdminRoles() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Roles & Permissions</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Control what each role can do</p>
+      </div>
+
+      <div className="rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/40 text-left text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
+              <tr>
+                <th className="px-5 py-3 font-medium">Permission</th>
+                <th className="px-5 py-3 font-medium text-center">Admin</th>
+                <th className="px-5 py-3 font-medium text-center">Organizer</th>
+                <th className="px-5 py-3 font-medium text-center">User</th>
+              </tr>
+            </thead>
+            <tbody>
+              {permissions.map((p, i) => (
+                <motion.tr
+                  key={p.name}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="border-b border-[var(--border-subtle)] last:border-0"
+                >
+                  <td className="px-5 py-3 font-medium text-[var(--text-primary)]">{p.name}</td>
+                  {(["admin", "organizer", "user"] as const).map((k) => (
+                    <td key={k} className="px-5 py-3 text-center">
+                      <Toggle on={p[k]} />
+                    </td>
+                  ))}
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// HOMEPAGE EDITOR
+// =====================================================
+export function AdminHomepage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Homepage</h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Edit content shown on the user homepage</p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Hero</h2>
+          <div className="mt-5 space-y-4">
+            <Field label="Heading">
+              <input defaultValue="Events, tickets & opportunities —" className="input" />
+            </Field>
+            <Field label="Highlight">
+              <input defaultValue="beautifully curated." className="input" />
+            </Field>
+            <Field label="Subheading">
+              <textarea
+                defaultValue="Find concerts, conferences, scholarships and more — all in one elegant, distraction-free experience."
+                className="input resize-none"
+                rows={3}
+              />
+            </Field>
+            <Field label="Background image URL">
+              <input defaultValue="https://picsum.photos/seed/hero/1800/900" className="input" />
+            </Field>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
+        >
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Section order</h2>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">Drag to reorder</p>
+          <div className="mt-5 space-y-2">
+            {[
+              "Happening Today",
+              "Popular Near You",
+              "Recommended For You",
+              "Upcoming Events",
+              "Latest Opportunities",
+              "Featured Events",
+              "List your event CTA",
+            ].map((s) => (
+              <div
+                key={s}
+                className="flex items-center gap-3 rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]"
+              >
+                <span className="text-[var(--text-tertiary)]">⋮⋮</span>
+                <span className="flex-1 text-sm text-[var(--text-primary)]">{s}</span>
+                <Toggle on />
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline">Preview</Button>
+        <Button>Publish changes</Button>
+      </div>
+    </div>
+  );
+}
