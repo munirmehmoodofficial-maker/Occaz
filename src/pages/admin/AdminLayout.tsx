@@ -33,6 +33,7 @@ import {
   Menu,
   X,
   Crown,
+  ExternalLink,
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -261,6 +262,15 @@ export function AdminLayout() {
             </motion.span>
           </motion.button>
 
+          <button
+            onClick={() => window.open("/", "_blank", "noopener,noreferrer")}
+            title="Open user app"
+            aria-label="Open user app"
+            className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] ring-1 ring-[var(--border-subtle)] transition hover:bg-accent-500/15 hover:ring-accent-500/40"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open User App
+          </button>
           <button className="relative grid h-9 w-9 place-items-center rounded-full bg-[var(--bg-card)] text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)] hover:text-[var(--text-primary)]">
             <Bell className="h-4 w-4" />
             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-pink-500" />
