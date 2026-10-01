@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Layout } from "./components/layout/Layout";
 import { HomePage } from "./pages/HomePage";
 import { ExplorePage } from "./pages/ExplorePage";
@@ -63,6 +64,7 @@ import { RequireUser, RequireAdmin, RequireOrganizer } from "./lib/guards";
 export default function App() {
   return (
     <BrowserRouter>
+      <SpeedInsights />
       <Routes>
         {/* Auth / marketing / onboarding pages — no Layout chrome */}
         <Route path="/welcome" element={<LandingPage />} />
