@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Edit3, Trash2, Search, Eye, EyeOff } from "lucide-react";
+import clsx from "clsx";
 import { opportunityCategories } from "../../data/mock";
 import { useDataStore } from "../../data/store";
 import { Button } from "../../components/ui/Button";
@@ -183,6 +184,10 @@ function OppForm({
     title: initial?.title || "",
     description: initial?.description || "",
     category: initial?.category || "Scholarships",
+    requirementsText: (initial?.requirements ?? []).join("\n"),
+    eligibilityText: (initial?.eligibility ?? []).join("\n"),
+    showRequirements: (initial?.requirements ?? []).length > 0,
+    showEligibility: (initial?.eligibility ?? []).length > 0,
     organizer: initial?.organizer || "",
     deadline: initial?.deadline || "",
     city: initial?.city || "",
@@ -190,10 +195,14 @@ function OppForm({
     image: initial?.image || "https://picsum.photos/seed/newopp/1200/800",
     applyUrl: initial?.applyUrl || "",
     stipend: initial?.stipend || "",
+    hasStipend: initial?.hasStipend ?? !!initial?.stipend,
     price: initial?.price ?? 0,
     currency: initial?.currency || "PKR",
+    feeType: initial?.feeType || "free",
+    feePeriod: initial?.feePeriod || "",
     published: initial?.published ?? true,
     featured: !!initial?.featured,
+    registrationsOpen: initial?.registrationsOpen ?? true,
   });
   const [gallery, setGallery] = useState<ImageItem[]>(() => {
     // If we have a cover image (prefer non-blob), build a single-element
@@ -294,6 +303,54 @@ function OppForm({
           <Field label="Description" full>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="input resize-none" />
           </Field>
+
+          {/* Requirements & Eligibility — toggle + textarea (one per line) */}
+          <Field label="Requirements" full>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+                <input
+                  type="checkbox"
+                  checked={form.showRequirements}
+                  onChange={(e) => setForm({ ...form, showRequirements: e.target.checked })}
+                  className="h-4 w-4 accent-accent-500"
+                />
+                Show requirements on the public listing
+              </label>
+              {form.showRequirements && (
+                <textarea
+                  value={form.requirementsText}
+                  onChange={(e) => setForm({ ...form, requirementsText: e.target.value })}
+                  rows={3}
+                  placeholder={"One per line, e.g.\nBachelor's degree\nOutstanding academic record"}
+                  className="input resize-none"
+                />
+              )}
+            </div>
+          </Field>
+
+          <Field label="Eligibility" full>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+                <input
+                  type="checkbox"
+                  checked={form.showEligibility}
+                  onChange={(e) => setForm({ ...form, showEligibility: e.target.checked })}
+                  className="h-4 w-4 accent-accent-500"
+                />
+                Show eligibility criteria on the public listing
+              </label>
+              {form.showEligibility && (
+                <textarea
+                  value={form.eligibilityText}
+                  onChange={(e) => setForm({ ...form, eligibilityText: e.target.value })}
+                  rows={3}
+                  placeholder={"One per line, e.g.\nPakistani citizen\nAges 18-25"}
+                  className="input resize-none"
+                />
+              )}
+            </div>
+          </Field>
+
           <Field label="Category">
             <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input">
               {opportunityCategories.map((c) => (
@@ -316,23 +373,80 @@ function OppForm({
           <Field label="Organization">
             <input value={form.organizer} onChange={(e) => setForm({ ...form, organizer: e.target.value })} className="input" />
           </Field>
+
+          {/* Stipend toggle + amount */}
           <Field label="Stipend / value">
-            <input value={form.stipend} onChange={(e) => setForm({ ...form, stipend: e.target.value })} className="input" />
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.hasStipend}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      hasStipend: e.target.checked,
+                      stipend: e.target.checked ? form.stipend : "",
+                    })
+                  }
+                  className="h-4 w-4 accent-accent-500"
+                />
+                This opportunity offers a stipend
+              </label>
+              {form.hasStipend && (
+                <input
+                  value={form.stipend}
+                  onChange={(e) => setForm({ ...form, stipend: e.target.value })}
+                  placeholder="e.g. PKR 30,000 / month"
+                  className="input"
+                />
+              )}
+            </div>
           </Field>
-          <Field label="Price to attend (PKR)">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--text-tertiary)]">₨</span>
-              <input
-                type="number"
-                min={0}
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                placeholder="0"
-                className="input flex-1"
-              />
-              <span className="text-xs text-[var(--text-tertiary)]">
-                {form.price === 0 ? "Free to apply" : "Per applicant"}
-              </span>
+
+          {/* Fee type: free / one-time / recurring */}
+          <Field label="Application fee">
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                {(["free", "one_time", "recurring"] as const).map((t) => (
+                  <button
+                    type="button"
+                    key={t}
+                    onClick={() => setForm({ ...form, feeType: t, price: t === "free" ? 0 : form.price })}
+                    className={clsx(
+                      "flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition",
+                      form.feeType === t
+                        ? "border-accent-500 bg-accent-500/15 text-accent-200"
+                        : "border-[var(--border-default)] text-[var(--text-tertiary)] hover:border-[var(--border-strong)]"
+                    )}
+                  >
+                    {t === "free" ? "Free" : t === "one_time" ? "One-time fee" : "Recurring"}
+                  </button>
+                ))}
+              </div>
+              {form.feeType !== "free" && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-[var(--text-tertiary)]">₨</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                    placeholder="0"
+                    className="input flex-1"
+                  />
+                  <span className="text-xs text-[var(--text-tertiary)]">
+                    {form.feeType === "recurring" ? "Per period" : "Per applicant"}
+                  </span>
+                </div>
+              )}
+              {form.feeType === "recurring" && (
+                <input
+                  value={form.feePeriod}
+                  onChange={(e) => setForm({ ...form, feePeriod: e.target.value })}
+                  placeholder='e.g. "4 months", "per semester", "12 weeks"'
+                  className="input"
+                />
+              )}
             </div>
           </Field>
           <Field label="Application URL" full>
@@ -368,10 +482,21 @@ function OppForm({
             </label>
           </Field>
           <Field label="Published">
-            <label className="flex items-center gap-3 text-sm pt-2">
-              <input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} className="h-4 w-4 accent-accent-500" />
-              Visible to users
-            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 text-sm pt-2">
+                <input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} className="h-4 w-4 accent-accent-500" />
+                Visible to users
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.registrationsOpen}
+                  onChange={(e) => setForm({ ...form, registrationsOpen: e.target.checked })}
+                  className="h-4 w-4 accent-accent-500"
+                />
+                Open for applications
+              </label>
+            </div>
           </Field>
         </div>
         <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] p-5">
@@ -398,7 +523,24 @@ function OppForm({
               const finalForm = cover
                 ? { ...form, image: cover.url }
                 : form;
-              onSave({ ...finalForm, gallery: cur });
+              // Convert requirements/eligibility textareas (one per line)
+              // into arrays; drop the field entirely if the toggle is off.
+              const splitLines = (t: string) =>
+                t
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0);
+              const payload = {
+                ...finalForm,
+                gallery: cur,
+                requirements: form.showRequirements
+                  ? splitLines(form.requirementsText)
+                  : [],
+                eligibility: form.showEligibility
+                  ? splitLines(form.eligibilityText)
+                  : [],
+              };
+              onSave(payload);
             }}
           >
             {gallery.some((g) => g.status === "uploading")

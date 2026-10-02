@@ -127,14 +127,21 @@ export function OpportunityCard({
           )}
           <div className="mt-auto flex items-center justify-between pt-3">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300 ring-1 ring-accent-500/25">
-                {formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}
-              </span>
-              <span className="text-[10px] text-[var(--text-tertiary)]">
-                {opp.deadline && !isNaN(new Date(opp.deadline).getTime())
-                  ? "to apply"
-                  : "to apply"}
-              </span>
+              {opp.feeType === "free" ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-500/25">
+                  Free
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300 ring-1 ring-accent-500/25">
+                  {formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}
+                  {opp.feeType === "recurring" && <span className="text-[10px] font-normal opacity-75">/{opp.feePeriod || "period"}</span>}
+                </span>
+              )}
+              {opp.hasStipend && opp.stipend && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-500/25">
+                  + Stipend
+                </span>
+              )}
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-card-hover)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)] transition group-hover:bg-white group-hover:text-black">
               Apply

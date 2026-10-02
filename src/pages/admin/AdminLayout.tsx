@@ -28,6 +28,7 @@ import {
   LifeBuoy,
   Palette,
   Globe,
+  MapPin,
   Inbox,
   Activity,
   Menu,
@@ -99,6 +100,7 @@ const groups = [
     items: [
       { to: "/admin/integrations", label: "Integrations", Icon: Plug },
       { to: "/admin/domains", label: "Domains & SEO", Icon: Globe },
+      { to: "/admin/cities", label: "Cities & Locations", Icon: MapPin },
       { to: "/admin/backup", label: "Backup & Data", Icon: Database },
       { to: "/admin/settings", label: "Settings", Icon: Settings },
     ],

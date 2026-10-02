@@ -54,6 +54,7 @@ import {
   AdminRevenue,
   AdminIntegrations,
   AdminDomains,
+  AdminCities,
   AdminBackup,
   AdminRoles,
   AdminHomepage,
@@ -121,6 +122,7 @@ export default function App() {
           <Route path="revenue" element={<AdminRevenue />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="domains" element={<AdminDomains />} />
+          <Route path="cities" element={<AdminCities />} />
           <Route path="backup" element={<AdminBackup />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

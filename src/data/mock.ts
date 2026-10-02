@@ -51,7 +51,10 @@ export interface EventListing extends BaseListing {
   attendees: number;
   ticketTypes: TicketType[];
   gallery?: string[];
+  registrationsOpen: boolean;
 }
+
+export type FeeType = "free" | "one_time" | "recurring";
 
 export interface OpportunityListing extends BaseListing {
   type: "opportunity";
@@ -60,9 +63,14 @@ export interface OpportunityListing extends BaseListing {
   eligibility: string[];
   applyUrl: string;
   stipend?: string;
+  hasStipend?: boolean;
   price?: number; // 0 = free
   currency?: string;
+  feeType: FeeType;
+  /** Free-text period for recurring fees (e.g. "4 months", "per semester") */
+  feePeriod?: string;
   gallery?: string[];
+  registrationsOpen: boolean;
 }
 
 export type Listing = EventListing | OpportunityListing;
@@ -137,6 +145,7 @@ export const events: EventListing[] = [
     mode: "Physical",
     featured: true,
     published: true,
+    registrationsOpen: true,
     date: "2026-10-12",
     time: "20:00",
     venue: "Brooklyn Steel",
@@ -170,6 +179,7 @@ export const events: EventListing[] = [
     mode: "Physical",
     featured: true,
     published: true,
+    registrationsOpen: true,
     date: "2026-09-28",
     time: "19:30",
     venue: "Royal Albert Hall",
@@ -196,6 +206,7 @@ export const events: EventListing[] = [
     city: "London, UK",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
     date: "2026-10-05",
     time: "19:00",
     venue: "Globe Theatre",
@@ -222,6 +233,7 @@ export const events: EventListing[] = [
     mode: "Physical",
     featured: true,
     published: true,
+    registrationsOpen: true,
     date: "2026-10-19",
     time: "21:00",
     venue: "The Improv Hollywood",
@@ -247,6 +259,7 @@ export const events: EventListing[] = [
     city: "New York, USA",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
     date: "2026-09-26",
     time: "18:30",
     venue: "WeWork Soho",
@@ -271,6 +284,7 @@ export const events: EventListing[] = [
     city: "Cambridge, USA",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
     date: "2026-10-08",
     time: "14:00",
     venue: "MIT Media Lab, Hall 6",
@@ -296,6 +310,7 @@ export const events: EventListing[] = [
     mode: "Physical",
     featured: true,
     published: true,
+    registrationsOpen: true,
     date: "2026-10-22",
     time: "10:00",
     venue: "Kairos Arena",
@@ -321,6 +336,7 @@ export const events: EventListing[] = [
     city: "London, UK",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
     date: "2026-10-15",
     time: "11:00",
     venue: "Design Museum",
@@ -346,6 +362,7 @@ export const events: EventListing[] = [
     city: "San Francisco, USA",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
     date: "2026-10-30",
     time: "17:00",
     venue: "Y Combinator, Mountain View",
@@ -370,6 +387,7 @@ export const events: EventListing[] = [
     city: "Brooklyn, USA",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
     date: "2026-10-02",
     time: "19:00",
     venue: "Studio 9, Brooklyn",
@@ -395,6 +413,7 @@ export const events: EventListing[] = [
     mode: "Physical",
     featured: true,
     published: true,
+    registrationsOpen: true,
     date: "2026-11-04",
     time: "09:00",
     venue: "Moscone Center West",
@@ -431,6 +450,7 @@ export const events: EventListing[] = [
     city: "Lahore, Pakistan",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
     date: "2026-10-18",
     time: "16:00",
     venue: "Gulberg Greens Open Grounds",
@@ -465,6 +485,9 @@ export const opportunities: OpportunityListing[] = [
     mode: "Online",
     featured: true,
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-10-15",
     requirements: [
       "Bachelor's degree or equivalent",
@@ -490,6 +513,9 @@ export const opportunities: OpportunityListing[] = [
     city: "Remote",
     mode: "Online",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-11-01",
     requirements: [
       "Currently enrolled in a CS or related program",
@@ -514,6 +540,9 @@ export const opportunities: OpportunityListing[] = [
     mode: "Physical",
     featured: true,
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-10-25",
     requirements: [
       "PhD or equivalent research experience in ML, CS, Math",
@@ -538,6 +567,9 @@ export const opportunities: OpportunityListing[] = [
     city: "Stanford, USA",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-10-09",
     requirements: [
       "Student or recent graduate",
@@ -562,6 +594,9 @@ export const opportunities: OpportunityListing[] = [
     city: "Online / Multiple",
     mode: "Online",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-10-20",
     requirements: [
       "Team of 3 university students",
@@ -584,6 +619,9 @@ export const opportunities: OpportunityListing[] = [
     city: "Remote",
     mode: "Online",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-10-12",
     requirements: [
       "2+ years experience preferred",
@@ -608,6 +646,9 @@ export const opportunities: OpportunityListing[] = [
     mode: "Physical",
     featured: true,
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-11-15",
     requirements: [
       "University student",
@@ -630,6 +671,9 @@ export const opportunities: OpportunityListing[] = [
     city: "Multiple",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-10-30",
     requirements: [
       "High school student",
@@ -652,6 +696,9 @@ export const opportunities: OpportunityListing[] = [
     city: "Remote",
     mode: "Online",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-12-31",
     requirements: ["Basic Python", "Some linear algebra"],
     eligibility: ["Open to all"],
@@ -671,6 +718,9 @@ export const opportunities: OpportunityListing[] = [
     city: "Remote",
     mode: "Online",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-11-10",
     requirements: [
       "Project proposal (5 pages)",
@@ -694,6 +744,9 @@ export const opportunities: OpportunityListing[] = [
     city: "USA",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-10-15",
     requirements: [
       "Bachelor's degree",
@@ -718,6 +771,9 @@ export const opportunities: OpportunityListing[] = [
     city: "Multiple",
     mode: "Physical",
     published: true,
+    registrationsOpen: true,
+    feeType: "free",
+    hasStipend: false,
     deadline: "2026-11-30",
     requirements: [
       "Master's degree",

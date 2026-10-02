@@ -127,37 +127,41 @@ export function OpportunityDetailPage() {
             </p>
           </FadeIn>
 
-          <FadeIn delay={0.15} className="mt-10">
-            <h2 className="text-xl font-semibold">Eligibility</h2>
-            <ul className="mt-4 space-y-2">
-              {opp.eligibility.map((e) => (
-                <motion.li
-                  key={e}
-                  whileHover={{ x: 2 }}
-                  className="flex items-start gap-3 rounded-xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]"
-                >
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
-                  <span className="text-sm text-[var(--text-secondary)]">{e}</span>
-                </motion.li>
-              ))}
-            </ul>
-          </FadeIn>
+          {opp.eligibility && opp.eligibility.length > 0 && (
+            <FadeIn delay={0.15} className="mt-10">
+              <h2 className="text-xl font-semibold">Eligibility</h2>
+              <ul className="mt-4 space-y-2">
+                {opp.eligibility.map((e) => (
+                  <motion.li
+                    key={e}
+                    whileHover={{ x: 2 }}
+                    className="flex items-start gap-3 rounded-xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]"
+                  >
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+                    <span className="text-sm text-[var(--text-secondary)]">{e}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </FadeIn>
+          )}
 
-          <FadeIn delay={0.2} className="mt-10">
-            <h2 className="text-xl font-semibold">Requirements</h2>
-            <ul className="mt-4 space-y-2">
-              {opp.requirements.map((r) => (
-                <motion.li
-                  key={r}
-                  whileHover={{ x: 2 }}
-                  className="flex items-start gap-3 rounded-xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]"
-                >
-                  <ListChecks className="mt-0.5 h-5 w-5 shrink-0 text-accent-400" />
-                  <span className="text-sm text-[var(--text-secondary)]">{r}</span>
-                </motion.li>
-              ))}
-            </ul>
-          </FadeIn>
+          {opp.requirements && opp.requirements.length > 0 && (
+            <FadeIn delay={0.2} className="mt-10">
+              <h2 className="text-xl font-semibold">Requirements</h2>
+              <ul className="mt-4 space-y-2">
+                {opp.requirements.map((r) => (
+                  <motion.li
+                    key={r}
+                    whileHover={{ x: 2 }}
+                    className="flex items-start gap-3 rounded-xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]"
+                  >
+                    <ListChecks className="mt-0.5 h-5 w-5 shrink-0 text-accent-400" />
+                    <span className="text-sm text-[var(--text-secondary)]">{r}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </FadeIn>
+          )}
 
           <FadeIn delay={0.22} className="mt-10">
             <h2 className="text-xl font-semibold">Gallery</h2>
@@ -232,10 +236,13 @@ export function OpportunityDetailPage() {
                 variant="secondary"
                 size="lg"
                 fullWidth
+                disabled={!opp.registrationsOpen}
                 leftIcon={<ArrowUpRight className="h-4 w-4" />}
                 onClick={() => window.open(opp.applyUrl, "_blank")}
               >
-                Apply now
+                {!opp.registrationsOpen
+                  ? "Applications closed"
+                  : "Apply now"}
               </Button>
               <div className="flex gap-2">
                 <Button
@@ -255,7 +262,20 @@ export function OpportunityDetailPage() {
 
             <div className="mt-6 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
               <div className="text-xs text-[var(--text-tertiary)]">Stipend / Value</div>
-              <div className="mt-1 text-base font-semibold">{opp.stipend || "Varies"}</div>
+              <div className="mt-1 text-base font-semibold">
+                {opp.hasStipend && opp.stipend ? opp.stipend : "Unpaid"}
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
+              <div className="text-xs text-[var(--text-tertiary)]">Application fee</div>
+              <div className="mt-1 text-base font-semibold">
+                {opp.feeType === "free"
+                  ? "Free to apply"
+                  : opp.feeType === "one_time"
+                  ? `One-time · ${formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}`
+                  : `Recurring · ${formatPrice(opp.price ?? 0, opp.currency ?? "PKR")} ${opp.feePeriod ? `/ ${opp.feePeriod}` : "/ period"}`}
+              </div>
             </div>
           </motion.aside>
         </div>

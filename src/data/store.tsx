@@ -49,6 +49,7 @@ type EventRow = {
   ticket_types: any[] | null;
   featured: boolean | null;
   published: boolean | null;
+  registrations_open: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -66,12 +67,16 @@ type OppRow = {
   deadline: string | null;
   apply_url: string | null;
   stipend: string | null;
+  has_stipend: boolean | null;
   price: number | null;
   currency: string | null;
+  fee_type: string | null;
+  fee_period: string | null;
   requirements: string[] | null;
   eligibility: string[] | null;
   featured: boolean | null;
   published: boolean | null;
+  registrations_open: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -101,6 +106,7 @@ function rowToEvent(r: EventRow): EventListing {
     ticketTypes: Array.isArray(r.ticket_types) ? r.ticket_types : [],
     featured: !!r.featured,
     published: r.published ?? true,
+    registrationsOpen: r.registrations_open ?? true,
   };
 }
 
@@ -124,6 +130,10 @@ function rowToOpp(r: OppRow): OpportunityListing {
     eligibility: Array.isArray(r.eligibility) ? r.eligibility : [],
     applyUrl: r.apply_url ?? "",
     stipend: r.stipend ?? "",
+    hasStipend: r.has_stipend ?? !!r.stipend,
+    feeType: ((r.fee_type as any) || "free") as "free" | "one_time" | "recurring",
+    feePeriod: r.fee_period ?? "",
+    registrationsOpen: r.registrations_open ?? true,
     price: Number(r.price ?? 0),
     currency: r.currency ?? "PKR",
     featured: !!r.featured,
@@ -152,6 +162,7 @@ function eventToRow(e: Partial<EventListing>): any {
   if (e.ticketTypes !== undefined) r.ticket_types = e.ticketTypes;
   if (e.featured !== undefined) r.featured = e.featured;
   if (e.published !== undefined) r.published = e.published;
+  if (e.registrationsOpen !== undefined) r.registrations_open = e.registrationsOpen;
   r.updated_at = new Date().toISOString();
   return r;
 }
@@ -171,8 +182,12 @@ function oppToRow(o: Partial<OpportunityListing>): any {
   if (o.deadline !== undefined) r.deadline = o.deadline || null;
   if (o.applyUrl !== undefined) r.apply_url = o.applyUrl;
   if (o.stipend !== undefined) r.stipend = o.stipend;
+  if (o.hasStipend !== undefined) r.has_stipend = o.hasStipend;
   if (o.price !== undefined) r.price = o.price;
   if (o.currency !== undefined) r.currency = o.currency;
+  if (o.feeType !== undefined) r.fee_type = o.feeType;
+  if (o.feePeriod !== undefined) r.fee_period = o.feePeriod;
+  if (o.registrationsOpen !== undefined) r.registrations_open = o.registrationsOpen;
   if (o.requirements !== undefined) r.requirements = o.requirements;
   if (o.eligibility !== undefined) r.eligibility = o.eligibility;
   if (o.featured !== undefined) r.featured = o.featured;

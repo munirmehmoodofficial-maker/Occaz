@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useEvents, useOpportunities } from "../hooks/useListings";
+import { supabase } from "../lib/supabase";
 import { EventCard } from "../components/cards/EventCard";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { CardGrid } from "../components/ui/CardGrid";
@@ -32,6 +33,43 @@ export function HomePage() {
     useSaved();
   const [city, setCity] = useState("New York, USA");
   const [q, setQ] = useState("");
+  const [sectionOrder, setSectionOrder] = useState<string[] | null>(null);
+  const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
+
+  // Fetch admin-configured section order + hero background (poll every 5s
+  // so admin changes appear on the home page without a manual refresh)
+  useEffect(() => {
+    let alive = true;
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from("homepage_settings")
+        .select("section_order, hero_bg_url")
+        .eq("id", "default")
+        .maybeSingle();
+      if (!alive) return;
+      if (!data) return;
+      if (Array.isArray(data.section_order) && data.section_order.length > 0) {
+        const newOrder = data.section_order as string[];
+        setSectionOrder((prev) => {
+          if (!prev) return newOrder;
+          if (prev.length !== newOrder.length) return newOrder;
+          for (let i = 0; i < prev.length; i++) {
+            if (prev[i] !== newOrder[i]) return newOrder;
+          }
+          return prev;
+        });
+      }
+      if (data.hero_bg_url) {
+        setHeroBgUrl((prev) => (prev === data.hero_bg_url ? prev : data.hero_bg_url));
+      }
+    };
+    fetchSettings();
+    const interval = setInterval(fetchSettings, 5000);
+    return () => {
+      alive = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // first-visit redirect: send unauthenticated non-guests through onboarding
   useEffect(() => {
@@ -95,12 +133,14 @@ export function HomePage() {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="relative overflow-hidden rounded-3xl ring-1 ring-[var(--border-default)]"
         >
-          <div className="absolute inset-0">
-            <img
-              src="https://picsum.photos/seed/hero/1800/900"
-              alt=""
-              className="h-full w-full object-cover opacity-50"
-            />
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-elevated)] via-[var(--bg-card)] to-[var(--bg-elevated)]">
+            {heroBgUrl && (
+              <img
+                src={heroBgUrl}
+                alt=""
+                className="h-full w-full object-cover opacity-50"
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-tr from-[var(--bg-base)] via-[var(--bg-base)]/85 to-[var(--bg-base)]/30" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.25),transparent_60%)]" />
           </div>
@@ -261,13 +301,14 @@ export function HomePage() {
         </FadeIn>
 
         {/* Sections */}
-        <div className="mt-12 space-y-16">
+        <div className="mt-12 flex flex-col gap-16">
           {happeningToday.length > 0 && (
             <Section
               title="Happening Today"
               subtitle="Don't miss these — they're on right now."
               actionLabel="See all"
               actionTo="/events"
+              style={sectionOrder ? { order: sectionOrder.indexOf("Happening Today") } : undefined}
             >
               <CardGrid>
                 {happeningToday.map((e) => (
@@ -287,6 +328,7 @@ export function HomePage() {
             subtitle="The most booked events in your city this week."
             actionLabel="More nearby"
             actionTo="/explore"
+            style={sectionOrder ? { order: sectionOrder.indexOf("Popular Near You") } : undefined}
           >
             <CardGrid>
               {popular.map((e) => (
@@ -305,6 +347,7 @@ export function HomePage() {
             subtitle="Based on your interests and recent activity."
             actionLabel="Personalize"
             actionTo="/profile"
+            style={sectionOrder ? { order: sectionOrder.indexOf("Recommended For You") } : undefined}
           >
             <CardGrid>
               {recommended.map((e) => (
@@ -323,6 +366,7 @@ export function HomePage() {
             subtitle="Plan ahead — book early, save more."
             actionLabel="All events"
             actionTo="/events"
+            style={sectionOrder ? { order: sectionOrder.indexOf("Upcoming Events") } : undefined}
           >
             <CardGrid>
               {upcoming.map((e) => (
@@ -341,6 +385,7 @@ export function HomePage() {
             subtitle="Scholarships, internships and competitions — fresh this week."
             actionLabel="Browse all"
             actionTo="/opportunities"
+            style={sectionOrder ? { order: sectionOrder.indexOf("Latest Opportunities") } : undefined}
           >
             <CardGrid>
               {latestOpps.map((o) => (
@@ -359,6 +404,7 @@ export function HomePage() {
             subtitle="Hand-picked by our editors."
             actionLabel="View all"
             actionTo="/events"
+            style={sectionOrder ? { order: sectionOrder.indexOf("Featured Events") } : undefined}
           >
             <CardGrid>
               {events
@@ -382,6 +428,7 @@ export function HomePage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
+          style={sectionOrder ? { order: sectionOrder.indexOf("List your event CTA") } : undefined}
           className="mt-16 overflow-hidden rounded-3xl bg-gradient-to-br from-accent-500/20 via-pink-500/15 to-cyan-500/15 p-8 ring-1 ring-[var(--border-default)] md:p-12"
         >
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">

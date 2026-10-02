@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
 import {
   Eye,
   Trash2,
@@ -21,10 +21,13 @@ import {
   Sparkles,
   FileText,
   Bell,
+  GripVertical,
 } from "lucide-react";
 import clsx from "clsx";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { ImageUploader, type ImageItem } from "../../components/admin/ImageUploader";
+import { supabase } from "../../lib/supabase";
 
 // =====================================================
 // ANALYTICS
@@ -1365,6 +1368,83 @@ export function AdminRoles() {
 // HOMEPAGE EDITOR
 // =====================================================
 export function AdminHomepage() {
+  const [heroBgGallery, setHeroBgGallery] = useState<ImageItem[]>(() => [
+    {
+      id: "hero",
+      url: "https://picsum.photos/seed/hero/1800/900",
+      isCover: true,
+      status: "ready" as const,
+    },
+  ]);
+  const [sections, setSections] = useState<string[]>([
+    "Happening Today",
+    "Popular Near You",
+    "Recommended For You",
+    "Upcoming Events",
+    "Latest Opportunities",
+    "Featured Events",
+    "List your event CTA",
+  ]);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  // Load existing section order from DB on mount
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from("homepage_settings")
+        .select("section_order, hero_bg_url")
+        .eq("id", "default")
+        .maybeSingle();
+      if (!alive) return;
+      if (data) {
+        if (Array.isArray(data.section_order) && data.section_order.length > 0) {
+          setSections(data.section_order as string[]);
+        }
+        if (data.hero_bg_url) {
+          setHeroBgGallery([
+            {
+              id: "hero",
+              url: data.hero_bg_url,
+              isCover: true,
+              status: "ready" as const,
+            },
+          ]);
+        }
+      }
+      setLoaded(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function onPublish() {
+    setSaving(true);
+    setSaveMsg(null);
+    const heroUrl =
+      heroBgGallery.find(
+        (g) => g.status === "ready" && !g.url.startsWith("blob:"),
+      )?.url ?? "";
+    const { error } = await supabase
+      .from("homepage_settings")
+      .upsert(
+        {
+          id: "default",
+          section_order: sections,
+          hero_bg_url: heroUrl || null,
+        },
+        { onConflict: "id" },
+      );
+    setSaving(false);
+    if (error) {
+      setSaveMsg({ kind: "err", text: `Save failed: ${error.message}` });
+    } else {
+      setSaveMsg({ kind: "ok", text: "Homepage published." });
+    }
+  }
   return (
     <div className="space-y-6">
       <div>
@@ -1393,8 +1473,22 @@ export function AdminHomepage() {
                 rows={3}
               />
             </Field>
-            <Field label="Background image URL">
-              <input defaultValue="https://picsum.photos/seed/hero/1800/900" className="input" />
+            <Field label="Background image">
+              <ImageUploader
+                images={heroBgGallery}
+                storageKind="misc"
+                max={1}
+                onChange={(next) => {
+                  // CRITICAL: use functional updater so the real-URL
+                  // callback applies to the latest gallery state.
+                  setHeroBgGallery((prev) =>
+                    typeof next === "function" ? next(prev) : next,
+                  );
+                }}
+              />
+              <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+                Used as the hero background. Best at 1800×900.
+              </p>
             </Field>
           </div>
         </motion.div>
@@ -1407,33 +1501,51 @@ export function AdminHomepage() {
         >
           <h2 className="text-base font-semibold text-[var(--text-primary)]">Section order</h2>
           <p className="mt-1 text-sm text-[var(--text-tertiary)]">Drag to reorder</p>
-          <div className="mt-5 space-y-2">
-            {[
-              "Happening Today",
-              "Popular Near You",
-              "Recommended For You",
-              "Upcoming Events",
-              "Latest Opportunities",
-              "Featured Events",
-              "List your event CTA",
-            ].map((s) => (
-              <div
+          <Reorder.Group
+            axis="y"
+            values={sections}
+            onReorder={setSections}
+            className="mt-5 space-y-2"
+          >
+            {sections.map((s) => (
+              <Reorder.Item
                 key={s}
-                className="flex items-center gap-3 rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]"
+                value={s}
+                whileDrag={{ scale: 1.02, zIndex: 10 }}
+                className="flex cursor-grab items-center gap-3 rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)] active:cursor-grabbing"
               >
-                <span className="text-[var(--text-tertiary)]">⋮⋮</span>
+                <GripVertical className="h-4 w-4 text-[var(--text-tertiary)]" />
                 <span className="flex-1 text-sm text-[var(--text-primary)]">{s}</span>
                 <Toggle on />
-              </div>
+              </Reorder.Item>
             ))}
-          </div>
+          </Reorder.Group>
         </motion.div>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <Button variant="outline">Preview</Button>
-        <Button>Publish changes</Button>
+      <div className="flex items-center gap-3">
+        {saveMsg && (
+          <div
+            className={clsx(
+              "rounded-lg px-3 py-1.5 text-sm",
+              saveMsg.kind === "ok"
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "bg-red-500/15 text-red-300",
+            )}
+          >
+            {saveMsg.text}
+          </div>
+        )}
+        <div className="ml-auto flex gap-2">
+          <Button variant="outline">Preview</Button>
+          <Button onClick={onPublish} disabled={saving || !loaded}>
+            {saving ? "Saving…" : "Publish changes"}
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
+
+// Re-export AdminCities (defined in its own file to keep AdminPages manageable)
+export { AdminCities } from "./AdminCities";

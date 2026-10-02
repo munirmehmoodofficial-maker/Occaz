@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Edit3, Trash2, Eye, EyeOff, Search, Crown, Sparkles } from "lucide-react";
 import { categories } from "../../data/mock";
@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { ImageUploader, type ImageItem } from "../../components/admin/ImageUploader";
 import { useSubscription } from "../../hooks/useSubscription";
+import { useAuth } from "../../lib/auth";
 
 export function AdminEvents() {
   const { events, addEvent, updateEvent, removeEvent } = useDataStore();
@@ -242,6 +243,7 @@ function EventForm({
     mode: initial?.mode || "Physical",
     featured: !!initial?.featured,
     published: initial?.published ?? true,
+    registrationsOpen: initial?.registrationsOpen ?? true,
     requirements: "",
   });
   const [gallery, setGallery] = useState<ImageItem[]>(() => {
@@ -269,6 +271,13 @@ function EventForm({
       status: "ready" as const,
     }];
   });
+
+  // Keep latest gallery in a ref so the Save handler always reads
+  // the current state, not a stale closure value.
+  const galleryRef = useRef<ImageItem[]>(gallery);
+  useEffect(() => {
+    galleryRef.current = gallery;
+  }, [gallery]);
 
   const update = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -374,12 +383,19 @@ function EventForm({
               images={gallery}
               storageKind="events"
               onChange={(next) => {
-                const arr = typeof next === "function" ? next(gallery) : next;
-                setGallery(arr);
-                const cover =
-                  arr.find((i) => i.isCover && i.status === "ready") ??
-                  arr.find((i) => i.status === "ready");
-                if (cover) update("image", cover.url);
+                // CRITICAL: use the functional updater so we always work
+                // with the latest gallery state. The ImageUploader calls
+                // onChange twice (once for placeholder, once for real URL).
+                // Each call must apply to the latest state, not a stale
+                // closure value.
+                setGallery((prev) => {
+                  const arr = typeof next === "function" ? next(prev) : next;
+                  const cover =
+                    arr.find((i) => i.isCover && i.status === "ready") ??
+                    arr.find((i) => i.status === "ready");
+                  if (cover) update("image", cover.url);
+                  return arr;
+                });
               }}
             />
           </Field>
@@ -390,15 +406,26 @@ function EventForm({
             />
           </Field>
           <Field label="Status" full>
-            <label className="flex items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                checked={form.published}
-                onChange={(e) => update("published", e.target.checked)}
-                className="h-4 w-4 accent-accent-500"
-              />
-              Published — visible to users
-            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.published}
+                  onChange={(e) => update("published", e.target.checked)}
+                  className="h-4 w-4 accent-accent-500"
+                />
+                Published — visible to users
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.registrationsOpen}
+                  onChange={(e) => update("registrationsOpen", e.target.checked)}
+                  className="h-4 w-4 accent-accent-500"
+                />
+                Open for registrations
+              </label>
+            </div>
           </Field>
         </div>
         <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] p-5">
@@ -406,20 +433,24 @@ function EventForm({
           <Button
             disabled={gallery.some((g) => g.status === "uploading")}
             onClick={async () => {
+              // Use ref so we always read the latest gallery state,
+              // not a stale closure value.
+              let cur = galleryRef.current;
               const start = Date.now();
               while (
-                gallery.some((g) => g.status === "uploading") &&
+                cur.some((g) => g.status === "uploading") &&
                 Date.now() - start < 30000
               ) {
                 await new Promise((r) => setTimeout(r, 200));
+                cur = galleryRef.current;
               }
               const cover =
-                gallery.find((g) => g.isCover && g.status === "ready") ??
-                gallery.find((g) => g.status === "ready");
+                cur.find((g) => g.isCover && g.status === "ready") ??
+                cur.find((g) => g.status === "ready");
               const finalForm = cover
                 ? { ...form, image: cover.url }
                 : form;
-              onSave({ ...finalForm, gallery });
+              onSave({ ...finalForm, gallery: cur });
             }}
           >
             {gallery.some((g) => g.status === "uploading")
@@ -459,7 +490,9 @@ function FeaturedToggle({
   onChange: (v: boolean) => void;
 }) {
   const { plan, can } = useSubscription();
-  const allowed = can("canFeature");
+  const { isAdmin } = useAuth();
+  // Admins bypass the subscription gate — they can feature anything.
+  const allowed = isAdmin || can("canFeature");
   return (
     <div className="space-y-2">
       <label className="flex items-center gap-3 text-sm">

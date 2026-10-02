@@ -383,10 +383,13 @@ function TicketPanel({
           variant="primary"
           size="lg"
           fullWidth
+          disabled={!event.registrationsOpen}
           leftIcon={<Ticket className="h-4 w-4" />}
           onClick={handleBook}
         >
-          Register · {formatPrice(ticket?.price ?? event.price, event.currency)}
+          {!event.registrationsOpen
+            ? "Registration is opening soon — we'll notify you when tickets are available."
+            : `Register · ${formatPrice(ticket?.price ?? event.price, event.currency)}`}
         </Button>
         <div className="flex gap-2">
           <Button

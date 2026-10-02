@@ -71,7 +71,7 @@ export function ImageUploader({
     }
 
     try {
-      const { url, path } = await uploadPublicImage(file, storageKind);
+      const { url } = await uploadPublicImage(file, storageKind);
       if (dbg) {
         dbg.innerHTML += `<div class="text-green-300">[ImageUploader] upload OK -> ${url}</div>`;
       }

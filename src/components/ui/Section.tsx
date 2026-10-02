@@ -9,6 +9,7 @@ export function Section({
   actionTo,
   children,
   className,
+  style,
 }: {
   title: string;
   subtitle?: string;
@@ -16,9 +17,10 @@ export function Section({
   actionTo?: string;
   children: ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
-    <section className={className}>
+    <section className={className} style={style}>
       <div className="section-header">
         <div>
           <h2 className="section-title">{title}</h2>
