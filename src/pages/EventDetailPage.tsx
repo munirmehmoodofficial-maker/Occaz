@@ -379,6 +379,18 @@ function TicketPanel({
       </div>
 
       <div className="mt-6 space-y-2">
+        <div className="flex items-center gap-2 text-xs">
+          <span
+            className={`inline-flex h-2 w-2 rounded-full ${
+              event.registrationsOpen ? "bg-emerald-400" : "bg-amber-400"
+            }`}
+          />
+          <span className="text-[var(--text-tertiary)]">
+            {event.registrationsOpen
+              ? "Registration is open"
+              : "Registration is currently closed"}
+          </span>
+        </div>
         <Button
           variant="primary"
           size="lg"
@@ -389,7 +401,9 @@ function TicketPanel({
         >
           {!event.registrationsOpen
             ? "Registration is opening soon — we'll notify you when tickets are available."
-            : `Register · ${formatPrice(ticket?.price ?? event.price, event.currency)}`}
+            : (event.ticketTypes && event.ticketTypes.length > 0
+              ? `Register · ${formatPrice(ticket?.price ?? event.price, event.currency)}`
+              : `Get ticket · ${formatPrice(event.price, event.currency)}`)}
         </Button>
         <div className="flex gap-2">
           <Button

@@ -162,7 +162,8 @@ function eventToRow(e: Partial<EventListing>): any {
   if (e.ticketTypes !== undefined) r.ticket_types = e.ticketTypes;
   if (e.featured !== undefined) r.featured = e.featured;
   if (e.published !== undefined) r.published = e.published;
-  if (e.registrationsOpen !== undefined) r.registrations_open = e.registrationsOpen;
+  // Always set registrations_open — boolean (default true if not provided)
+  r.registrations_open = e.registrationsOpen !== undefined ? !!e.registrationsOpen : true;
   r.updated_at = new Date().toISOString();
   return r;
 }
@@ -187,7 +188,8 @@ function oppToRow(o: Partial<OpportunityListing>): any {
   if (o.currency !== undefined) r.currency = o.currency;
   if (o.feeType !== undefined) r.fee_type = o.feeType;
   if (o.feePeriod !== undefined) r.fee_period = o.feePeriod;
-  if (o.registrationsOpen !== undefined) r.registrations_open = o.registrationsOpen;
+  // Always set registrations_open — boolean (default true if not provided)
+  r.registrations_open = o.registrationsOpen !== undefined ? !!o.registrationsOpen : true;
   if (o.requirements !== undefined) r.requirements = o.requirements;
   if (o.eligibility !== undefined) r.eligibility = o.eligibility;
   if (o.featured !== undefined) r.featured = o.featured;
