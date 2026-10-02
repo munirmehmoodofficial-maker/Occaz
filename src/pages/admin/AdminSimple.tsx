@@ -11,8 +11,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  categories,
-  opportunityCategories,
   user as mockUser,
 } from "../../data/mock";
 import { useDataStore } from "../../data/store";
@@ -20,80 +18,305 @@ import { useEvents } from "../../hooks/useListings";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
+import { useToast } from "../../lib/toast";
 
 export function AdminCategories() {
-  const [list, setList] = useState<string[]>(categories);
-  const [oppList, setOppList] = useState<string[]>(opportunityCategories);
-  const [newCat, setNewCat] = useState("");
+  const { push } = useToast();
+  type Cat = { id: string; name: string; kind: string; created_at?: string };
+  const [rows, setRows] = useState<Cat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [newEvent, setNewEvent] = useState("");
+  const [newOpp, setNewOpp] = useState("");
+  const [editing, setEditing] = useState<Cat | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id, name, kind, created_at")
+      .order("kind", { ascending: true })
+      .order("name", { ascending: true });
+    if (error) {
+      push("err", `Failed to load categories: ${error.message}`);
+    } else {
+      setRows((data ?? []) as Cat[]);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const eventCats = rows.filter((r) => r.kind === "event");
+  const oppCats = rows.filter((r) => r.kind === "opportunity");
+
+  function matchesQ(c: Cat) {
+    const t = q.trim().toLowerCase();
+    if (!t) return true;
+    return c.name.toLowerCase().includes(t);
+  }
+
+  async function addCategory(kind: "event" | "opportunity", name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      push("err", "Category name is required");
+      return;
+    }
+    // Unique check
+    const existing = rows.find(
+      (r) => r.kind === kind && r.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) {
+      push("err", `"${trimmed}" already exists in ${kind} categories`);
+      return;
+    }
+    const id =
+      kind + ":" + trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const { error } = await supabase.from("categories").insert({
+      id,
+      name: trimmed,
+      kind,
+    });
+    if (error) {
+      push("err", `Add failed: ${error.message}`);
+      return;
+    }
+    push("ok", `Added "${trimmed}"`);
+    if (kind === "event") setNewEvent("");
+    else setNewOpp("");
+    load();
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    const trimmed = editValue.trim();
+    if (!trimmed) {
+      push("err", "Category name is required");
+      return;
+    }
+    const { error } = await supabase
+      .from("categories")
+      .update({ name: trimmed })
+      .eq("id", editing.id);
+    if (error) {
+      push("err", `Update failed: ${error.message}`);
+      return;
+    }
+    push("ok", "Category updated");
+    setEditing(null);
+    setEditValue("");
+    load();
+  }
+
+  async function remove(c: Cat) {
+    if (!confirm(`Delete category "${c.name}"? Items using it will keep the ID but lose the label.`))
+      return;
+    const { error } = await supabase.from("categories").delete().eq("id", c.id);
+    if (error) {
+      push("err", `Delete failed: ${error.message}`);
+    } else {
+      push("ok", "Category deleted");
+      load();
+    }
+  }
+
+  function startEdit(c: Cat) {
+    setEditing(c);
+    setEditValue(c.name);
+  }
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Categories</h1>
-        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Manage event and opportunity categories</p>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+          Manage event and opportunity categories
+        </p>
       </div>
 
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Event categories</h2>
-          <div className="flex gap-2">
-            <input
-              value={newCat}
-              onChange={(e) => setNewCat(e.target.value)}
-              placeholder="New category..."
-              className="input w-48"
-            />
-            <Button
-              onClick={() => {
-                if (newCat.trim()) {
-                  setList((p) => [...p, newCat.trim()]);
-                  setNewCat("");
-                }
-              }}
-              leftIcon={<Plus className="h-4 w-4" />}
+      <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-card)] p-3 ring-1 ring-[var(--border-subtle)]">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search categories..."
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-tertiary)]"
+        />
+        <span className="text-xs text-[var(--text-tertiary)]">
+          {rows.length} total
+        </span>
+      </div>
+
+      {/* Edit modal */}
+      <AnimatePresence>
+        {editing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4"
+            onClick={() => setEditing(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl bg-[var(--bg-elevated)] p-6 ring-1 ring-[var(--border-default)]"
             >
-              Add
-            </Button>
-          </div>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {list.map((c) => (
-            <div key={c} className="flex items-center justify-between rounded-xl bg-[var(--bg-card)] p-3 ring-1 ring-[var(--border-subtle)]">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-accent-400" />
-                <span className="text-sm font-medium">{c}</span>
+              <h2 className="mb-4 text-lg font-semibold">
+                Edit {editing.kind} category
+              </h2>
+              <input
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveEdit();
+                  if (e.key === "Escape") setEditing(null);
+                }}
+                autoFocus
+                className="input w-full"
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditing(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={saveEdit}>Save</Button>
               </div>
-              <button
-                onClick={() => setList((p) => p.filter((x) => x !== c))}
-                className="grid h-7 w-7 place-items-center rounded-lg text-[var(--text-tertiary)] hover:bg-red-500/15 hover:text-red-400"
-                aria-label="Delete"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Event categories */}
+      <CategorySection
+        title="Event categories"
+        kind="event"
+        accentClass="text-accent-400"
+        rows={eventCats}
+        loading={loading}
+        matchesQ={matchesQ}
+        value={newEvent}
+        onChange={setNewEvent}
+        onAdd={() => addCategory("event", newEvent)}
+        onEdit={startEdit}
+        onDelete={remove}
+      />
+
+      {/* Opportunity categories */}
+      <CategorySection
+        title="Opportunity categories"
+        kind="opportunity"
+        accentClass="text-pink-400"
+        rows={oppCats}
+        loading={loading}
+        matchesQ={matchesQ}
+        value={newOpp}
+        onChange={setNewOpp}
+        onAdd={() => addCategory("opportunity", newOpp)}
+        onEdit={startEdit}
+        onDelete={remove}
+      />
+    </div>
+  );
+}
+
+function CategorySection({
+  title,
+  kind,
+  accentClass,
+  rows,
+  loading,
+  matchesQ,
+  value,
+  onChange,
+  onAdd,
+  onEdit,
+  onDelete,
+}: {
+  title: string;
+  kind: string;
+  accentClass: string;
+  rows: { id: string; name: string; kind: string; created_at?: string }[];
+  loading: boolean;
+  matchesQ: (c: { name: string }) => boolean;
+  value: string;
+  onChange: (v: string) => void;
+  onAdd: () => void;
+  onEdit: (c: { id: string; name: string; kind: string }) => void;
+  onDelete: (c: { id: string; name: string; kind: string }) => void;
+}) {
+  const filtered = rows.filter(matchesQ);
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <span className="rounded-full bg-[var(--bg-card)] px-2 py-0.5 text-xs text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
+            {rows.length}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onAdd();
+            }}
+            placeholder={`New ${kind} category...`}
+            className="input w-56"
+          />
+          <Button onClick={onAdd} leftIcon={<Plus className="h-4 w-4" />}>
+            Add
+          </Button>
         </div>
       </div>
 
-      <div>
-        <h2 className="mb-3 text-lg font-semibold">Opportunity categories</h2>
+      {loading ? (
+        <div className="rounded-xl bg-[var(--bg-card)] p-6 text-center text-sm text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
+          Loading...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-xl bg-[var(--bg-card)] p-6 text-center text-sm text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
+          {rows.length === 0
+            ? `No ${kind} categories yet. Add one above.`
+            : "No matches for your search."}
+        </div>
+      ) : (
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {oppList.map((c) => (
-            <div key={c} className="flex items-center justify-between rounded-xl bg-[var(--bg-card)] p-3 ring-1 ring-[var(--border-subtle)]">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-pink-400" />
-                <span className="text-sm font-medium">{c}</span>
+          {filtered.map((c) => (
+            <motion.div
+              key={c.id}
+              layout
+              className="group flex items-center justify-between rounded-xl bg-[var(--bg-card)] p-3 ring-1 ring-[var(--border-subtle)] hover:ring-[var(--border-default)]"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <Tag className={`h-4 w-4 shrink-0 ${accentClass}`} />
+                <span className="truncate text-sm font-medium">{c.name}</span>
               </div>
-              <button
-                onClick={() => setOppList((p) => p.filter((x) => x !== c))}
-                className="grid h-7 w-7 place-items-center rounded-lg text-[var(--text-tertiary)] hover:bg-red-500/15 hover:text-red-400"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+              <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                <button
+                  onClick={() => onEdit(c)}
+                  className="grid h-7 w-7 place-items-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+                  aria-label="Edit"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => onDelete(c)}
+                  className="grid h-7 w-7 place-items-center rounded-lg text-[var(--text-tertiary)] hover:bg-red-500/15 hover:text-red-400"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </motion.div>
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
