@@ -74,13 +74,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // initial session + listener
   useEffect(() => {
     let unsub: (() => void) | null = null;
+    // Hard timeout: never let the auth check block the page for more than 5s.
+    // If getSession() hangs (e.g. corrupt localStorage from a previous deploy),
+    // we still render the app as a guest after the timeout.
+    const timeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          // eslint-disable-next-line no-console
+          console.warn("[auth] getSession() timed out, rendering as guest");
+        }
+        return false;
+      });
+    }, 5000);
+
     (async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      if (data.session?.user) {
-        setProfile(await fetchProfile(data.session.user.id));
+      try {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+        if (data.session?.user) {
+          setProfile(await fetchProfile(data.session.user.id));
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[auth] getSession() failed:", err);
+      } finally {
+        clearTimeout(timeout);
+        setLoading(false);
       }
-      setLoading(false);
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
