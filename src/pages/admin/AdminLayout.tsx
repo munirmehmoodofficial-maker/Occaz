@@ -30,6 +30,7 @@ import {
   Globe,
   MapPin,
   Activity,
+  Inbox,
   Menu,
   X,
   Crown,
