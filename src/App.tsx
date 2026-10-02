@@ -62,13 +62,16 @@ import {
   AdminHomepage,
 } from "./pages/admin/AdminPages";
 import { RequireUser, RequireAdmin, RequireOrganizer } from "./lib/guards";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { StatusPage } from "./pages/StatusPage";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Auth / marketing / onboarding pages — no Layout chrome */}
-        <Route path="/welcome" element={<LandingPage />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          {/* Auth / marketing / onboarding pages — no Layout chrome */}
+          <Route path="/welcome" element={<LandingPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
@@ -77,6 +80,7 @@ export default function App() {
         <Route path="/auth/confirmed" element={<AuthConfirmedPage />} />
         <Route path="/dev-confirm" element={<DevConfirmPage />} />
         <Route path="/__storage-debug" element={<StorageDebugPage />} />
+        <Route path="/__status" element={<StatusPage />} />
 
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
@@ -132,5 +136,6 @@ export default function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
