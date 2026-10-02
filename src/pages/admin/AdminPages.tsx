@@ -1549,3 +1549,5 @@ export function AdminHomepage() {
 
 // Re-export AdminCities (defined in its own file to keep AdminPages manageable)
 export { AdminCities } from "./AdminCities";
+export { AdminPaymentSettings } from "./AdminPaymentSettings";
+export { AdminPaymentSubmissions } from "./AdminPaymentSubmissions";

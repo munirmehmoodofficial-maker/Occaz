@@ -123,6 +123,8 @@ export default function App() {
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="domains" element={<AdminDomains />} />
           <Route path="cities" element={<AdminCities />} />
+          <Route path="payment-settings" element={<AdminPaymentSettings />} />
+          <Route path="payment-submissions" element={<AdminPaymentSubmissions />} />
           <Route path="backup" element={<AdminBackup />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
