@@ -79,6 +79,11 @@ export function HomePage() {
     }
   }, [user, authLoading, navigate]);
 
+  // IMPORTANT: call all hooks BEFORE any conditional return.
+  // React requires hooks to be called in the same order every render.
+  const events = useEvents();
+  const opportunities = useOpportunities();
+
   // Avoid flashing the app chrome before the redirect kicks in.
   if (authLoading || (!user && !isGuest())) {
     return (
@@ -90,9 +95,6 @@ export function HomePage() {
       </div>
     );
   }
-
-  const events = useEvents();
-  const opportunities = useOpportunities();
 
   const today = new Date().toISOString().slice(0, 10);
   const happeningToday = useMemo(
