@@ -79,7 +79,16 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
     }
   }, [open]);
 
-  const ticketType = event.ticketTypes.find((t) => t.id === ticketTypeId) ?? event.ticketTypes[0];
+  // Use the picked ticket type, or fall back to a virtual one synthesised
+  // from the event's flat price (for events without a ticket_types array).
+  const ticketType =
+    event.ticketTypes.find((t) => t.id === ticketTypeId) ??
+    event.ticketTypes[0] ?? {
+      id: "_general",
+      name: "General Admission",
+      price: event.price,
+      currency: event.currency,
+    };
   if (!ticketType) return null;
 
   const subtotal = ticketType.price * qty;
@@ -138,13 +147,14 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
               </button>
             </div>
 
-            {/* Ticket type */}
-            <div className="mt-5">
-              <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
-                Ticket type
-              </div>
-              <div className="mt-2 space-y-2">
-                {event.ticketTypes.map((t) => {
+            {/* Ticket type — only shown when event has multiple ticket types */}
+            {event.ticketTypes && event.ticketTypes.length > 0 && (
+              <div className="mt-5">
+                <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                  Ticket type
+                </div>
+                <div className="mt-2 space-y-2">
+                  {event.ticketTypes.map((t) => {
                   const active = t.id === ticketTypeId;
                   return (
                     <button
@@ -185,6 +195,7 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
                 })}
               </div>
             </div>
+            )}
 
             {/* Quantity */}
             <div className="mt-5">

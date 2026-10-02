@@ -313,13 +313,9 @@ function TicketPanel({
   }
 
   function handleBook() {
-    if (!event.ticketTypes || event.ticketTypes.length === 0) {
-      push(
-        "info",
-        "Registration is opening soon — we'll notify you when tickets are available.",
-      );
-      return;
-    }
+    // Always open the booking flow when registration is open. The booking
+    // modal handles both the multi-ticket-type case (with picker) and the
+    // single-price case (no ticket_types array on the event).
     onBook();
   }
   const ticket = event.ticketTypes.find((t) => t.id === selectedTicket);
