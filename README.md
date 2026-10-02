@@ -1,89 +1,82 @@
 # Occaz
 
-A modern events, ticketing and opportunity discovery platform.
+A polished, premium events, tickets, and opportunities discovery platform with a full admin control panel.
+
+## Stack
+
+- **Frontend:** React 18 + Vite + TypeScript
+- **Routing:** react-router-dom
+- **Styling:** Tailwind CSS with custom design system
+- **Animations:** framer-motion
+- **Backend:** Supabase (Postgres + Auth + Realtime + Storage)
+- **Currency:** PKR (₨) throughout
 
 ## Features
 
-- **User app**: Browse and book events, discover scholarships, internships and other opportunities
-- **Admin panel**: Manage events, opportunities, users, organizers, subscriptions and more
-- **Organizer hub**: Create events, manage tickets, view analytics, custom organizer pages
-- **Authentication**: Email/password + magic link via Supabase Auth
-- **Onboarding wizard**: Welcome → Auth → Interests → Done
-- **Storage**: Supabase Storage with public bucket for event/opportunity images
-- **Realtime**: Live data sync via Supabase Realtime subscriptions
-- **Multi-tier subscriptions**: Free / Pro / Business plans for organizers
+### User-facing app
+- Home, Explore, Events, Opportunities pages
+- Event and Opportunity detail pages
+- Tickets, Saved, Profile, Search
+- Magic-link and email/password auth
+- Onboarding wizard (4 steps)
+- Welcome/landing page for guests
+- Multi-image upload with cover selection
+- Save/bookmark events and opportunities
+- Organizer subscription system (Free / Pro / Business)
 
-## Tech stack
+### Admin control panel (22+ sections)
+- Dashboard with analytics
+- Events, Opportunities, Users, Organizations management
+- Orders & Revenue
+- Featured toggles with Pro plan gating
+- Categories, Tags, Cities & Locations
+- Reviews, Reports, Coupons
+- Notifications, Email templates
+- Homepage editor (drag-and-drop section order, hero background image)
+- Domains & SEO
+- Integrations, Backup & Data
+- Settings, Roles & Permissions
+- Audit log
 
-- **Frontend**: React 18 + TypeScript + Vite
-- **Routing**: React Router
-- **State**: React Context + custom hooks
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
-- **Backend**: Supabase (Postgres + Auth + Storage + Realtime)
-- **Styling**: Custom CSS with dark/light theme
-
-## Getting started
+## Local development
 
 ```bash
-# Install dependencies
 npm install
-
-# Create .env.local
 cp .env.example .env.local
-# Edit .env.local with your Supabase project URL and anon key
-
-# Run dev server
+# Edit .env.local with your Supabase URL and anon key
 npm run dev
+```
 
-# Build for production
+## Build for production
+
+```bash
 npm run build
-
-# Preview production build
-npm run preview
+# Outputs to dist/
 ```
 
-## Environment variables
+## Deploy to Vercel
 
-```
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
+1. Push to GitHub (this repo)
+2. Go to https://vercel.com/new
+3. Import this repository
+4. Vercel auto-detects Vite — no config needed (vercel.json included)
+5. Add environment variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+6. Click Deploy
 
-## Database
+## Database schema
 
-The app expects the following Supabase tables:
-- `profiles` — user profile data
+See `supabase/schema.sql` for the full schema. Key tables:
 - `events` — event listings
-- `opportunities` — scholarship/internship listings
-- `organizations` — organizer profiles
-- `registrations` — ticket bookings
-- `saved_items` — bookmarked events
-- `cities` — city directory
-- `taxonomy_categories` / `taxonomy_subcategories` / `taxonomy_types`
+- `opportunities` — scholarships, fellowships, etc.
+- `profiles` — user profiles
+- `organizations` — organizers
+- `registrations` — event bookings
+- `saved_items` — bookmarks
+- `cities` — location directory
+- `homepage_settings` — homepage config (section order, hero bg)
 
-Storage:
-- `occaz` bucket (public) — event images, opportunity images, org logos
+## Storage
 
-## Project structure
-
-```
-src/
-  components/    # Reusable UI components
-  data/         # Data store + Supabase adapter
-  hooks/         # Custom React hooks
-  lib/           # Supabase client, auth, storage, etc.
-  pages/         # Top-level pages (routed)
-    admin/       # Admin panel pages
-    organizer/   # Organizer dashboard pages
-  App.tsx        # Router + layout
-  main.tsx       # Entry point
-```
-
-## Scripts
-
-- `npm run dev` — start dev server
-- `npm run build` — production build
-- `npm run preview` — preview production build
-- `npm run lint` — run linter
-- `npm run typecheck` — TypeScript check
+The `occaz` bucket holds all uploaded images (event covers, opportunity covers, gallery, organizer logos, hero backgrounds). Public read access.
