@@ -55,6 +55,8 @@ import {
   AdminIntegrations,
   AdminDomains,
   AdminCities,
+  AdminPaymentSettings,
+  AdminPaymentSubmissions,
   AdminBackup,
   AdminRoles,
   AdminHomepage,
