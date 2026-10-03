@@ -199,10 +199,14 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
       // 2. Create registration row (status = pending_verification)
       const regId = "reg-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
       const ticketCode = "OCC-" + regId.slice(-6).toUpperCase();
+      // user.id from Supabase auth is a UUID string — but if it's somehow
+      // a placeholder (e.g. for guest checkouts), we'll store null instead
+      // so the foreign key / type check doesn't fail.
+      const userId = user?.id && /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : null;
       const { error: regErr } = await supabase.from("registrations").insert({
         id: regId,
         event_id: event.id,
-        user_id: user.id,
+        user_id: userId,
         attendee_name: name,
         attendee_email: email,
         attendee_phone: phone || null,
@@ -220,7 +224,7 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
       // 3. Create payment_submissions row
       const { error: subErr } = await supabase.from("payment_submissions").insert({
         registration_id: regId,
-        user_id: user.id,
+        user_id: userId,
         event_id: event.id,
         amount: total,
         currency: event.currency || "PKR",
