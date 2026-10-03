@@ -265,7 +265,7 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.98 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(560px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-[var(--bg-elevated)] p-6 shadow-2xl ring-1 ring-[var(--border-default)]"
+            className="fixed inset-0 z-50 m-auto max-h-[92vh] w-[min(560px,calc(100vw-24px))] overflow-y-auto rounded-3xl bg-[var(--bg-elevated)] p-6 shadow-2xl ring-1 ring-[var(--border-default)]"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -369,7 +369,7 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your name"
-                    className="input pl-10"
+                    className="input pl-10 w-full min-w-0"
                   />
                 </Field>
                 <Field icon={<Mail className="h-4 w-4" />} label="Email">
@@ -378,7 +378,7 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="input pl-10"
+                    className="input pl-10 w-full min-w-0"
                   />
                 </Field>
                 <Field icon={<Phone className="h-4 w-4" />} label="Phone (for WhatsApp)">
@@ -386,7 +386,7 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+92 300 1234567"
-                    className="input pl-10"
+                    className="input pl-10 w-full min-w-0"
                   />
                 </Field>
               </div>
@@ -621,7 +621,7 @@ function ManualPaymentPanel({
           value={txRef}
           onChange={(e) => setTxRef(e.target.value)}
           placeholder="e.g. Txn ID from JazzCash"
-          className="input pl-10"
+          className="input pl-10 w-full min-w-0"
         />
       </Field>
 
@@ -634,7 +634,7 @@ function ManualPaymentPanel({
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           placeholder="Anything the organizer should know"
-          className="input min-h-[60px]"
+          className="input min-h-[60px] w-full min-w-0"
         />
       </label>
     </div>
@@ -667,7 +667,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
+    <label className="block min-w-0">
       <span className="mb-1.5 block text-xs font-medium text-[var(--text-tertiary)]">{label}</span>
       <div className="relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]">
