@@ -203,49 +203,55 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
       // a placeholder (e.g. for guest checkouts), we'll store null instead
       // so the foreign key / type check doesn't fail.
       const userId = user?.id && /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : null;
+
       // Try the canonical column names first; if the table has different
       // column types (e.g. id is uuid not text), fall back gracefully.
+      // We try up to 3 variants to handle schema mismatches:
+      //   1. Full payload with our custom id
+      //   2. Without our custom id (DB generates uuid)
+      //   3. With event_id as text (events table has text ids)
+      const basePayload: any = {
+        attendee_name: name,
+        attendee_email: email,
+        attendee_phone: phone || null,
+        qty: 1,
+        total: subtotal,
+        currency: event.currency || "PKR",
+        status: "pending_verification",
+        ticket_code: ticketCode,
+        user_id: userId,
+        event_id: event.id,
+      };
+      const attempts = [
+        { ...basePayload, id: regId },
+        { ...basePayload, id: undefined },
+        { ...basePayload, id: undefined, event_id: String(event.id) },
+      ];
       let regErr: any = null;
-      try {
-        const res = await supabase.from("registrations").insert({
-          id: regId,
-          event_id: event.id,
-          user_id: userId,
-          attendee_name: name,
-          attendee_email: email,
-          attendee_phone: phone || null,
-          qty: 1,
-          total: subtotal,
-          currency: event.currency || "PKR",
-          status: "pending_verification",
-          ticket_code: ticketCode,
-        });
-        regErr = res.error;
-      } catch (e: any) {
-        regErr = e;
+      for (let i = 0; i < attempts.length; i++) {
+        const attempt = attempts[i];
+        try {
+          // strip undefined keys so they don't get sent
+          const payload = Object.fromEntries(
+            Object.entries(attempt).filter(([_, v]) => v !== undefined),
+          );
+          const res = await supabase.from("registrations").insert(payload);
+          if (!res.error) {
+            regErr = null;
+            break;
+          }
+          regErr = res.error;
+          // If it's not a uuid type error, no point trying again
+          const msg = String(res.error.message || "");
+          if (!msg.includes("invalid input syntax for type uuid")) {
+            break;
+          }
+        } catch (e: any) {
+          regErr = e;
+        }
       }
       if (regErr) {
-        // If id type mismatch, retry without our custom id (let DB generate)
-        const msg = String(regErr.message || regErr);
-        if (msg.includes("invalid input syntax for type uuid") && msg.includes('"reg-')) {
-          const res2 = await supabase.from("registrations").insert({
-            event_id: event.id,
-            user_id: userId,
-            attendee_name: name,
-            attendee_email: email,
-            attendee_phone: phone || null,
-            qty: 1,
-            total: subtotal,
-            currency: event.currency || "PKR",
-            status: "pending_verification",
-            ticket_code: ticketCode,
-          });
-          if (res2.error) throw new Error(`Registration failed: ${res2.error.message}`);
-        } else {
-          throw new Error(`Registration failed: ${msg}`);
-        }
-      } else if (regErr) {
-        throw new Error(`Registration failed: ${regErr.message}`);
+        throw new Error(`Registration failed: ${regErr.message || regErr}`);
       }
       if (regErr) {
         console.warn("Registration insert failed:", regErr);
