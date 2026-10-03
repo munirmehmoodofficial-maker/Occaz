@@ -28,6 +28,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ImageUploader, type ImageItem } from "../../components/admin/ImageUploader";
 import { supabase } from "../../lib/supabase";
+import { useToast } from "../../lib/toast.tsx";
 
 // =====================================================
 // ANALYTICS
@@ -251,122 +252,231 @@ const pendingRegs = [
     submittedDocs: [],
   },
 ];
+/* New AdminRegistrations to be inserted at line 255 in AdminPages.tsx */
+
+interface RegRow {
+  id: string;
+  user_id: string | null;
+  event_id: string | null;
+  opportunity_id: string | null;
+  attendee_name: string | null;
+  attendee_email: string | null;
+  attendee_phone: string | null;
+  qty: number | null;
+  total: number | null;
+  currency: string | null;
+  status: string | null;
+  ticket_code: string | null;
+  created_at: string | null;
+}
 
 export function AdminRegistrations() {
-  const [list, setList] = useState(pendingRegs);
-  const [filter, setFilter] = useState<"all" | "User" | "Organizer">("all");
-  const [viewing, setViewing] = useState<typeof pendingRegs[number] | null>(null);
+  const { push } = useToast();
+  const [rows, setRows] = useState<RegRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"all" | "pending" | "confirmed" | "rejected" | "pending_verification">("all");
+  const [q, setQ] = useState("");
+  const [viewing, setViewing] = useState<RegRow | null>(null);
+  const [events, setEvents] = useState<Record<string, { title: string; date: string }>>({});
+  const [users, setUsers] = useState<Record<string, { email: string; name: string; phone: string }>>({});
 
-  const filtered = filter === "all" ? list : list.filter((r) => r.role === filter);
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("registrations")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      push("err", `Failed to load: ${error.message}`);
+    } else {
+      const list = (data ?? []) as RegRow[];
+      setRows(list);
+      const evIds = [...new Set(list.map((r) => r.event_id).filter(Boolean))] as string[];
+      if (evIds.length > 0) {
+        const { data: evs } = await supabase
+          .from("events")
+          .select("id, title, date")
+          .in("id", evIds);
+        const map: Record<string, { title: string; date: string }> = {};
+        for (const e of evs ?? []) {
+          map[(e as any).id] = { title: (e as any).title, date: (e as any).date };
+        }
+        setEvents(map);
+      }
+      const userIds = [...new Set(list.map((r) => r.user_id).filter(Boolean))] as string[];
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, email, full_name, phone")
+          .in("id", userIds);
+        const map: Record<string, { email: string; name: string; phone: string }> = {};
+        for (const p of profs ?? []) {
+          map[(p as any).id] = {
+            email: (p as any).email || "",
+            name: (p as any).full_name || "",
+            phone: (p as any).phone || "",
+          };
+        }
+        setUsers(map);
+      }
+    }
+    setLoading(false);
+  }
 
-  const approve = (id: string) => {
-    setList((p) => p.filter((r) => r.id !== id));
-    if (viewing?.id === id) setViewing(null);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const counts = {
+    all: rows.length,
+    pending: rows.filter((r) => r.status === "pending").length,
+    confirmed: rows.filter((r) => r.status === "confirmed").length,
+    rejected: rows.filter((r) => r.status === "rejected").length,
+    pending_verification: rows.filter((r) => r.status === "pending_verification").length,
   };
-  const reject = (id: string) => {
-    setList((p) => p.filter((r) => r.id !== id));
-    if (viewing?.id === id) setViewing(null);
-  };
+
+  const filtered = rows
+    .filter((r) => (tab === "all" ? true : r.status === tab))
+    .filter((r) => {
+      const t = q.trim().toLowerCase();
+      if (!t) return true;
+      const ev = r.event_id ? events[r.event_id] : null;
+      return (
+        r.attendee_name?.toLowerCase().includes(t) ||
+        r.attendee_email?.toLowerCase().includes(t) ||
+        r.ticket_code?.toLowerCase().includes(t) ||
+        ev?.title.toLowerCase().includes(t)
+      );
+    });
+
+  async function setStatus(r: RegRow, status: string) {
+    const { error } = await supabase
+      .from("registrations")
+      .update({ status })
+      .eq("id", r.id);
+    if (error) {
+      push("err", `Update failed: ${error.message}`);
+    } else {
+      push("ok", `Marked as ${status}`);
+      load();
+    }
+  }
+
+  async function remove(r: RegRow) {
+    if (!confirm(`Delete registration for "${r.attendee_name}"?`)) return;
+    const { error } = await supabase.from("registrations").delete().eq("id", r.id);
+    if (error) {
+      push("err", `Delete failed: ${error.message}`);
+    } else {
+      push("ok", "Deleted");
+      load();
+    }
+  }
+
+  function statusBadge(s: string | null) {
+    if (s === "confirmed") return <Badge tone="emerald">✓ Confirmed</Badge>;
+    if (s === "pending_verification") return <Badge tone="amber">⏳ Verifying</Badge>;
+    if (s === "rejected") return <Badge tone="rose">✗ Rejected</Badge>;
+    if (s === "pending") return <Badge tone="sky">Pending</Badge>;
+    return <Badge tone="zinc">{s ?? "—"}</Badge>;
+  }
+
+  function fmtDate(iso: string | null) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleString();
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-            Registrations
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-            {list.length} pending approval
-          </p>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          Registrations
+        </h1>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+          All event registrations — confirm pending ones, see who's coming
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {([
+          ["all", "All"],
+          ["pending", "Pending"],
+          ["pending_verification", "Verifying"],
+          ["confirmed", "Confirmed"],
+          ["rejected", "Rejected"],
+        ] as const).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k as any)}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+              tab === k
+                ? "bg-accent-500/15 text-accent-400 ring-1 ring-accent-500/30"
+                : "text-[var(--text-tertiary)] hover:bg-[var(--bg-card)]"
+            }`}
+          >
+            {label}
+            <span className="ml-2 text-xs opacity-70">{counts[k]}</span>
+          </button>
+        ))}
+        <div className="ml-auto flex items-center gap-3 rounded-xl bg-[var(--bg-card)] p-3 ring-1 ring-[var(--border-subtle)] min-w-0 flex-1 max-w-sm">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search user, event, ticket code..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-tertiary)]"
+          />
         </div>
       </div>
 
-      <div className="flex gap-2 rounded-full bg-[var(--bg-card)] p-1 ring-1 ring-[var(--border-subtle)] w-fit">
-        {(["all", "User", "Organizer"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={clsx(
-              "rounded-full px-4 py-1.5 text-sm font-medium transition",
-              filter === f
-                ? "bg-white text-black"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-            )}
-          >
-            {f === "all" ? "All" : f + "s"}
-          </button>
-        ))}
-      </div>
-
       <div className="rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
-        {filtered.length === 0 ? (
-          <div className="p-16 text-center">
-            <Inbox className="mx-auto h-10 w-10 text-[var(--text-tertiary)]" />
-            <p className="mt-4 text-sm text-[var(--text-tertiary)]">
-              No pending registrations. You're all caught up.
-            </p>
+        {loading ? (
+          <div className="p-12 text-center text-sm text-[var(--text-tertiary)]">
+            Loading registrations...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 p-12 text-sm text-[var(--text-tertiary)]">
+            <Inbox className="h-8 w-8 opacity-30" />
+            {rows.length === 0
+              ? "No registrations yet. Users will appear here when they book a ticket."
+              : "No registrations match this filter."}
           </div>
         ) : (
           <div className="divide-y divide-[var(--border-subtle)]">
-            {filtered.map((r, i) => (
-              <motion.div
-                key={r.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-accent-500 to-pink-500 text-sm font-semibold text-white">
-                    {r.name.split(" ").map((n) => n[0]).join("")}
+            {filtered.map((r) => {
+              const ev = r.event_id ? events[r.event_id] : null;
+              const u = r.user_id ? users[r.user_id] : null;
+              return (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-4 p-4 transition hover:bg-[var(--bg-card-hover)] cursor-pointer"
+                  onClick={() => setViewing(r)}
+                >
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-accent-500 to-pink-500 text-sm font-semibold text-white">
+                    {(r.attendee_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
-                      {r.name}
-                      <Badge tone={r.role === "Organizer" ? "accent" : "blue"}>
-                        {r.role}
-                      </Badge>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                        {r.attendee_name || "(no name)"}
+                      </div>
+                      {statusBadge(r.status)}
                     </div>
-                    <div className="text-xs text-[var(--text-tertiary)]">
-                      {r.email}
-                      {r.org && ` · ${r.org}`}
+                    <div className="mt-0.5 truncate text-xs text-[var(--text-tertiary)]">
+                      {ev?.title || r.event_id || "—"}
+                      {r.total ? ` · Rs ${Number(r.total).toLocaleString()}` : ""}
+                      {r.ticket_code ? ` · 🎫 ${r.ticket_code}` : ""}
                       {" · "}
-                      {r.when}
+                      {fmtDate(r.created_at)}
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 sm:shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={<Eye className="h-3.5 w-3.5" />}
-                    onClick={() => setViewing(r)}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    size="sm"
-                    leftIcon={<Check className="h-3.5 w-3.5" />}
-                    onClick={() => approve(r.id)}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    leftIcon={<X className="h-3.5 w-3.5" />}
-                    onClick={() => reject(r.id)}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Side drawer with full registration details */}
       <AnimatePresence>
         {viewing && (
           <>
@@ -387,16 +497,14 @@ export function AdminRegistrations() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-accent-500 to-pink-500 text-base font-semibold text-white">
-                    {viewing.name.split(" ").map((n) => n[0]).join("")}
+                    {(viewing.attendee_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold">{viewing.name}</h2>
+                    <h2 className="text-lg font-semibold">{viewing.attendee_name}</h2>
                     <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
-                      <Badge tone={viewing.role === "Organizer" ? "accent" : "blue"}>
-                        {viewing.role}
-                      </Badge>
+                      {statusBadge(viewing.status)}
                       <span>·</span>
-                      <span>Applied {viewing.when}</span>
+                      <span>{fmtDate(viewing.created_at)}</span>
                     </div>
                   </div>
                 </div>
@@ -410,77 +518,88 @@ export function AdminRegistrations() {
               </div>
 
               <div className="mt-6 space-y-4">
-                <DrawerRow label="Email">
-                  <a
-                    href={`mailto:${viewing.email}`}
-                    className="text-accent-400 hover:underline"
-                  >
-                    {viewing.email}
-                  </a>
-                </DrawerRow>
-                {viewing.org && (
-                  <DrawerRow label="Organization">
-                    <span className="font-medium">{viewing.org}</span>
-                  </DrawerRow>
-                )}
-                {viewing.location && (
-                  <DrawerRow label="Location">
-                    <span>{viewing.location}</span>
-                  </DrawerRow>
-                )}
-                {viewing.requestedPlan && (
-                  <DrawerRow label="Requested plan">
-                    <Badge tone="amber">
-                      <Sparkles className="mr-1 h-2.5 w-2.5" /> {viewing.requestedPlan}
-                    </Badge>
-                  </DrawerRow>
-                )}
-                {viewing.message && (
-                  <DrawerRow label="Message from applicant">
-                    <p className="rounded-lg bg-[var(--bg-card)] p-3 text-sm text-[var(--text-secondary)]">
-                      {viewing.message}
-                    </p>
-                  </DrawerRow>
-                )}
-                {viewing.submittedDocs.length > 0 && (
-                  <DrawerRow label="Documents submitted">
-                    <ul className="space-y-1.5">
-                      {viewing.submittedDocs.map((d) => (
-                        <li
-                          key={d}
-                          className="flex items-center gap-2 rounded-lg bg-[var(--bg-card)] px-3 py-2 text-sm"
-                        >
-                          <FileText className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                          {d}
-                          <a
-                            href="#"
-                            onClick={(e) => e.preventDefault()}
-                            className="ml-auto text-xs text-accent-400 hover:underline"
-                          >
-                            View
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </DrawerRow>
-                )}
+                <RegRow label="Email">
+                  {viewing.attendee_email ? (
+                    <a href={`mailto:${viewing.attendee_email}`} className="text-accent-400 hover:underline">
+                      {viewing.attendee_email}
+                    </a>
+                  ) : (
+                    <span className="text-[var(--text-tertiary)]">—</span>
+                  )}
+                </RegRow>
+                <RegRow label="Phone">
+                  <span>{viewing.attendee_phone || "—"}</span>
+                </RegRow>
+                <RegRow label="Event">
+                  {viewing.event_id && events[viewing.event_id] ? (
+                    <div>
+                      <div className="font-medium">{events[viewing.event_id].title}</div>
+                      <div className="text-xs text-[var(--text-tertiary)]">{events[viewing.event_id].date}</div>
+                    </div>
+                  ) : (
+                    <span className="font-mono text-xs">{viewing.event_id || "—"}</span>
+                  )}
+                </RegRow>
+                <RegRow label="Quantity">
+                  <span>{viewing.qty ?? 1}</span>
+                </RegRow>
+                <RegRow label="Total">
+                  <span className="font-semibold">
+                    Rs {Number(viewing.total ?? 0).toLocaleString()}
+                    {viewing.currency && viewing.currency !== "PKR" ? ` ${viewing.currency}` : ""}
+                  </span>
+                </RegRow>
+                <RegRow label="Ticket code">
+                  <span className="font-mono text-sm">{viewing.ticket_code || "—"}</span>
+                </RegRow>
+                <RegRow label="Auth user">
+                  {viewing.user_id && users[viewing.user_id] ? (
+                    <div>
+                      <div className="text-sm">{users[viewing.user_id].name || users[viewing.user_id].email}</div>
+                      <div className="text-xs text-[var(--text-tertiary)]">{users[viewing.user_id].phone || "—"}</div>
+                    </div>
+                  ) : (
+                    <span className="font-mono text-xs">{viewing.user_id || "Guest"}</span>
+                  )}
+                </RegRow>
               </div>
 
-              <div className="mt-8 flex gap-2">
+              <div className="mt-8 flex flex-col gap-2">
+                {viewing.status !== "confirmed" && (
+                  <Button
+                    fullWidth
+                    leftIcon={<Check className="h-3.5 w-3.5" />}
+                    onClick={() => {
+                      setStatus(viewing, "confirmed");
+                      setViewing(null);
+                    }}
+                  >
+                    Mark as confirmed
+                  </Button>
+                )}
+                {viewing.status !== "rejected" && (
+                  <Button
+                    fullWidth
+                    variant="outline"
+                    leftIcon={<X className="h-3.5 w-3.5" />}
+                    onClick={() => {
+                      setStatus(viewing, "rejected");
+                      setViewing(null);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                )}
                 <Button
                   fullWidth
-                  leftIcon={<Check className="h-3.5 w-3.5" />}
-                  onClick={() => approve(viewing.id)}
-                >
-                  Approve
-                </Button>
-                <Button
                   variant="danger"
-                  fullWidth
-                  leftIcon={<X className="h-3.5 w-3.5" />}
-                  onClick={() => reject(viewing.id)}
+                  leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                  onClick={() => {
+                    remove(viewing);
+                    setViewing(null);
+                  }}
                 >
-                  Reject
+                  Delete record
                 </Button>
               </div>
             </motion.aside>
@@ -491,13 +610,7 @@ export function AdminRegistrations() {
   );
 }
 
-function DrawerRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function RegRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
@@ -507,6 +620,8 @@ function DrawerRow({
     </div>
   );
 }
+
+
 
 // =====================================================
 // REVIEWS

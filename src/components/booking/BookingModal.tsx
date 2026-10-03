@@ -197,16 +197,24 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
       setUploading(false);
 
       // 2. Create registration row (status = pending_verification)
-      const regId = crypto.randomUUID();
+      const regId = "reg-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+      const ticketCode = "OCC-" + regId.slice(-6).toUpperCase();
       const { error: regErr } = await supabase.from("registrations").insert({
         id: regId,
         event_id: event.id,
         user_id: user.id,
+        attendee_name: name,
+        attendee_email: email,
+        attendee_phone: phone || null,
+        qty: 1,
+        total: subtotal,
+        currency: event.currency || "PKR",
         status: "pending_verification",
+        ticket_code: ticketCode,
       });
       if (regErr) {
-        // If no event_id, try opportunity; or fall back to just creating the submission
         console.warn("Registration insert failed:", regErr);
+        throw new Error(`Failed to create registration: ${regErr.message}`);
       }
 
       // 3. Create payment_submissions row

@@ -34,6 +34,8 @@ interface Submission {
 
 interface Joined {
   user_email?: string;
+  user_name?: string;
+  user_phone?: string;
   event_title?: string;
   opp_title?: string;
 }
@@ -77,13 +79,18 @@ export function AdminPaymentSubmissions() {
       if (userIds.length > 0) {
         const { data: profs } = await supabase
           .from("profiles")
-          .select("id, email")
+          .select("id, email, full_name, phone")
           .in("id", userIds);
         for (const p of profs ?? []) {
           // Also associate with the first submission that uses this user_id
           for (const r of list) {
             if (r.user_id === p.id) {
-              j[r.id] = { ...(j[r.id] || {}), user_email: (p as any).email };
+              j[r.id] = {
+                ...(j[r.id] || {}),
+                user_email: (p as any).email,
+                user_name: (p as any).full_name,
+                user_phone: (p as any).phone,
+              };
             }
           }
         }

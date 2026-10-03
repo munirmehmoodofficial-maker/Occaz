@@ -70,25 +70,26 @@ export function CheckoutPage() {
     setProcessing(true);
 
     // Persist a single row per booking to `registrations`.
-    // The table only has (id, event_id, user_id, status) — we
-    // embed attendee info into the `status` field as JSON-ish text
-    // OR rely on the eventual schema extension. For now we just
-    // store the bare minimum and put attendee details into a
-    // `meta` JSONB if it exists, otherwise skip.
     const ticketIds: string[] = [];
     for (let i = 0; i < draft.qty; i++) {
       const id =
-        "t-" + Date.now().toString(36) + "-" + i.toString(36) + "-" +
+        "reg-" + Date.now().toString(36) + "-" + i.toString(36) + "-" +
         Math.random().toString(36).slice(2, 6);
-      ticketIds.push(id);
+      const ticketCode = "OCC-" + id.slice(-6).toUpperCase();
+      ticketIds.push(ticketCode);
+      const perTicket = Math.round((draft.total || 0) / draft.qty);
       const { error } = await supabase.from("registrations").insert({
         id,
         user_id: user.id,
         event_id: draft.event.id,
         attendee_name: draft.attendees[0].name,
         attendee_email: draft.attendees[0].email,
-        attendee_phone: draft.attendees[0].phone,
+        attendee_phone: draft.attendees[0].phone || null,
+        qty: 1,
+        total: perTicket,
+        currency: draft.event.currency || "PKR",
         status: "confirmed",
+        ticket_code: ticketCode,
       });
       if (error) {
         setErr(`Failed to save ticket: ${error.message}`);
