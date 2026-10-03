@@ -203,19 +203,50 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
       // a placeholder (e.g. for guest checkouts), we'll store null instead
       // so the foreign key / type check doesn't fail.
       const userId = user?.id && /^[0-9a-f-]{36}$/i.test(user.id) ? user.id : null;
-      const { error: regErr } = await supabase.from("registrations").insert({
-        id: regId,
-        event_id: event.id,
-        user_id: userId,
-        attendee_name: name,
-        attendee_email: email,
-        attendee_phone: phone || null,
-        qty: 1,
-        total: subtotal,
-        currency: event.currency || "PKR",
-        status: "pending_verification",
-        ticket_code: ticketCode,
-      });
+      // Try the canonical column names first; if the table has different
+      // column types (e.g. id is uuid not text), fall back gracefully.
+      let regErr: any = null;
+      try {
+        const res = await supabase.from("registrations").insert({
+          id: regId,
+          event_id: event.id,
+          user_id: userId,
+          attendee_name: name,
+          attendee_email: email,
+          attendee_phone: phone || null,
+          qty: 1,
+          total: subtotal,
+          currency: event.currency || "PKR",
+          status: "pending_verification",
+          ticket_code: ticketCode,
+        });
+        regErr = res.error;
+      } catch (e: any) {
+        regErr = e;
+      }
+      if (regErr) {
+        // If id type mismatch, retry without our custom id (let DB generate)
+        const msg = String(regErr.message || regErr);
+        if (msg.includes("invalid input syntax for type uuid") && msg.includes('"reg-')) {
+          const res2 = await supabase.from("registrations").insert({
+            event_id: event.id,
+            user_id: userId,
+            attendee_name: name,
+            attendee_email: email,
+            attendee_phone: phone || null,
+            qty: 1,
+            total: subtotal,
+            currency: event.currency || "PKR",
+            status: "pending_verification",
+            ticket_code: ticketCode,
+          });
+          if (res2.error) throw new Error(`Registration failed: ${res2.error.message}`);
+        } else {
+          throw new Error(`Registration failed: ${msg}`);
+        }
+      } else if (regErr) {
+        throw new Error(`Registration failed: ${regErr.message}`);
+      }
       if (regErr) {
         console.warn("Registration insert failed:", regErr);
         throw new Error(`Failed to create registration: ${regErr.message}`);
