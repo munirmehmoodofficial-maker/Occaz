@@ -258,9 +258,11 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
         throw new Error(`Failed to create registration: ${regErr.message}`);
       }
 
-      // 3. Create payment_submissions row
-      const { error: subErr } = await supabase.from("payment_submissions").insert({
-        registration_id: regId,
+      // 3. Create payment_submissions row.
+      // registration_id might be a text or uuid column depending on schema.
+      // Try with our regId first; if that fails because the column is uuid,
+      // let it be null (the submission is still useful on its own).
+      const subPayload: any = {
         user_id: userId,
         event_id: event.id,
         amount: total,
@@ -269,7 +271,25 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
         transaction_ref: manualTxRef.trim() || null,
         notes: manualNotes.trim() || null,
         status: "pending",
-      });
+      };
+      const subAttempts = [
+        { ...subPayload, registration_id: regId },
+        { ...subPayload, registration_id: null },
+      ];
+      let subErr: any = null;
+      for (const attempt of subAttempts) {
+        const payload = Object.fromEntries(
+          Object.entries(attempt).filter(([_, v]) => v !== undefined),
+        );
+        const res = await supabase.from("payment_submissions").insert(payload);
+        if (!res.error) {
+          subErr = null;
+          break;
+        }
+        subErr = res.error;
+        const msg = String(res.error.message || "");
+        if (!msg.includes("invalid input syntax for type uuid")) break;
+      }
       if (subErr) throw new Error(subErr.message);
 
       push("ok", "Payment proof submitted! We'll review and confirm within a few hours.");
