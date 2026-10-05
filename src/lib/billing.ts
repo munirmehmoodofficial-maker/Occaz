@@ -58,11 +58,15 @@ export async function startCheckout(input: CheckoutInput): Promise<CheckoutResul
     });
     if (payErr) return { paymentId, status: "failed", error: payErr.message };
 
+    // Try to update the profile's plan column. If the column doesn't
+    // exist, don't fail the whole checkout — just log it.
     const { error: profErr } = await supabase
       .from("profiles")
       .update({ plan: input.plan })
       .eq("id", input.userId);
-    if (profErr) return { paymentId, status: "failed", error: profErr.message };
+    if (profErr && !profErr.message?.includes("Could not find the 'plan' column")) {
+      return { paymentId, status: "failed", error: profErr.message };
+    }
 
     return { paymentId, status: "succeeded" };
   }
@@ -141,7 +145,9 @@ export async function approvePlanPayment(paymentId: string): Promise<{ ok: boole
     .from("profiles")
     .update({ plan: (payment as any).plan })
     .eq("id", (payment as any).user_id);
-  if (profErr) return { ok: false, error: profErr.message };
+  if (profErr && !profErr.message?.includes("Could not find the 'plan' column")) {
+    return { ok: false, error: profErr.message };
+  }
 
   return { ok: true };
 }

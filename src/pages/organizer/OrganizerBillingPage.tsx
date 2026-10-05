@@ -52,10 +52,20 @@ export function OrganizerBillingPage() {
   const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const [coupon, setCoupon] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
-  const [couponMsg, setCouponMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const [couponLoading, setCouponLoading] = useState(false);
+  // Coupon state — per plan (Starter doesn't get coupons, only Pro & Business)
+  const [couponInput, setCouponInput] = useState<Record<"pro" | "business", string>>({
+    pro: "",
+    business: "",
+  });
+  const [appliedCoupon, setAppliedCoupon] = useState<Record<"pro" | "business", { code: string; discount: number } | null>>({
+    pro: null,
+    business: null,
+  });
+  const [couponMsg, setCouponMsg] = useState<Record<"pro" | "business", { kind: "ok" | "err"; text: string } | null>>({
+    pro: null,
+    business: null,
+  });
+  const [couponLoading, setCouponLoading] = useState<"pro" | "business" | null>(null);
 
   // Manual payment modal state
   const [manualFor, setManualFor] = useState<PlanId | null>(null);
@@ -127,8 +137,9 @@ export function OrganizerBillingPage() {
     setMsg(null);
     setBusyPlan(target);
     const basePrice = interval === "yearly" ? PLANS.find((p) => p.id === target)!.yearlyPKR : PLANS.find((p) => p.id === target)!.monthlyPKR;
-    const finalPrice = appliedCoupon
-      ? Math.max(0, basePrice - appliedCoupon.discount)
+    const targetCoupon = target === "starter" ? null : appliedCoupon[target as "pro" | "business"];
+    const finalPrice = targetCoupon
+      ? Math.max(0, basePrice - targetCoupon.discount)
       : basePrice;
     const res = await startCheckout({
       plan: target,
@@ -136,7 +147,7 @@ export function OrganizerBillingPage() {
       method: "card",
       userId: user.id,
       amount: finalPrice,
-      coupon: appliedCoupon?.code,
+      coupon: targetCoupon?.code,
     });
     setBusyPlan(null);
     if (res.error) {
@@ -166,8 +177,9 @@ export function OrganizerBillingPage() {
       const basePrice = interval === "yearly"
         ? PLANS.find((p) => p.id === manualFor)!.yearlyPKR
         : PLANS.find((p) => p.id === manualFor)!.monthlyPKR;
-      const finalPrice = appliedCoupon
-        ? Math.max(0, basePrice - appliedCoupon.discount)
+      const targetCoupon = manualFor === "starter" ? null : appliedCoupon[manualFor as "pro" | "business"];
+      const finalPrice = targetCoupon
+        ? Math.max(0, basePrice - targetCoupon.discount)
         : basePrice;
       const res = await startCheckout({
         plan: manualFor,
@@ -175,7 +187,7 @@ export function OrganizerBillingPage() {
         method: "manual",
         userId: user.id,
         amount: finalPrice,
-        coupon: appliedCoupon?.code,
+        coupon: targetCoupon?.code,
         screenshotFile,
         transactionRef: manualTxRef,
         notes: manualNotes,
@@ -195,25 +207,36 @@ export function OrganizerBillingPage() {
     }
   }
 
-  async function applyCoupon() {
-    if (!coupon.trim()) return;
-    setCouponMsg(null);
-    setCouponLoading(true);
+  async function applyCoupon(planId: "pro" | "business") {
+    const code = couponInput[planId].trim();
+    if (!code) return;
+    setCouponMsg((prev) => ({ ...prev, [planId]: null }));
+    setCouponLoading(planId);
     const basePrice = interval === "yearly"
-      ? PLANS.find((p) => p.id === "pro")!.yearlyPKR
-      : PLANS.find((p) => p.id === "pro")!.monthlyPKR;
-    const res = await validateCoupon(coupon, "pro", basePrice);
-    setCouponLoading(false);
+      ? PLANS.find((p) => p.id === planId)!.yearlyPKR
+      : PLANS.find((p) => p.id === planId)!.monthlyPKR;
+    const res = await validateCoupon(code, planId, basePrice);
+    setCouponLoading(null);
     if (!res.ok) {
-      setCouponMsg({ kind: "err", text: res.error ?? "Invalid code" });
-      setAppliedCoupon(null);
+      setCouponMsg((prev) => ({ ...prev, [planId]: { kind: "err", text: res.error ?? "Invalid code" } }));
+      setAppliedCoupon((prev) => ({ ...prev, [planId]: null }));
       return;
     }
-    setAppliedCoupon({ code: coupon.toUpperCase(), discount: res.discount });
-    setCouponMsg({
-      kind: "ok",
-      text: `Saved ₨ ${res.discount.toLocaleString()} on Pro. Will apply at checkout.`,
-    });
+    const planName = planId === "business" ? "Business" : "Pro";
+    setAppliedCoupon((prev) => ({ ...prev, [planId]: { code: code.toUpperCase(), discount: res.discount } }));
+    setCouponMsg((prev) => ({
+      ...prev,
+      [planId]: {
+        kind: "ok",
+        text: `Saved ₨ ${res.discount.toLocaleString()} on ${planName}. Will apply at checkout.`,
+      },
+    }));
+  }
+
+  function clearCoupon(planId: "pro" | "business") {
+    setAppliedCoupon((prev) => ({ ...prev, [planId]: null }));
+    setCouponInput((prev) => ({ ...prev, [planId]: "" }));
+    setCouponMsg((prev) => ({ ...prev, [planId]: null }));
   }
 
   async function onCancel() {
@@ -286,64 +309,6 @@ export function OrganizerBillingPage() {
           </div>
         )}
 
-        {/* Coupon code (Business plan perk) */}
-        <div className="mb-6 rounded-2xl border border-dashed border-violet-500/30 bg-violet-500/5 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Tag className="h-4 w-4 text-violet-400" />
-              <div>
-                <div className="text-sm font-medium">Have a coupon?</div>
-                <div className="text-xs text-[var(--text-tertiary)]">
-                  Issued by Occaz Business organizers — apply at checkout
-                </div>
-              </div>
-            </div>
-            {appliedCoupon ? (
-              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-200">
-                <Tag className="h-3.5 w-3.5" />
-                <span className="font-mono">{appliedCoupon.code}</span>
-                <span>− ₨ {appliedCoupon.discount.toLocaleString()}</span>
-                <button
-                  onClick={() => {
-                    setAppliedCoupon(null);
-                    setCoupon("");
-                    setCouponMsg(null);
-                  }}
-                  className="ml-1 rounded p-0.5 hover:bg-emerald-500/20"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <input
-                  value={coupon}
-                  onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                  placeholder="OCCAZ20"
-                  className="input w-32 font-mono text-sm uppercase"
-                />
-                <Button
-                  size="sm"
-                  onClick={applyCoupon}
-                  disabled={couponLoading || !coupon.trim()}
-                >
-                  {couponLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Apply"}
-                </Button>
-              </div>
-            )}
-          </div>
-          {couponMsg && (
-            <p
-              className={clsx(
-                "mt-2 text-xs",
-                couponMsg.kind === "ok" ? "text-emerald-300" : "text-red-300",
-              )}
-            >
-              {couponMsg.text}
-            </p>
-          )}
-        </div>
-
         {/* Current plan summary */}
         {subscription && (
           <div className="mb-8 grid gap-3 rounded-2xl border border-accent-500/30 bg-gradient-to-br from-accent-500/10 to-pink-500/5 p-6 sm:grid-cols-4">
@@ -380,10 +345,12 @@ export function OrganizerBillingPage() {
         )}
 
         {/* Plans */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-3">
           {PLANS.map((p) => {
             const price = interval === "yearly" ? p.yearlyPKR : p.monthlyPKR;
             const isCurrent = plan.id === p.id && subscription?.status === "active";
+            const cardCoupon = p.id === "starter" ? null : appliedCoupon[p.id as "pro" | "business"];
+            const finalPrice = cardCoupon ? Math.max(0, price - cardCoupon.discount) : price;
             return (
               <motion.div
                 key={p.id}
@@ -410,11 +377,16 @@ export function OrganizerBillingPage() {
 
                 <div className="mt-5 flex items-baseline gap-1">
                   <span className="text-3xl font-bold">
-                    {formatPrice(price, "PKR")}
+                    {formatPrice(finalPrice, "PKR")}
                   </span>
                   <span className="text-sm text-[var(--text-tertiary)]">
                     / {interval.replace("ly", "")}
                   </span>
+                  {cardCoupon && (
+                    <span className="ml-1 text-sm text-[var(--text-tertiary)] line-through">
+                      {formatPrice(price, "PKR")}
+                    </span>
+                  )}
                 </div>
 
                 <ul className="mt-5 flex-1 space-y-2 text-sm">
@@ -456,6 +428,61 @@ export function OrganizerBillingPage() {
                         Pay manually
                       </Button>
                     </>
+                  )}
+
+                  {/* Per-plan coupon input — Pro and Business only */}
+                  {(p.id === "pro" || p.id === "business") && !isCurrent && (
+                    <div className="mt-3 rounded-xl border border-dashed border-violet-500/30 bg-violet-500/5 p-3">
+                      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-violet-300">
+                        <Tag className="h-3.5 w-3.5" />
+                        Coupon code
+                      </div>
+                      {appliedCoupon[p.id] ? (
+                        <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-mono truncate">{appliedCoupon[p.id]!.code}</span>
+                            <span className="shrink-0">− ₨ {appliedCoupon[p.id]!.discount.toLocaleString()}</span>
+                          </div>
+                          <button
+                            onClick={() => clearCoupon(p.id)}
+                            className="shrink-0 rounded p-0.5 hover:bg-emerald-500/20"
+                            aria-label="Remove coupon"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-1.5">
+                            <input
+                              value={couponInput[p.id]}
+                              onChange={(e) => setCouponInput((prev) => ({ ...prev, [p.id]: e.target.value.toUpperCase() }))}
+                              placeholder={p.id === "business" ? "OCCAZ30" : "OCCAZ20"}
+                              className="input min-w-0 flex-1 font-mono text-xs uppercase"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => applyCoupon(p.id)}
+                              disabled={couponLoading === p.id || !couponInput[p.id].trim()}
+                            >
+                              {couponLoading === p.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                "Apply"
+                              )}
+                            </Button>
+                          </div>
+                      )}
+                      {couponMsg[p.id] && (
+                        <p
+                          className={clsx(
+                            "mt-1.5 text-[11px]",
+                            couponMsg[p.id]!.kind === "ok" ? "text-emerald-300" : "text-red-300",
+                          )}
+                        >
+                          {couponMsg[p.id]!.text}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -583,10 +610,10 @@ export function OrganizerBillingPage() {
                         "PKR",
                       )}
                     </div>
-                    {appliedCoupon && (
+                    {manualFor !== "starter" && appliedCoupon[manualFor as "pro" | "business"] && (
                       <div className="mt-1 text-xs text-emerald-400">
                         After coupon: {formatPrice(
-                          Math.max(0, (interval === "yearly" ? PLANS.find((p) => p.id === manualFor)!.yearlyPKR : PLANS.find((p) => p.id === manualFor)!.monthlyPKR) - appliedCoupon.discount),
+                          Math.max(0, (interval === "yearly" ? PLANS.find((p) => p.id === manualFor)!.yearlyPKR : PLANS.find((p) => p.id === manualFor)!.monthlyPKR) - appliedCoupon[manualFor as "pro" | "business"]!.discount),
                           "PKR",
                         )}
                       </div>
