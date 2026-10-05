@@ -212,20 +212,22 @@ export function Sidebar({
       {/* Upgrade card */}
       {!collapsed && (
         <div className="mx-3 mb-3 overflow-hidden rounded-xl bg-gradient-to-br from-accent-500/20 via-pink-500/15 to-cyan-500/15 p-4 ring-1 ring-[var(--border-default)]">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-accent-400" />
-            <span className="text-sm font-semibold">List on Occaz</span>
+          <div className="flex items-start gap-2">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
+            <span className="text-sm font-semibold leading-tight">
+              Become an Organizer at Occaz. List on Occaz.
+            </span>
           </div>
           <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
             Reach thousands of engaged attendees.
           </p>
           <NavLink
-            to="/admin"
+            to="/organizer/billing"
             onClick={onClose}
             className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-white/90"
           >
             <TrendingUp className="h-3.5 w-3.5" />
-            Open admin
+            Start listing
           </NavLink>
         </div>
       )}
