@@ -139,6 +139,9 @@ export function AdminCoupons() {
       return;
     }
     const payload: any = {
+      id: editing
+        ? editing.id
+        : "cpn-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
       code,
       plan: form.plan,
       kind: form.kind,
