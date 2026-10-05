@@ -124,7 +124,8 @@ export async function cancelSubscription(_subscriptionId: string): Promise<{ ok:
 }
 
 /**
- * Admin: approve a pending plan payment. Activates the user's plan.
+ * Admin: approve a pending plan payment. Activates the user's plan AND
+ * creates an organization record so they show in the directory.
  */
 export async function approvePlanPayment(paymentId: string): Promise<{ ok: boolean; error?: string }> {
   const { data: payment, error: payErr } = await supabase
@@ -141,12 +142,52 @@ export async function approvePlanPayment(paymentId: string): Promise<{ ok: boole
     .eq("id", paymentId);
   if (upErr) return { ok: false, error: upErr.message };
 
+  // Try to set profiles.plan (silently skip if column is missing).
   const { error: profErr } = await supabase
     .from("profiles")
     .update({ plan: (payment as any).plan })
     .eq("id", (payment as any).user_id);
   if (profErr && !profErr.message?.includes("Could not find the 'plan' column")) {
     return { ok: false, error: profErr.message };
+  }
+
+  // Try to upsert into the organizations table so the organizer shows in the
+  // directory. If the table doesn't exist, silently skip.
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name, email")
+      .eq("id", (payment as any).user_id)
+      .maybeSingle();
+    const orgName =
+      (profile as any)?.name?.trim() ||
+      (profile as any)?.email?.split("@")[0] ||
+      "Organizer";
+    const { data: existingOrg } = await supabase
+      .from("organizations")
+      .select("id")
+      .eq("owner_id", (payment as any).user_id)
+      .maybeSingle();
+    if (existingOrg?.id) {
+      await supabase
+        .from("organizations")
+        .update({ plan: (payment as any).plan, is_published: true })
+        .eq("id", existingOrg.id);
+    } else {
+      await supabase.from("organizations").insert({
+        owner_id: (payment as any).user_id,
+        created_by: (payment as any).user_id,
+        name: orgName,
+        slug:
+          "org-" +
+          ((payment as any).user_id as string).slice(0, 8).toLowerCase(),
+        plan: (payment as any).plan,
+        is_published: true,
+        verification_status: "unverified",
+      });
+    }
+  } catch (e) {
+    // ignore — table may not exist
   }
 
   return { ok: true };
