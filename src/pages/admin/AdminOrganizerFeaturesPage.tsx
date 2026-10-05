@@ -279,7 +279,8 @@ export function AdminOrganizerFeaturesPage() {
               : "No organizers match your search."}
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/40 text-left text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
               <tr>
                 <th className="px-5 py-3 font-medium">Organizer</th>
@@ -375,6 +376,7 @@ export function AdminOrganizerFeaturesPage() {
               })}
             </tbody>
           </table>
+        </div>
         )}
       </section>
 

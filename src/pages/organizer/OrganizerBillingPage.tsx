@@ -496,41 +496,77 @@ export function OrganizerBillingPage() {
           <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             Feature comparison across all plans
           </p>
-          <div className="mt-5 overflow-x-auto rounded-2xl border border-[var(--border-subtle)]">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--bg-elevated)] text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
-                <tr>
-                  <th className="px-4 py-3 text-left">Feature</th>
+
+          {(() => {
+            const rows = [
+              { label: "Events per month", values: PLANS.map((p) => p.flags.maxEventsPerMonth.toString()) },
+              { label: "Featured placement", values: PLANS.map((p) => (p.flags.canFeature ? "✓" : "—")) },
+              { label: "Promotional tools", values: PLANS.map((p) => (p.flags.hasPromotionalTools ? "✓" : "—")) },
+              { label: "Audience insights", values: PLANS.map((p) => (p.flags.hasAudienceInsights ? "✓" : "—")) },
+              { label: "Profile customization", values: PLANS.map((p) => (p.flags.canCustomizeProfile ? "✓" : "—")) },
+              { label: "Advanced analytics", values: PLANS.map((p) => (p.flags.hasAdvancedAnalytics ? "✓" : "—")) },
+              { label: "Multiple organizers", values: PLANS.map((p) => (p.flags.hasMultipleOrganizers ? "✓" : "—")) },
+              { label: "Campaign tools", values: PLANS.map((p) => (p.flags.hasCampaignTools ? "✓" : "—")) },
+              { label: "Priority promotion", values: PLANS.map((p) => (p.flags.hasPriorityPromotion ? "✓" : "—")) },
+              { label: "Dedicated support", values: PLANS.map((p) => (p.flags.hasDedicatedSupport ? "✓" : "—")) },
+            ];
+            return (
+              <>
+                {/* Mobile: per-plan cards stacked */}
+                <div className="mt-5 grid gap-3 md:hidden">
                   {PLANS.map((p) => (
-                    <th key={p.id} className="px-4 py-3 text-center">{p.name}</th>
+                    <div
+                      key={p.id}
+                      className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4"
+                    >
+                      <div className="mb-3 flex items-center gap-2">
+                        {p.id === "starter" && <Sparkles className="h-4 w-4 text-[var(--text-tertiary)]" />}
+                        {p.id === "pro" && <Crown className="h-4 w-4 text-accent-400" />}
+                        {p.id === "business" && <Building2 className="h-4 w-4 text-violet-400" />}
+                        <h3 className="text-sm font-semibold">{p.name}</h3>
+                      </div>
+                      <ul className="space-y-1.5 text-xs">
+                        {rows.map((row) => (
+                          <li key={row.label} className="flex items-center justify-between gap-2">
+                            <span className="text-[var(--text-tertiary)]">{row.label}</span>
+                            <span className="font-medium text-[var(--text-secondary)]">
+                              {row.values[PLANS.findIndex((pl) => pl.id === p.id)]}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-subtle)]">
-                {[
-                  { label: "Events per month", values: PLANS.map((p) => p.flags.maxEventsPerMonth.toString()) },
-                  { label: "Featured placement", values: PLANS.map((p) => (p.flags.canFeature ? "✓" : "—")) },
-                  { label: "Promotional tools", values: PLANS.map((p) => (p.flags.hasPromotionalTools ? "✓" : "—")) },
-                  { label: "Audience insights", values: PLANS.map((p) => (p.flags.hasAudienceInsights ? "✓" : "—")) },
-                  { label: "Organizer profile customization", values: PLANS.map((p) => (p.flags.canCustomizeProfile ? "✓" : "—")) },
-                  { label: "Advanced analytics", values: PLANS.map((p) => (p.flags.hasAdvancedAnalytics ? "✓" : "—")) },
-                  { label: "Multiple organizers / users", values: PLANS.map((p) => (p.flags.hasMultipleOrganizers ? "✓" : "—")) },
-                  { label: "Campaign tools", values: PLANS.map((p) => (p.flags.hasCampaignTools ? "✓" : "—")) },
-                  { label: "Priority promotion", values: PLANS.map((p) => (p.flags.hasPriorityPromotion ? "✓" : "—")) },
-                  { label: "Dedicated support", values: PLANS.map((p) => (p.flags.hasDedicatedSupport ? "✓" : "—")) },
-                ].map((row) => (
-                  <tr key={row.label}>
-                    <td className="px-4 py-3 font-medium">{row.label}</td>
-                    {row.values.map((v, i) => (
-                      <td key={i} className="px-4 py-3 text-center text-[var(--text-secondary)]">
-                        {v}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </div>
+
+                {/* Desktop: actual table */}
+                <div className="mt-5 hidden overflow-x-auto rounded-2xl border border-[var(--border-subtle)] md:block">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[var(--bg-elevated)] text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Feature</th>
+                        {PLANS.map((p) => (
+                          <th key={p.id} className="px-4 py-3 text-center">{p.name}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-subtle)]">
+                      {rows.map((row) => (
+                        <tr key={row.label}>
+                          <td className="px-4 py-3 font-medium">{row.label}</td>
+                          {row.values.map((v, i) => (
+                            <td key={i} className="px-4 py-3 text-center text-[var(--text-secondary)]">
+                              {v}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         {loading && (
