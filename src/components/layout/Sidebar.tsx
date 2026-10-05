@@ -222,7 +222,7 @@ export function Sidebar({
             Reach thousands of engaged attendees.
           </p>
           <NavLink
-            to="/organizer/billing"
+            to="/become-organizer"
             onClick={onClose}
             className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-white/90"
           >

@@ -22,11 +22,13 @@ import { OrganizerBillingPage } from "./pages/organizer/OrganizerBillingPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OrganizerCheckoutPage } from "./pages/organizer/OrganizerCheckoutPage";
 import { AdminOrganizerFeaturesPage } from "./pages/admin/AdminOrganizerFeaturesPage";
+import { AdminOrganizerVerifications } from "./pages/admin/AdminOrganizerVerifications";
 import { LandingPage } from "./pages/LandingPage";
 import { OrganizerProfilePage } from "./pages/organizer/OrganizerProfilePage";
 import { OrganizerDashboardPage } from "./pages/organizer/OrganizerDashboardPage";
 import { PublicOrganizerPage } from "./pages/PublicOrganizerPage";
 import { OrganizersDirectoryPage } from "./pages/OrganizersDirectoryPage";
+import { BecomeOrganizerPage } from "./pages/BecomeOrganizerPage";
 import { AdminLogin } from "./pages/admin/AdminLogin";
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
@@ -79,6 +81,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/auth/confirmed" element={<AuthConfirmedPage />} />
+        <Route path="/become-organizer" element={<BecomeOrganizerPage />} />
         <Route path="/dev-confirm" element={<DevConfirmPage />} />
         <Route path="/__storage-debug" element={<StorageDebugPage />} />
         <Route path="/__status" element={<StatusPage />} />
@@ -115,6 +118,7 @@ export default function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="organizers" element={<AdminOrganizers />} />
           <Route path="organizer-features" element={<AdminOrganizerFeaturesPage />} />
+          <Route path="organizer-verifications" element={<AdminOrganizerVerifications />} />
           <Route path="registrations" element={<AdminRegistrations />} />
           <Route path="roles" element={<AdminRoles />} />
           <Route path="tickets" element={<AdminTickets />} />

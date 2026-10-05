@@ -35,6 +35,7 @@ import {
   Menu,
   X,
   Crown,
+  ShieldCheck,
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -66,6 +67,7 @@ const groups = [
     items: [
       { to: "/admin/users", label: "Users", Icon: Users },
       { to: "/admin/organizers", label: "Organizers", Icon: Building2 },
+      { to: "/admin/organizer-verifications", label: "Verifications", Icon: ShieldCheck },
       { to: "/admin/organizer-features", label: "Organizer Features", Icon: Crown },
       { to: "/admin/registrations", label: "Registrations", Icon: Inbox },
       { to: "/admin/roles", label: "Roles & Permissions", Icon: Shield },

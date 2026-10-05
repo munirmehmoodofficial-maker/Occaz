@@ -47,7 +47,9 @@ export function OrganizersDirectoryPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from("organizations")
-        .select("id, name, slug, logo_url, description, category, plan, verification_status, created_at")
+        .select("id, name, slug, logo_url, description, category, plan, verification_status, is_published, created_at")
+        .eq("verification_status", "approved")
+        .eq("is_published", true)
         .order("created_at", { ascending: false });
       if (!alive) return;
       if (!error && data) setOrgs(data as Org[]);
