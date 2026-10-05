@@ -919,66 +919,8 @@ export function AdminEmailCampaigns() {
 }
 
 // =====================================================
-// COUPONS
+// COUPONS — implementation lives in ./AdminCoupons (re-exported below)
 // =====================================================
-const coupons = [
-  { id: "co1", code: "WELCOME20", discount: "20% off", uses: 142, limit: 500, expires: "Dec 31, 2026" },
-  { id: "co2", code: "FESTIVAL10", discount: "$10 off", uses: 89, limit: 200, expires: "Oct 18, 2026" },
-  { id: "co3", code: "STUDENT15", discount: "15% off", uses: 412, limit: "∞", expires: "Never" },
-  { id: "co4", code: "EARLYBIRD", discount: "25% off", uses: 0, limit: 100, expires: "Nov 1, 2026" },
-];
-
-export function AdminCoupons() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Coupons</h1>
-          <p className="mt-1 text-sm text-[var(--text-tertiary)]">Discount codes and promotions</p>
-        </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />}>New coupon</Button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {coupons.map((c, i) => (
-          <motion.div
-            key={c.id}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            whileHover={{ y: -3 }}
-            className="overflow-hidden rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]"
-          >
-            <div className="bg-gradient-to-br from-accent-500/15 to-pink-500/10 p-5">
-              <div className="flex items-center justify-between">
-                <Badge tone="accent">{c.discount}</Badge>
-                <TicketPercent className="h-4 w-4 text-accent-400" />
-              </div>
-              <div className="mt-3 font-mono text-lg font-bold text-[var(--text-primary)]">{c.code}</div>
-            </div>
-            <div className="p-5">
-              <div className="flex justify-between text-xs text-[var(--text-tertiary)]">
-                <span>Used</span>
-                <span>{c.uses} / {c.limit}</span>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--bg-card-hover)]">
-                <div
-                  className="h-full bg-gradient-to-r from-accent-500 to-pink-500"
-                  style={{ width: c.limit === "∞" ? "20%" : `${(c.uses / (c.limit as number)) * 100}%` }}
-                />
-              </div>
-              <div className="mt-3 text-xs text-[var(--text-tertiary)]">Expires {c.expires}</div>
-              <div className="mt-4 flex gap-2">
-                <Button variant="outline" size="sm" fullWidth leftIcon={<Copy className="h-3.5 w-3.5" />}>Copy</Button>
-                <Button variant="outline" size="sm" leftIcon={<Edit3 className="h-3.5 w-3.5" />}>Edit</Button>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // =====================================================
 // AUDIT LOG
@@ -1667,3 +1609,4 @@ export { AdminCities } from "./AdminCities";
 export { AdminPaymentSettings } from "./AdminPaymentSettings";
 export { AdminPaymentSubmissions } from "./AdminPaymentSubmissions";
 export { AdminPlanPayments } from "./AdminPlanPayments";
+export { AdminCoupons } from "./AdminCoupons";
