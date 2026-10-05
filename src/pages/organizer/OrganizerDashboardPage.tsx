@@ -25,7 +25,10 @@ import { formatPrice } from "../../data/mock";
 import clsx from "clsx";
 
 export function OrganizerDashboardPage() {
-  const { user, profile, isAdmin } = useAuth();
+  const auth = useAuth();
+  const user = auth.user;
+  const profile = auth.profile;
+  const isAdmin = Boolean(auth.isAdmin);
   const { plan, subscription, organizerProfile, can } = useSubscription();
   const events = useEvents();
   const [stats, setStats] = useState<{
