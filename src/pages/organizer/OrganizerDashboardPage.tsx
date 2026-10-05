@@ -25,7 +25,7 @@ import { formatPrice } from "../../data/mock";
 import clsx from "clsx";
 
 export function OrganizerDashboardPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const { plan, subscription, organizerProfile, can } = useSubscription();
   const events = useEvents();
   const [stats, setStats] = useState<{
@@ -147,7 +147,16 @@ export function OrganizerDashboardPage() {
               </div>
               <div>
                 <div className="text-xs text-[var(--text-tertiary)]">Plan</div>
-                <div className="text-lg font-semibold">{plan.name}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-lg font-semibold">
+                    {isAdmin ? "Business (Admin)" : plan.name}
+                  </div>
+                  {isAdmin && (
+                    <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300 ring-1 ring-violet-500/30">
+                      Full access
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-6 text-sm">

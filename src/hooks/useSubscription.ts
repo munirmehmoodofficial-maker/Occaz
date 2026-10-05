@@ -133,8 +133,12 @@ export function useSubscription() {
   }, [user, load]);
 
   const plan: Plan = getPlan(planId);
+  const { isAdmin } = useAuth();
+  const effectiveIsAdmin: boolean = Boolean(isAdmin);
 
   function can(feature: keyof Plan["flags"]): boolean {
+    // Admins always have access to all features regardless of plan.
+    if (effectiveIsAdmin) return true;
     return Boolean(plan.flags[feature]);
   }
 
