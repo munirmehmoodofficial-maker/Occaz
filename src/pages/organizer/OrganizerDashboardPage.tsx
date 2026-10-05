@@ -41,7 +41,7 @@ export function OrganizerDashboardPage() {
   );
   const publishedCount = myEvents.filter((e) => e.published).length;
   const featuredCount = myEvents.filter((e) => e.featured).length;
-  const monthlyLimit = plan.flags.maxEventsPerMonth;
+  const monthlyLimit = isAdmin ? 9999 : plan.flags.maxEventsPerMonth;
   const remainingThisMonth = Math.max(0, monthlyLimit - publishedCount);
 
   // rough stats from tickets table

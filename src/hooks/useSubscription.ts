@@ -42,7 +42,7 @@ export interface Payment {
 }
 
 export function useSubscription() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile | null>(null);
   const [planId, setPlanId] = useState<"starter" | "pro" | "business">("starter");
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -133,7 +133,6 @@ export function useSubscription() {
   }, [user, load]);
 
   const plan: Plan = getPlan(planId);
-  const { isAdmin } = useAuth();
   const effectiveIsAdmin: boolean = Boolean(isAdmin);
 
   function can(feature: keyof Plan["flags"]): boolean {
