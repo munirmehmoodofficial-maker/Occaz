@@ -22,6 +22,11 @@ import {
   FileText,
   Bell,
   GripVertical,
+  Image as ImageIcon,
+  ExternalLink,
+  Banknote,
+  Building2,
+  Hash,
 } from "lucide-react";
 import clsx from "clsx";
 import { Badge } from "../../components/ui/Badge";
@@ -270,6 +275,19 @@ interface RegRow {
   created_at: string | null;
 }
 
+interface PaymentInfo {
+  id: string;
+  method: string | null;     // "card" | "manual"
+  status: string | null;      // "pending" | "approved" | "rejected" | "succeeded"
+  amount: number | null;
+  currency: string | null;
+  screenshot_url: string | null;
+  transaction_ref: string | null;
+  notes: string | null;
+  created_at: string | null;
+  reviewed_at: string | null;
+}
+
 export function AdminRegistrations() {
   const { push } = useToast();
   const [rows, setRows] = useState<RegRow[]>([]);
@@ -279,6 +297,7 @@ export function AdminRegistrations() {
   const [viewing, setViewing] = useState<RegRow | null>(null);
   const [events, setEvents] = useState<Record<string, { title: string; date: string }>>({});
   const [users, setUsers] = useState<Record<string, { email: string; name: string; phone: string }>>({});
+  const [payments, setPayments] = useState<Record<string, PaymentInfo>>({});
 
   async function load() {
     setLoading(true);
@@ -318,6 +337,25 @@ export function AdminRegistrations() {
           };
         }
         setUsers(map);
+      }
+      // Load payment submissions for these registrations
+      const regIds = list.map((r) => r.id).filter(Boolean) as string[];
+      if (regIds.length > 0) {
+        const { data: pays } = await supabase
+          .from("payment_submissions")
+          .select("*")
+          .in("registration_id", regIds);
+        const payMap: Record<string, PaymentInfo> = {};
+        for (const p of pays ?? []) {
+          // Use registration_id as the key
+          const key = (p as any).registration_id;
+          if (key) {
+            payMap[key] = p as PaymentInfo;
+          }
+        }
+        setPayments(payMap);
+      } else {
+        setPayments({});
       }
     }
     setLoading(false);
@@ -446,6 +484,7 @@ export function AdminRegistrations() {
             {filtered.map((r) => {
               const ev = r.event_id ? events[r.event_id] : null;
               const u = r.user_id ? users[r.user_id] : null;
+              const pay = payments[r.id];
               return (
                 <div
                   key={r.id}
@@ -461,11 +500,23 @@ export function AdminRegistrations() {
                         {r.attendee_name || "(no name)"}
                       </div>
                       {statusBadge(r.status)}
+                      {pay && (
+                        pay.method === "card" ? (
+                          <Badge tone="accent">
+                            <CreditCard className="mr-1 inline h-2.5 w-2.5" /> Card
+                          </Badge>
+                        ) : pay.method === "manual" ? (
+                          <Badge tone="violet">
+                            <Banknote className="mr-1 inline h-2.5 w-2.5" /> Manual
+                          </Badge>
+                        ) : null
+                      )}
                     </div>
                     <div className="mt-0.5 truncate text-xs text-[var(--text-tertiary)]">
                       {ev?.title || r.event_id || "—"}
                       {r.total ? ` · Rs ${Number(r.total).toLocaleString()}` : ""}
                       {r.ticket_code ? ` · 🎫 ${r.ticket_code}` : ""}
+                      {pay?.transaction_ref ? ` · Ref: ${pay.transaction_ref}` : ""}
                       {" · "}
                       {fmtDate(r.created_at)}
                     </div>
@@ -562,6 +613,84 @@ export function AdminRegistrations() {
                     <span className="font-mono text-xs">{viewing.user_id || "Guest"}</span>
                   )}
                 </RegRow>
+
+                {/* Payment details */}
+                {payments[viewing.id] && (
+                  <>
+                    <div className="my-2 border-t border-[var(--border-subtle)]" />
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-accent-400">
+                      Payment details
+                    </div>
+                    <RegRow label="Method">
+                      {payments[viewing.id].method === "card" ? (
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-accent-400" />
+                          <span className="font-medium">Card</span>
+                        </div>
+                      ) : payments[viewing.id].method === "manual" ? (
+                        <div className="flex items-center gap-2">
+                          <Banknote className="h-4 w-4 text-violet-400" />
+                          <span className="font-medium">Manual transfer</span>
+                        </div>
+                      ) : (
+                        <span>—</span>
+                      )}
+                    </RegRow>
+                    <RegRow label="Payment status">
+                      {(() => {
+                        const ps = payments[viewing.id].status;
+                        if (ps === "approved" || ps === "succeeded")
+                          return <Badge tone="emerald">✓ {ps}</Badge>;
+                        if (ps === "rejected")
+                          return <Badge tone="rose">✗ {ps}</Badge>;
+                        if (ps === "pending")
+                          return <Badge tone="amber">⏳ {ps}</Badge>;
+                        return <Badge tone="zinc">{ps}</Badge>;
+                      })()}
+                    </RegRow>
+                    {payments[viewing.id].transaction_ref && (
+                      <RegRow label="Transaction ref">
+                        <span className="font-mono text-xs">{payments[viewing.id].transaction_ref}</span>
+                      </RegRow>
+                    )}
+                    {payments[viewing.id].notes && (
+                      <RegRow label="User notes">
+                        <p className="rounded-lg bg-[var(--bg-card)] p-2 text-xs text-[var(--text-secondary)]">
+                          {payments[viewing.id].notes}
+                        </p>
+                      </RegRow>
+                    )}
+                    {payments[viewing.id].screenshot_url && (
+                      <RegRow label="Payment screenshot">
+                        <a
+                          href={payments[viewing.id].screenshot_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block overflow-hidden rounded-xl ring-1 ring-[var(--border-default)] transition hover:ring-accent-500/50"
+                        >
+                          <img
+                            src={payments[viewing.id].screenshot_url!}
+                            alt="Payment screenshot"
+                            className="w-full"
+                          />
+                        </a>
+                        <a
+                          href={payments[viewing.id].screenshot_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-accent-400 hover:underline"
+                        >
+                          <ExternalLink className="h-2.5 w-2.5" /> Open full size
+                        </a>
+                      </RegRow>
+                    )}
+                    {payments[viewing.id].reviewed_at && (
+                      <RegRow label="Reviewed at">
+                        <span className="text-xs">{fmtDate(payments[viewing.id].reviewed_at)}</span>
+                      </RegRow>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="mt-8 flex flex-col gap-2">
