@@ -28,7 +28,7 @@ interface Org {
 
 const PLAN_FILTERS = [
   { id: "all", label: "All" },
-  { id: "free", label: "Free" },
+  { id: "starter", label: "Starter" },
   { id: "pro", label: "Pro" },
   { id: "business", label: "Business" },
 ] as const;
@@ -181,7 +181,7 @@ function OrgCard({
   eventsCount: number;
 }) {
   const plan = getPlan(org.category);
-  const isPro = plan.id !== "free";
+  const isPro = plan.id !== "starter";
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}

@@ -20,10 +20,10 @@ export interface OrganizerProfile {
   social_links: any;
 }
 
-/** Stub subscription shape — fields old code expects, defaults to free. */
+/** Stub subscription shape — fields old code expects, defaults to starter. */
 export interface Subscription {
   id: string;
-  plan: "free" | "pro" | "business";
+  plan: "starter" | "pro" | "business";
   status: string;
   current_period_end: string;
   amount: number;
@@ -44,7 +44,7 @@ export interface Payment {
 export function useSubscription() {
   const { user } = useAuth();
   const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile | null>(null);
-  const [planId, setPlanId] = useState<"free" | "pro" | "business">("free");
+  const [planId, setPlanId] = useState<"starter" | "pro" | "business">("starter");
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ export function useSubscription() {
       setOrganizerProfile(null);
       setSubscription(null);
       setPayments([]);
-      setPlanId("free");
+      setPlanId("starter");
       setLoading(false);
       return;
     }
@@ -71,9 +71,10 @@ export function useSubscription() {
 
     const pid =
       (profileRow as any)?.plan === "pro" ||
-      (profileRow as any)?.plan === "business"
-        ? ((profileRow as any).plan as "pro" | "business")
-        : "free";
+      (profileRow as any)?.plan === "business" ||
+      (profileRow as any)?.plan === "starter"
+        ? ((profileRow as any).plan as "starter" | "pro" | "business")
+        : "starter";
     setPlanId(pid);
 
     // 2. Read the user's organization
@@ -89,8 +90,8 @@ export function useSubscription() {
     setOrganizerProfile((orgByCreator as OrganizerProfile) ?? null);
 
     // 3. Synthesize a Subscription stub based on plan
-    if (pid !== "free") {
-      const amount = pid === "pro" ? 1500 : 4500;
+    if (pid !== "starter") {
+      const amount = pid === "pro" ? 5000 : 12000;
       setSubscription({
         id: `sim-${user.id}`,
         plan: pid,

@@ -79,7 +79,7 @@ export function AdminOrganizerFeaturesPage() {
     setErr(null);
     const { data, error } = await supabase
       .from("organizations")
-      .select("id, name, slug, logo_url, verification_status, social_links")
+      .select("id, name, slug, logo_url, verification_status, social_links, plan")
       .order("created_at", { ascending: false });
     if (error) {
       setErr(error.message);
@@ -195,7 +195,7 @@ export function AdminOrganizerFeaturesPage() {
               key={p.id}
               className={clsx(
                 "rounded-xl border p-4 ring-1",
-                p.id === "free"
+                p.id === "starter"
                   ? "border-[var(--border-subtle)] ring-[var(--border-subtle)]"
                   : p.id === "pro"
                     ? "border-accent-500/30 ring-accent-500/30"
@@ -203,7 +203,7 @@ export function AdminOrganizerFeaturesPage() {
               )}
             >
               <div className="flex items-center gap-2">
-                {p.id === "free" ? (
+                {p.id === "starter" ? (
                   <Sparkles className="h-4 w-4 text-[var(--text-tertiary)]" />
                 ) : p.id === "pro" ? (
                   <Crown className="h-4 w-4 text-accent-400" />
@@ -325,17 +325,22 @@ export function AdminOrganizerFeaturesPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3">
-                      <Badge
-                        tone={
-                          ("free" as PlanId) === "business"
-                            ? "violet"
-                            : ("free" as PlanId) === "pro"
-                              ? "accent"
-                              : "default"
-                        }
-                      >
-                        {PLANS.find((p) => p.id === ("free" as PlanId))?.name}
-                      </Badge>
+                      {(() => {
+                        const orgPlan = ((o as any).plan as PlanId) || "starter";
+                        return (
+                          <Badge
+                            tone={
+                              orgPlan === "business"
+                                ? "violet"
+                                : orgPlan === "pro"
+                                  ? "accent"
+                                  : "default"
+                            }
+                          >
+                            {PLANS.find((p) => p.id === orgPlan)?.name}
+                          </Badge>
+                        );
+                      })()}
                     </td>
                     <td className="px-5 py-3">
                       <span className="text-sm font-semibold">{count}</span>

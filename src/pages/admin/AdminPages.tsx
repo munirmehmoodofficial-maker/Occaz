@@ -1666,3 +1666,4 @@ export function AdminHomepage() {
 export { AdminCities } from "./AdminCities";
 export { AdminPaymentSettings } from "./AdminPaymentSettings";
 export { AdminPaymentSubmissions } from "./AdminPaymentSubmissions";
+export { AdminPlanPayments } from "./AdminPlanPayments";

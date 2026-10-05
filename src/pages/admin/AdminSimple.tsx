@@ -518,7 +518,7 @@ export function AdminOrganizers() {
                     <div className="truncate font-semibold">{o.display_name}</div>
                     <div className="mt-0.5 text-xs text-[var(--text-tertiary)]">
                       {count} event{count === 1 ? "" : "s"} ·{" "}
-                      {o.plan === "pro" ? "Occaz Pro" : o.plan === "business" ? "Business" : "Free"}
+                      {o.plan === "pro" ? "Occaz Pro" : o.plan === "business" ? "Business" : "Starter"}
                     </div>
                   </div>
                   {o.verified && (
@@ -586,7 +586,7 @@ export function AdminOrganizers() {
                   <div>
                     <h2 className="text-lg font-semibold">{view.display_name}</h2>
                     <div className="text-xs text-[var(--text-tertiary)]">
-                      {view.plan === "pro" ? "Occaz Pro" : view.plan === "business" ? "Business" : "Free"}
+                      {view.plan === "pro" ? "Occaz Pro" : view.plan === "business" ? "Business" : "Starter"}
                       {view.verified ? " · Verified" : ""}
                     </div>
                   </div>

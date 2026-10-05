@@ -519,7 +519,7 @@ function FeaturedToggle({
           </Link>
         </div>
       )}
-      {allowed && plan.id !== "free" && (
+      {allowed && plan.id !== "starter" && (
         <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
           <Sparkles className="h-3.5 w-3.5 text-accent-400" />
           Active on your {plan.name} plan

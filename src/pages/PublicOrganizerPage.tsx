@@ -88,8 +88,8 @@ export function PublicOrganizerPage() {
     );
   }
 
-  const plan = getPlan("free");
-  const isPro = plan.id !== "free";
+  const plan = getPlan("starter");
+  const isPro = plan.id !== "starter";
   const isOwnPage = user?.id === profile.id;
 
   return (

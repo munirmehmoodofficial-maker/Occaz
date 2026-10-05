@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Check,
   Sparkles,
@@ -16,6 +16,10 @@ import {
   AlertCircle,
   Tag,
   X,
+  Upload,
+  Image as ImageIcon,
+  Building2 as BankIcon,
+  Copy,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useAuth } from "../../lib/auth";
@@ -24,12 +28,26 @@ import { PLANS, type PlanId, type PlanInterval } from "../../lib/plans";
 import { startCheckout, cancelSubscription } from "../../lib/billing";
 import { validateCoupon } from "../../lib/coupons";
 import { formatPrice } from "../../data/mock";
+import { useToast } from "../../lib/toast.tsx";
+import { supabase } from "../../lib/supabase";
 import clsx from "clsx";
+
+interface PaymentSetting {
+  id: string;
+  scope: string;
+  target_id: string | null;
+  account_title: string;
+  account_number: string;
+  bank_name: string | null;
+  instructions: string | null;
+  active: boolean;
+}
 
 export function OrganizerBillingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { plan, subscription, payments, loading, refresh } = useSubscription();
+  const { push } = useToast();
+  const { plan, subscription, loading, refresh } = useSubscription();
   const [interval, setInterval] = useState<PlanInterval>("monthly");
   const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -38,6 +56,56 @@ export function OrganizerBillingPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponMsg, setCouponMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+
+  // Manual payment modal state
+  const [manualFor, setManualFor] = useState<PlanId | null>(null);
+  const [manualPayment, setManualPayment] = useState<PaymentSetting | null>(null);
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [manualTxRef, setManualTxRef] = useState("");
+  const [manualNotes, setManualNotes] = useState("");
+  const [submittingManual, setSubmittingManual] = useState(false);
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+
+  async function loadManualSettings() {
+    // Try global default
+    const { data } = await supabase
+      .from("payment_settings")
+      .select("*")
+      .eq("active", true)
+      .eq("scope", "global")
+      .limit(1)
+      .maybeSingle();
+    setManualPayment((data as PaymentSetting) ?? null);
+  }
+
+  function openManualFor(target: PlanId) {
+    setManualFor(target);
+    setScreenshotFile(null);
+    setScreenshotPreview(null);
+    setManualTxRef("");
+    setManualNotes("");
+    loadManualSettings();
+  }
+
+  function closeManual() {
+    setManualFor(null);
+  }
+
+  function onPickFile(f: File | null) {
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) {
+      push("err", "Screenshot must be under 8MB");
+      return;
+    }
+    if (!f.type.startsWith("image/")) {
+      push("err", "Please choose an image file");
+      return;
+    }
+    setScreenshotFile(f);
+    const url = URL.createObjectURL(f);
+    setScreenshotPreview(url);
+  }
 
   if (!user) {
     return (
@@ -53,15 +121,21 @@ export function OrganizerBillingPage() {
     );
   }
 
-  async function onUpgrade(target: PlanId) {
+  async function onUpgradeCard(target: PlanId) {
     if (!user) return;
     if (target === plan.id) return;
     setMsg(null);
     setBusyPlan(target);
+    const basePrice = interval === "yearly" ? PLANS.find((p) => p.id === target)!.yearlyPKR : PLANS.find((p) => p.id === target)!.monthlyPKR;
+    const finalPrice = appliedCoupon
+      ? Math.max(0, basePrice - appliedCoupon.discount)
+      : basePrice;
     const res = await startCheckout({
       plan: target,
       interval,
+      method: "card",
       userId: user.id,
+      amount: finalPrice,
       coupon: appliedCoupon?.code,
     });
     setBusyPlan(null);
@@ -69,11 +143,55 @@ export function OrganizerBillingPage() {
       setMsg({ kind: "err", text: res.error });
       return;
     }
-    if (res.redirectUrl) {
-      navigate(res.redirectUrl);
-    } else {
+    if (res.status === "failed") {
+      setMsg({ kind: "err", text: "Payment failed. Please try again." });
+      return;
+    }
+    await refresh();
+    setMsg({ kind: "ok", text: `You're now on ${PLANS.find((p) => p.id === target)?.name}.` });
+  }
+
+  async function onSubmitManual() {
+    if (!user || !manualFor) return;
+    if (!screenshotFile) {
+      push("err", "Please upload a screenshot of your payment");
+      return;
+    }
+    if (!manualPayment) {
+      push("err", "No payment method configured. Contact the admin or use card payment.");
+      return;
+    }
+    setSubmittingManual(true);
+    try {
+      const basePrice = interval === "yearly"
+        ? PLANS.find((p) => p.id === manualFor)!.yearlyPKR
+        : PLANS.find((p) => p.id === manualFor)!.monthlyPKR;
+      const finalPrice = appliedCoupon
+        ? Math.max(0, basePrice - appliedCoupon.discount)
+        : basePrice;
+      const res = await startCheckout({
+        plan: manualFor,
+        interval,
+        method: "manual",
+        userId: user.id,
+        amount: finalPrice,
+        coupon: appliedCoupon?.code,
+        screenshotFile,
+        transactionRef: manualTxRef,
+        notes: manualNotes,
+      });
+      if (res.error || res.status === "failed") {
+        push("err", res.error || "Submission failed");
+        return;
+      }
+      push("ok", "Payment proof submitted! We'll review and activate your plan within a few hours.");
+      closeManual();
       await refresh();
-      setMsg({ kind: "ok", text: `You're now on ${PLANS.find((p) => p.id === target)?.name}.` });
+    } catch (e: any) {
+      push("err", e?.message || "Submission failed");
+    } finally {
+      setSubmittingManual(false);
+      setUploadingScreenshot(false);
     }
   }
 
@@ -81,8 +199,6 @@ export function OrganizerBillingPage() {
     if (!coupon.trim()) return;
     setCouponMsg(null);
     setCouponLoading(true);
-    // validate against the currently-displayed prices for the *pro* plan as a
-    // sensible default — the actual discount applies at checkout.
     const basePrice = interval === "yearly"
       ? PLANS.find((p) => p.id === "pro")!.yearlyPKR
       : PLANS.find((p) => p.id === "pro")!.monthlyPKR;
@@ -102,7 +218,7 @@ export function OrganizerBillingPage() {
 
   async function onCancel() {
     if (!subscription) return;
-    if (!confirm("Cancel your subscription? You'll keep access until the period ends.")) return;
+    if (!confirm("Cancel your subscription? You'll keep access until the period ends, then revert to Starter.")) return;
     setCancelling(true);
     const res = await cancelSubscription(subscription.id);
     setCancelling(false);
@@ -247,7 +363,7 @@ export function OrganizerBillingPage() {
               value={`${formatPrice(subscription.amount, subscription.currency)} / ${subscription.interval.replace("ly", "")}`}
               icon={<CreditCard className="h-4 w-4 text-accent-400" />}
             />
-            {subscription.status === "active" && plan.id !== "free" && (
+            {subscription.status === "active" && plan.id !== "starter" && (
               <div className="sm:col-span-4">
                 <Button
                   variant="outline"
@@ -285,7 +401,7 @@ export function OrganizerBillingPage() {
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  {p.id === "free" && <Sparkles className="h-5 w-5 text-[var(--text-tertiary)]" />}
+                  {p.id === "starter" && <Sparkles className="h-5 w-5 text-[var(--text-tertiary)]" />}
                   {p.id === "pro" && <Crown className="h-5 w-5 text-accent-400" />}
                   {p.id === "business" && <Building2 className="h-5 w-5 text-violet-400" />}
                   <h3 className="text-lg font-semibold">{p.name}</h3>
@@ -294,16 +410,14 @@ export function OrganizerBillingPage() {
 
                 <div className="mt-5 flex items-baseline gap-1">
                   <span className="text-3xl font-bold">
-                    {price === 0 ? "Free" : formatPrice(price, "PKR")}
+                    {formatPrice(price, "PKR")}
                   </span>
-                  {price > 0 && (
-                    <span className="text-sm text-[var(--text-tertiary)]">
-                      / {interval.replace("ly", "")}
-                    </span>
-                  )}
+                  <span className="text-sm text-[var(--text-tertiary)]">
+                    / {interval.replace("ly", "")}
+                  </span>
                 </div>
 
-                <ul className="mt-5 space-y-2 text-sm">
+                <ul className="mt-5 flex-1 space-y-2 text-sm">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
@@ -312,34 +426,36 @@ export function OrganizerBillingPage() {
                   ))}
                 </ul>
 
-                <div className="mt-6 pt-2">
+                <div className="mt-6 space-y-2 pt-2">
                   {isCurrent ? (
                     <Button variant="outline" disabled fullWidth>
                       Current plan
                     </Button>
-                  ) : p.id === "free" ? (
-                    <Button
-                      variant="outline"
-                      fullWidth
-                      onClick={onCancel}
-                      disabled={!subscription || subscription.plan === "free" || cancelling}
-                    >
-                      {cancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                      Downgrade to Free
-                    </Button>
                   ) : (
-                    <Button
-                      fullWidth
-                      onClick={() => onUpgrade(p.id)}
-                      disabled={busyPlan === p.id}
-                    >
-                      {busyPlan === p.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      )}
-                      {plan.id === "free" ? "Upgrade" : "Switch"} to {p.name}
-                    </Button>
+                    <>
+                      <Button
+                        fullWidth
+                        onClick={() => onUpgradeCard(p.id)}
+                        disabled={busyPlan === p.id}
+                        leftIcon={
+                          busyPlan === p.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <CreditCard className="h-3.5 w-3.5" />
+                          )
+                        }
+                      >
+                        {plan.id === "starter" ? "Upgrade" : "Switch"} with card
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="outline"
+                        onClick={() => openManualFor(p.id)}
+                        leftIcon={<BankIcon className="h-3.5 w-3.5" />}
+                      >
+                        Pay manually
+                      </Button>
+                    </>
                   )}
                 </div>
               </motion.div>
@@ -365,7 +481,7 @@ export function OrganizerBillingPage() {
               </thead>
               <tbody className="divide-y divide-[var(--border-subtle)]">
                 {[
-                  { label: "Events per month", values: ["3", "25", "25"] },
+                  { label: "Events per month", values: PLANS.map((p) => p.flags.maxEventsPerMonth.toString()) },
                   { label: "Featured placement", values: PLANS.map((p) => (p.flags.canFeature ? "✓" : "—")) },
                   { label: "Promotional tools", values: PLANS.map((p) => (p.flags.hasPromotionalTools ? "✓" : "—")) },
                   { label: "Audience insights", values: PLANS.map((p) => (p.flags.hasAudienceInsights ? "✓" : "—")) },
@@ -390,71 +506,173 @@ export function OrganizerBillingPage() {
           </div>
         </div>
 
-        {/* Payment history */}
-        <div className="mt-12">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Receipt className="h-4 w-4 text-[var(--text-tertiary)]" /> Payment history
-          </h2>
-          {payments.length === 0 ? (
-            <p className="mt-3 rounded-xl bg-[var(--bg-card)] p-6 text-sm text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
-              No payments yet. {plan.id === "free" ? "You're on the Free plan." : ""}
-            </p>
-          ) : (
-            <div className="mt-3 overflow-x-auto rounded-2xl border border-[var(--border-subtle)]">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--bg-elevated)] text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Date</th>
-                    <th className="px-4 py-3 text-left">Reference</th>
-                    <th className="px-4 py-3 text-left">Method</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border-subtle)]">
-                  {payments.map((p) => (
-                    <tr key={p.id}>
-                      <td className="px-4 py-3">
-                        {new Date(p.created_at).toLocaleDateString("en-PK", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-[var(--text-tertiary)]">
-                        {p.id}
-                      </td>
-                      <td className="px-4 py-3 capitalize">
-                        {p.gateway ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        {formatPrice(p.amount, p.currency)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={clsx(
-                            "inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1",
-                            p.status === "succeeded" && "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-                            p.status === "pending" && "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-                            p.status === "failed" && "bg-red-500/15 text-red-300 ring-red-500/30",
-                            p.status === "refunded" && "bg-[var(--bg-elevated)] text-[var(--text-tertiary)] ring-[var(--border-subtle)]",
-                          )}
-                        >
-                          {p.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
         {loading && (
           <p className="mt-6 text-center text-xs text-[var(--text-tertiary)]">Refreshing…</p>
         )}
       </div>
+
+      {/* Manual payment modal */}
+      <AnimatePresence>
+        {manualFor && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
+            onClick={closeManual}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="flex max-h-[90vh] w-full max-w-md flex-col overflow-y-auto rounded-3xl bg-[var(--bg-elevated)] p-6 shadow-2xl ring-1 ring-[var(--border-default)]"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold tracking-tight">Pay manually</h2>
+                  <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
+                    {PLANS.find((p) => p.id === manualFor)?.name} plan
+                  </p>
+                </div>
+                <button
+                  onClick={closeManual}
+                  className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--bg-card-hover)] hover:bg-[var(--bg-card)]"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {manualPayment ? (
+                <div className="mt-4 space-y-3 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-500/15 text-accent-400">
+                      <BankIcon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold">{manualPayment.account_title}</div>
+                      <div className="text-xs text-[var(--text-tertiary)]">
+                        {manualPayment.bank_name ? `${manualPayment.bank_name} · ` : ""}
+                        <span className="font-mono">{manualPayment.account_number}</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(manualPayment.account_number);
+                            push("ok", "Copied");
+                          }}
+                          className="ml-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-accent-400 hover:bg-accent-500/10"
+                          type="button"
+                        >
+                          <Copy className="h-3 w-3" /> Copy
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {manualPayment.instructions && (
+                    <p className="rounded-lg bg-[var(--bg-card)] p-3 text-xs leading-relaxed text-[var(--text-tertiary)]">
+                      {manualPayment.instructions}
+                    </p>
+                  )}
+                  <div className="rounded-lg bg-[var(--bg-card)] p-3">
+                    <div className="text-xs text-[var(--text-tertiary)]">Amount to send</div>
+                    <div className="mt-0.5 text-lg font-bold">
+                      {formatPrice(
+                        interval === "yearly"
+                          ? PLANS.find((p) => p.id === manualFor)!.yearlyPKR
+                          : PLANS.find((p) => p.id === manualFor)!.monthlyPKR,
+                        "PKR",
+                      )}
+                    </div>
+                    {appliedCoupon && (
+                      <div className="mt-1 text-xs text-emerald-400">
+                        After coupon: {formatPrice(
+                          Math.max(0, (interval === "yearly" ? PLANS.find((p) => p.id === manualFor)!.yearlyPKR : PLANS.find((p) => p.id === manualFor)!.monthlyPKR) - appliedCoupon.discount),
+                          "PKR",
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300">
+                  No payment method is configured. Please contact the admin or use card payment instead.
+                </div>
+              )}
+
+              <div className="mt-4 space-y-3">
+                <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                  Screenshot of payment
+                </div>
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[var(--border-default)] p-3 hover:border-accent-500/40">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+                  />
+                  {screenshotPreview ? (
+                    <img
+                      src={screenshotPreview}
+                      alt="Screenshot preview"
+                      className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-[var(--border-default)]"
+                    />
+                  ) : (
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[var(--bg-card)] text-[var(--text-tertiary)]">
+                      <ImageIcon className="h-4 w-4" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">
+                      {screenshotPreview ? "Replace screenshot" : "Upload screenshot"}
+                    </div>
+                    <div className="text-xs text-[var(--text-tertiary)]">PNG, JPG, WebP up to 8MB</div>
+                  </div>
+                </label>
+
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-[var(--text-tertiary)]">Transaction reference (optional)</div>
+                  <input
+                    value={manualTxRef}
+                    onChange={(e) => setManualTxRef(e.target.value)}
+                    placeholder="e.g. Txn ID from JazzCash"
+                    className="input w-full"
+                  />
+                </div>
+
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-[var(--text-tertiary)]">Notes (optional)</div>
+                  <textarea
+                    value={manualNotes}
+                    onChange={(e) => setManualNotes(e.target.value)}
+                    rows={2}
+                    placeholder="Anything we should know"
+                    className="input min-h-[60px] w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5 flex justify-end gap-2">
+                <Button variant="outline" onClick={closeManual}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={onSubmitManual}
+                  disabled={submittingManual || !manualPayment || !screenshotFile}
+                  leftIcon={
+                    submittingManual ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="h-3.5 w-3.5" />
+                    )
+                  }
+                >
+                  {submittingManual ? "Submitting…" : "Submit payment proof"}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

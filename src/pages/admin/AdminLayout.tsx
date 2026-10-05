@@ -103,6 +103,7 @@ const groups = [
       { to: "/admin/cities", label: "Cities & Locations", Icon: MapPin },
       { to: "/admin/payment-settings", label: "Payment Settings", Icon: CreditCard },
       { to: "/admin/payment-submissions", label: "Payment Submissions", Icon: Inbox },
+      { to: "/admin/plan-payments", label: "Plan Payments", Icon: Receipt },
       { to: "/admin/backup", label: "Backup & Data", Icon: Database },
       { to: "/admin/settings", label: "Settings", Icon: Settings },
     ],

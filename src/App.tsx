@@ -57,6 +57,7 @@ import {
   AdminCities,
   AdminPaymentSettings,
   AdminPaymentSubmissions,
+  AdminPlanPayments,
   AdminBackup,
   AdminRoles,
   AdminHomepage,
@@ -131,6 +132,7 @@ export default function App() {
           <Route path="cities" element={<AdminCities />} />
           <Route path="payment-settings" element={<AdminPaymentSettings />} />
           <Route path="payment-submissions" element={<AdminPaymentSubmissions />} />
+          <Route path="plan-payments" element={<AdminPlanPayments />} />
           <Route path="backup" element={<AdminBackup />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
