@@ -31,6 +31,7 @@ import {
   MapPin,
   Activity,
   Inbox,
+  Receipt,
   Menu,
   X,
   Crown,
