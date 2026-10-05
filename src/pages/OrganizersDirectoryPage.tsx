@@ -22,6 +22,7 @@ interface Org {
   logo_url: string | null;
   description: string | null;
   category: string | null;
+  plan: string | null;
   verification_status: string | null;
   created_at: string;
 }
@@ -46,7 +47,7 @@ export function OrganizersDirectoryPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from("organizations")
-        .select("id, name, slug, logo_url, description, category, verification_status, created_at")
+        .select("id, name, slug, logo_url, description, category, plan, verification_status, created_at")
         .order("created_at", { ascending: false });
       if (!alive) return;
       if (!error && data) setOrgs(data as Org[]);
@@ -180,7 +181,7 @@ function OrgCard({
   index: number;
   eventsCount: number;
 }) {
-  const plan = getPlan(org.category);
+  const plan = getPlan(org.plan ?? org.category);
   const isPro = plan.id !== "starter";
   return (
     <motion.div

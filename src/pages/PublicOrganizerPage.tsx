@@ -28,6 +28,7 @@ interface OrgProfile {
   website: string | null;
   social_links: { twitter?: string; instagram?: string; linkedin?: string } | null;
   verification_status: string | null;
+  plan?: string | null;
 }
 
 export function PublicOrganizerPage() {
@@ -88,7 +89,7 @@ export function PublicOrganizerPage() {
     );
   }
 
-  const plan = getPlan("starter");
+  const plan = getPlan(profile.plan ?? "starter");
   const isPro = plan.id !== "starter";
   const isOwnPage = user?.id === profile.id;
 
