@@ -29,7 +29,7 @@ export function OrganizerDashboardPage() {
   const user = auth.user;
   const profile = auth.profile;
   const isAdmin = Boolean(auth.isAdmin);
-  const { plan, subscription, organizerProfile, can } = useSubscription();
+  const { plan, planId, subscription, organizerProfile, can } = useSubscription();
   const events = useEvents();
   const [stats, setStats] = useState<{
     published: number;
@@ -144,7 +144,7 @@ export function OrganizerDashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
-                {plan.id === "free" && <Sparkles className="h-5 w-5 text-[var(--text-tertiary)]" />}
+                {(planId === null || plan.id === "free") && <Sparkles className="h-5 w-5 text-[var(--text-tertiary)]" />}
                 {plan.id === "pro" && <Crown className="h-5 w-5 text-accent-400" />}
                 {plan.id === "business" && <Building2 className="h-5 w-5 text-violet-400" />}
               </div>
@@ -170,8 +170,8 @@ export function OrganizerDashboardPage() {
               <Mini label="Events this month" value={`${publishedCount} / ${monthlyLimit === 9999 ? "∞" : monthlyLimit}`} />
               <Mini
                 label="Status"
-                value={subscription?.status ?? "active"}
-                tone={subscription?.status === "active" ? "ok" : "warn"}
+                value={planId === null ? "no plan" : subscription?.status ?? "active"}
+                tone={planId === null ? "warn" : subscription?.status === "active" ? "ok" : "warn"}
               />
               <Mini
                 label="Renews"
@@ -357,8 +357,8 @@ export function OrganizerDashboardPage() {
           )}
         </div>
 
-        {/* Empty upsell when on free */}
-        {plan.id === "free" && (
+        {/* Empty upsell when no plan or on free */}
+        {(plan.id === "free" || planId === null) && (
           <div className="mt-10 overflow-hidden rounded-3xl border border-accent-500/30 bg-gradient-to-br from-accent-500/15 via-pink-500/10 to-transparent p-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>

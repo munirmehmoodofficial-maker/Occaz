@@ -966,7 +966,7 @@ function Step3(props: any) {
         {PLANS.map((p: any) => {
           const price = props.interval === "yearly" ? p.yearlyPKR : p.monthlyPKR;
           const selected = props.selectedPlan === p.id;
-          const Icon = p.id === "starter" ? Sparkles : p.id === "pro" ? Crown : Building2;
+          const Icon = p.id === "free" ? Sparkles : p.id === "starter" ? Sparkles : p.id === "pro" ? Crown : Building2;
           return (
             <button
               key={p.id}
