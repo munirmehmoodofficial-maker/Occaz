@@ -23,15 +23,15 @@ export function Layout() {
   // guest. Otherwise bounce them through onboarding.
   useEffect(() => {
     if (authLoading) return;
+    // /become-organizer is the organizer setup flow — let everyone reach it,
+    // even unauthenticated users (they can sign up at step 1).
+    if (location.pathname.startsWith("/become-organizer")) return;
     if (!user && !isGuest()) {
       navigate("/onboarding", { replace: true });
       return;
     }
     // Admins skip onboarding entirely.
     if (user && profile?.role === "admin") return;
-    // /become-organizer is the organizer setup flow — let users reach it
-    // even before they're "onboarded" as a regular attendee.
-    if (location.pathname.startsWith("/become-organizer")) return;
     // If user is signed in but not yet onboarded (or profile hasn't loaded),
     // send them to /onboarding to complete the flow.
     if (user && !authLoading && (!profile || !profile.onboarded)) {
