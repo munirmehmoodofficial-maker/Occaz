@@ -88,6 +88,41 @@ export function OrganizerDashboardPage() {
     );
   }
 
+  // If a user has no plan and isn't admin, send them through the
+  // proper onboarding form so they set up their brand, profile, and
+  // choose a plan before reaching the dashboard.
+  if (!isAdmin && planId === null) {
+    return (
+      <div className="page flex min-h-[80vh] items-center justify-center">
+        <div className="max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-8 text-center shadow-2xl">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-accent-500/20 to-pink-500/20 ring-1 ring-accent-500/40">
+            <Sparkles className="h-7 w-7 text-accent-400" />
+          </div>
+          <h1 className="text-xl font-semibold">Finish your organizer setup</h1>
+          <p className="mt-2 text-sm text-[var(--text-tertiary)]">
+            You're almost there. Pick a brand, set up your profile, and
+            choose a plan to start listing events on Occaz.
+          </p>
+          <Link
+            to="/become-organizer"
+            className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            <Sparkles className="h-4 w-4" />
+            Continue organizer setup
+          </Link>
+          <div className="mt-3">
+            <Link
+              to="/"
+              className="text-xs text-[var(--text-tertiary)] hover:text-white"
+            >
+              Back to home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const planColor =
     plan.id === "business"
       ? "from-violet-500/20 to-fuchsia-500/10 ring-violet-500/40"

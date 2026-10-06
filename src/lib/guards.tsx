@@ -66,46 +66,25 @@ export function RequireOrganizer({ children }: { children: ReactNode }) {
 }
 
 function BecomeOrganizerGate() {
-  const { user } = useAuth();
-  const [busy, setBusy] = useState(false);
-  async function optIn() {
-    if (!user) return;
-    setBusy(true);
-    await supabase.from("profiles").update({ is_organizer: true }).eq("id", user.id);
-    // also ensure a profile row exists for older accounts
-    const baseName = user.email?.split("@")[0] || "Organizer";
-    const baseSlug = baseName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "organizer";
-    await supabase.from("organizer_profiles").upsert(
-      { id: user.id, display_name: baseName, slug: baseSlug },
-      { onConflict: "id" },
-    );
-    setBusy(false);
-    window.location.reload();
-  }
+  const navigate = useNavigate();
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <div className="max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-8 text-center shadow-2xl">
         <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-accent-500/20 to-pink-500/20 ring-1 ring-accent-500/40">
           <Building2 className="h-7 w-7 text-accent-400" />
         </div>
-        <h1 className="text-xl font-semibold">This area is for organizers</h1>
+        <h1 className="text-xl font-semibold">Become an organizer on Occaz</h1>
         <p className="mt-2 text-sm text-[var(--text-tertiary)]">
-          The Organizer dashboard, billing, and tools are separate from your
-          attendee account. You can opt in to become an organizer at any time
-          — your data stays yours.
+          List your events, sell tickets, and reach thousands of attendees.
+          Setup is quick — just pick a brand, choose a plan, and you're live.
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <button
-            onClick={optIn}
-            disabled={busy}
-            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-accent-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            onClick={() => navigate("/become-organizer")}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-accent-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
           >
             <Sparkles className="h-4 w-4" />
-            {busy ? "Setting up…" : "Become an organizer"}
+            Start listing — it's free to set up
           </button>
           <Link
             to="/"
