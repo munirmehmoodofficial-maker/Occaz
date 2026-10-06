@@ -104,16 +104,22 @@ export function OrganizerDashboardPage() {
             You're almost there. Pick a brand, set up your profile, and
             choose a plan to start listing events on Occaz.
           </p>
-          {/* Use a plain <a> tag so navigation works even if React Router
-              is wedged. Browser default navigation, no JS dependency. */}
+          {/* Plain <a> tag — native browser navigation is the most reliable.
+              If the user has JS, the onClick attempts SPA nav first, but
+              if anything goes wrong the browser's default href takes over. */}
           <a
             href="/become-organizer"
             onClick={(e) => {
-              // Prefer SPA navigation when available
-              e.preventDefault();
+              // Only attempt SPA navigation if the click target is the
+              // button itself, not a child. Try the SPA route, but if
+              // anything throws, let the browser handle it via the href.
               try {
+                // Don't preventDefault — let the browser fall back to the
+                // href if React Router doesn't fire. This means clicks
+                // ALWAYS navigate (worst case: full page reload).
                 navigate("/become-organizer");
               } catch {
+                // If navigate itself throws synchronously, force a hard nav.
                 window.location.href = "/become-organizer";
               }
             }}
