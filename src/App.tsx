@@ -19,6 +19,9 @@ import { DevConfirmPage } from "./pages/DevConfirmPage";
 import { StorageDebugPage } from "./pages/StorageDebugPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import { OrganizerBillingPage } from "./pages/organizer/OrganizerBillingPage";
+import { OrganizerEventsPage } from "./pages/organizer/OrganizerEventsPage";
+import { OrganizerAnalyticsPage } from "./pages/organizer/OrganizerAnalyticsPage";
+import { OrganizerPromotePage } from "./pages/organizer/OrganizerPromotePage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OrganizerCheckoutPage } from "./pages/organizer/OrganizerCheckoutPage";
 import { AdminOrganizerFeaturesPage } from "./pages/admin/AdminOrganizerFeaturesPage";
@@ -102,6 +105,9 @@ export default function App() {
           <Route path="/organizer/billing" element={<RequireOrganizer><OrganizerBillingPage /></RequireOrganizer>} />
           <Route path="/organizer/billing/checkout/:paymentId" element={<RequireOrganizer><OrganizerCheckoutPage /></RequireOrganizer>} />
           <Route path="/organizer/profile" element={<RequireOrganizer><OrganizerProfilePage /></RequireOrganizer>} />
+          <Route path="/organizer/events" element={<RequireOrganizer><OrganizerEventsPage /></RequireOrganizer>} />
+          <Route path="/organizer/analytics" element={<RequireOrganizer><OrganizerAnalyticsPage /></RequireOrganizer>} />
+          <Route path="/organizer/promote" element={<RequireOrganizer><OrganizerPromotePage /></RequireOrganizer>} />
           <Route path="/organizers" element={<OrganizersDirectoryPage />} />
           <Route path="/organizers/:slug" element={<PublicOrganizerPage />} />
         </Route>
