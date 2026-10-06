@@ -1,4 +1,7 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../lib/auth";
+import { getPlan } from "../../lib/plans";
+import { ArrowRight } from "lucide-react";
 import {
   Home,
   Compass,
@@ -46,6 +49,13 @@ export function Sidebar({
   onToggleCollapsed,
 }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const isOrganizer = Boolean(profile?.is_organizer);
+  const isAdmin = profile?.role === "admin";
+  const planLabel = isOrganizer
+    ? (isAdmin ? "Admin" : getPlan(profile?.plan as any)?.name ?? "Free")
+    : "";
 
   const content = (
     <div
@@ -209,27 +219,49 @@ export function Sidebar({
 
       <div className="flex-1" />
 
-      {/* Upgrade card */}
-      {!collapsed && (
+      {/* Upgrade card — only for non-organizers */}
+      {!collapsed && !isOrganizer && (
         <div className="mx-3 mb-3 overflow-hidden rounded-xl bg-gradient-to-br from-accent-500/20 via-pink-500/15 to-cyan-500/15 p-4 ring-1 ring-[var(--border-default)]">
           <div className="flex items-start gap-2">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
             <span className="text-sm font-semibold leading-tight">
-              Become an Organizer at Occaz. List on Occaz.
+              Become an Organizer at Occaz
             </span>
           </div>
           <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
-            Reach thousands of engaged attendees.
+            List your events, sell tickets, and reach thousands of attendees.
           </p>
-          <NavLink
-            to="/become-organizer"
-            onClick={onClose}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-white/90"
+          <button
+            onClick={() => {
+              onClose?.();
+              navigate("/become-organizer");
+            }}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-white/90 cursor-pointer"
           >
             <TrendingUp className="h-3.5 w-3.5" />
             Start listing
-          </NavLink>
+          </button>
         </div>
+      )}
+
+      {/* Organizer dashboard shortcut — only for organizers */}
+      {!collapsed && isOrganizer && (
+        <NavLink
+          to="/organizer"
+          onClick={onClose}
+          className="mx-3 mb-3 flex items-center gap-3 rounded-xl bg-gradient-to-br from-violet-500/15 to-accent-500/10 p-3 ring-1 ring-violet-500/30 transition hover:ring-violet-500/50"
+        >
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/20">
+            <Building2 className="h-4 w-4 text-violet-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold">Organizer hub</div>
+            <div className="text-[10px] text-[var(--text-tertiary)]">
+              {isAdmin ? "Admin · full access" : `Plan: ${planLabel}`}
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-violet-400" />
+        </NavLink>
       )}
 
       {/* Bottom */}

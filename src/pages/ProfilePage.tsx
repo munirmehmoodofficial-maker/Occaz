@@ -233,7 +233,7 @@ export function ProfilePage() {
             </div>
 
             {!profile?.is_organizer && (
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent-500/30 bg-gradient-to-br from-accent-500/10 via-pink-500/5 to-transparent p-4">
+              <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-accent-500/40 bg-gradient-to-br from-accent-500/15 via-pink-500/10 to-transparent p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <div className="grid h-9 w-9 place-items-center rounded-lg bg-accent-500/20 ring-1 ring-accent-500/30">
                     <Building2 className="h-4 w-4 text-accent-400" />
@@ -433,7 +433,4 @@ function Toggle({
             on ? "left-5" : "left-0.5",
           )}
         />
-      </button>
-    </div>
-  );
-}
+   
