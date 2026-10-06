@@ -473,21 +473,21 @@ function InterestsStep({
   }
 
   async function commitAndContinue() {
-    // Move to the next step FIRST so the UI always advances even if the
-    // database write fails (e.g. RLS denial, missing column). The async
-    // writes happen in the background.
-    onNext();
-
+    // For guests: write to localStorage and advance immediately.
     if (isGuest) {
       try {
         localStorage.setItem(
           "occaz.preferences",
           JSON.stringify({ categories: picked, city }),
         );
+        localStorage.setItem("occaz.onboarded", "1");
       } catch {}
+      onNext();
       return;
     }
-    // signed-in user: persist to profiles.preferences (best-effort)
+
+    // For signed-in users: persist to DB FIRST so the Layout stops
+    // redirecting us back to /onboarding, then advance.
     try {
       const { data: u } = await supabase.auth.getUser();
       if (u.user) {
@@ -503,6 +503,11 @@ function InterestsStep({
           // eslint-disable-next-line no-console
           console.warn("[onboarding] profile update failed:", error.message);
         }
+        // Always set a local fallback flag so even if RLS or schema is
+        // broken, the Layout doesn't loop the user back to /onboarding.
+        try {
+          localStorage.setItem("occaz.onboarded", "1");
+        } catch {}
         // Refresh the auth context so the Layout's "ready" check sees onboarded=true
         try {
           await refreshProfile();
@@ -512,6 +517,7 @@ function InterestsStep({
       // eslint-disable-next-line no-console
       console.warn("[onboarding] commit error:", err?.message ?? err);
     }
+    onNext();
   }
 
   const enough = picked.length >= 1;

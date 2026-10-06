@@ -18,6 +18,18 @@ export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Helper: read the local-storage "I've completed onboarding UI" flag.
+// This is a fallback in case the database write for `onboarded` failed
+// (e.g. RLS denial, missing column). It prevents the redirect loop
+// where the user reaches the done screen but is bounced back to /onboarding.
+  const localOnboarded = (() => {
+    try {
+      return localStorage.getItem("occaz.onboarded") === "1";
+    } catch {
+      return false;
+    }
+  })();
+
   // Gate the main app: only render the chrome (and Outlet) when the user
   // has either signed in (and completed onboarding) or is browsing as a
   // guest. Otherwise bounce them through onboarding.
@@ -33,15 +45,15 @@ export function Layout() {
     // Admins skip onboarding entirely.
     if (user && profile?.role === "admin") return;
     // Organizers (users who opted into the organizer flow) skip onboarding.
-    // They already have a brand and dashboard; routing them through the
-    // generic welcome flow creates a deadlock loop.
     if (user && profile?.is_organizer) return;
+    // Local fallback: if the user finished the UI flow, never redirect back.
+    if (localOnboarded) return;
     // If user is signed in but not yet onboarded (or profile hasn't loaded),
     // send them to /onboarding to complete the flow.
     if (user && !authLoading && (!profile || !profile.onboarded)) {
       navigate("/onboarding", { replace: true });
     }
-  }, [user, profile, authLoading, navigate, location.pathname]);
+  }, [user, profile, authLoading, navigate, location.pathname, localOnboarded]);
 
   // Show the main app only if:
   //   - the user is signed in AND has completed onboarding, OR
@@ -59,14 +71,16 @@ export function Layout() {
       isAdminUser ||
       isOrganizerUser ||
       onOrganizerSetup ||
+      localOnboarded ||
       (user && (profile?.onboarded ?? false))
     );
 
   // If we know the user is not signed in and not a guest, don't show a
   // long loading screen — let the useEffect above navigate to /onboarding.
   // Exception: the /become-organizer page is accessible without auth (sign-up
-  // happens at step 1), so render it directly.
-  if (!authLoading && !user && !guest && !onOrganizerSetup) {
+  // happens at step 1), so render it directly. Also: local onboarded flag
+  // means the user completed onboarding UI even if the DB write failed.
+  if (!authLoading && !user && !guest && !onOrganizerSetup && !localOnboarded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg-base)]">
         <div className="flex items-center gap-3 text-sm text-[var(--text-tertiary)]">
