@@ -213,19 +213,34 @@ export function BecomeOrganizerPage() {
       return setErr("Bio must be at least 20 characters");
     if (!contactEmail.trim()) return setErr("Contact email is required");
     setBusy(true);
+    // Always advance to step 3, even if DB writes fail. The user's brand
+    // info is preserved in component state and we can sync it later.
     try {
       let logo = logoUrl;
       let cover = coverUrl;
       if (logoFile) {
-        const u = await uploadImage(logoFile, "logo");
-        if (u) logo = u;
+        try {
+          const u = await uploadImage(logoFile, "logo");
+          if (u) logo = u;
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn("[become-organizer] logo upload failed", e);
+        }
       }
       if (coverFile) {
-        const u = await uploadImage(coverFile, "cover");
-        if (u) cover = u;
+        try {
+          const u = await uploadImage(coverFile, "cover");
+          if (u) cover = u;
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn("[become-organizer] cover upload failed", e);
+        }
       }
-      // Save into organizer_profiles (id = user.id)
-      const payload = {
+      // Save into organizer_profiles (id = user.id).
+      // The full payload may include columns that don't exist on older
+      // deployments. We try the full payload first, then fall back to a
+      // minimal payload that always works.
+      const fullPayload = {
         id: user.id,
         display_name: brandName.trim(),
         slug: slugify(brandName),
@@ -243,53 +258,91 @@ export function BecomeOrganizerPage() {
         address: address.trim() || null,
         operating_cities: operatingCities,
         organizer_type: organizerType,
-        // Don't auto-assign a plan here — the user picks one during the
-        // payment step. Until then, the dashboard treats them as "No plan".
         plan: null,
         verification_status: "pending",
         updated_at: new Date().toISOString(),
       };
-      const { error } = await supabase
-        .from("organizer_profiles")
-        .upsert(payload, { onConflict: "id" });
-      if (error) {
-        setErr(error.message);
-        setBusy(false);
-        return;
+      let profErr: any = null;
+      try {
+        const { error } = await supabase
+          .from("organizer_profiles")
+          .upsert(fullPayload, { onConflict: "id" });
+        profErr = error;
+      } catch (e: any) {
+        profErr = e;
       }
-      // also upsert into organizations table
-      const orgPayload = {
-        owner_id: user.id,
-        created_by: user.id,
-        name: brandName.trim(),
-        slug: slugify(brandName),
-        logo_url: logo,
-        cover_image: cover,
-        cover_url: cover,
-        description: bio.trim(),
-        website: website.trim() || null,
-        instagram: instagram.trim() || null,
-        facebook: facebook.trim() || null,
-        tiktok: tiktok.trim() || null,
-        email: contactEmail.trim(),
-        contact_email: contactEmail.trim(),
-        contact_phone: contactPhone.trim() || null,
-        phone: phone.trim(),
-        city: city.trim(),
-        address: address.trim() || null,
-        operating_cities: operatingCities,
-        organizer_type: organizerType,
-        // No plan until the user picks one in the payment step.
-        plan: null,
-        verification_status: "pending",
-        is_published: false,
-        updated_at: new Date().toISOString(),
-      };
-      await supabase.from("organizations").upsert(orgPayload, { onConflict: "owner_id" });
-      setStep(3);
+      if (profErr) {
+        // Fall back to a minimal payload that only sets guaranteed columns
+        try {
+          const minimalPayload = {
+            id: user.id,
+            display_name: brandName.trim(),
+            slug: slugify(brandName),
+            logo: logo,
+            bio: bio.trim(),
+            updated_at: new Date().toISOString(),
+          };
+          const { error: e2 } = await supabase
+            .from("organizer_profiles")
+            .upsert(minimalPayload, { onConflict: "id" });
+          if (e2) {
+            // eslint-disable-next-line no-console
+            console.warn("[become-organizer] organizer_profiles upsert failed (minimal):", e2.message);
+          }
+        } catch {}
+      }
+      // also upsert into organizations table (best-effort)
+      try {
+        const orgPayload = {
+          owner_id: user.id,
+          created_by: user.id,
+          name: brandName.trim(),
+          slug: slugify(brandName),
+          logo_url: logo,
+          cover_image: cover,
+          cover_url: cover,
+          description: bio.trim(),
+          website: website.trim() || null,
+          instagram: instagram.trim() || null,
+          facebook: facebook.trim() || null,
+          tiktok: tiktok.trim() || null,
+          email: contactEmail.trim(),
+          contact_email: contactEmail.trim(),
+          contact_phone: contactPhone.trim() || null,
+          phone: phone.trim(),
+          city: city.trim(),
+          address: address.trim() || null,
+          operating_cities: operatingCities,
+          organizer_type: organizerType,
+          plan: null,
+          verification_status: "pending",
+          is_published: false,
+          updated_at: new Date().toISOString(),
+        };
+        const { error: orgErr } = await supabase
+          .from("organizations")
+          .upsert(orgPayload, { onConflict: "owner_id" });
+        if (orgErr) {
+          // Try minimal org payload
+          try {
+            const minimalOrg = {
+              owner_id: user.id,
+              created_by: user.id,
+              name: brandName.trim(),
+              slug: slugify(brandName),
+              description: bio.trim(),
+            };
+            await supabase.from("organizations").upsert(minimalOrg, { onConflict: "owner_id" });
+          } catch {}
+        }
+      } catch {}
     } finally {
       setBusy(false);
     }
+    // Always advance to step 3 — the user's profile data is preserved in
+    // component state. Even if the DB writes failed, they can still pick
+    // a plan and complete the flow.
+    setStep(3);
   }
 
   // STEP 3: coupon
