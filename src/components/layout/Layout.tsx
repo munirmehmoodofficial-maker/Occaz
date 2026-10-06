@@ -57,7 +57,9 @@ export function Layout() {
 
   // If we know the user is not signed in and not a guest, don't show a
   // long loading screen — let the useEffect above navigate to /onboarding.
-  if (!authLoading && !user && !guest) {
+  // Exception: the /become-organizer page is accessible without auth (sign-up
+  // happens at step 1), so render it directly.
+  if (!authLoading && !user && !guest && !onOrganizerSetup) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg-base)]">
         <div className="flex items-center gap-3 text-sm text-[var(--text-tertiary)]">

@@ -120,17 +120,20 @@ export function BecomeOrganizerPage() {
   }, [user]);
 
   // If already an organizer, jump to dashboard
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data } = await supabase
-        .from("organizer_profiles")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (data?.id) navigate("/organizer");
-    })();
-  }, [user]);
+  // Disabled: this was causing users to be redirected away from the
+  // setup form, which made the page "unclickable" because they could
+  // never see the form. Now they can re-do the flow if they want.
+  // useEffect(() => {
+  //   if (!user) return;
+  //   (async () => {
+  //     const { data } = await supabase
+  //       .from("organizer_profiles")
+  //       .select("id")
+  //       .eq("id", user.id)
+  //       .maybeSingle();
+  //     if (data?.id) navigate("/organizer");
+  //   })();
+  // }, [user]);
 
   // STEP 1 handlers
   async function onSubmitRegister() {
