@@ -473,6 +473,11 @@ function InterestsStep({
   }
 
   async function commitAndContinue() {
+    // Move to the next step FIRST so the UI always advances even if the
+    // database write fails (e.g. RLS denial, missing column). The async
+    // writes happen in the background.
+    onNext();
+
     if (isGuest) {
       try {
         localStorage.setItem(
@@ -480,24 +485,33 @@ function InterestsStep({
           JSON.stringify({ categories: picked, city }),
         );
       } catch {}
-      onNext();
       return;
     }
-    // signed-in user: persist to profiles.preferences
-    const { data: u } = await supabase.auth.getUser();
-    if (u.user) {
-      await supabase
-        .from("profiles")
-        .update({
-          preferences: { categories: picked, city },
-          onboarded: true,
-          city: city || null,
-        })
-        .eq("id", u.user.id);
-      // Refresh the auth context so the Layout's "ready" check sees onboarded=true
-      await refreshProfile();
+    // signed-in user: persist to profiles.preferences (best-effort)
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            preferences: { categories: picked, city },
+            onboarded: true,
+            city: city || null,
+          })
+          .eq("id", u.user.id);
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.warn("[onboarding] profile update failed:", error.message);
+        }
+        // Refresh the auth context so the Layout's "ready" check sees onboarded=true
+        try {
+          await refreshProfile();
+        } catch {}
+      }
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.warn("[onboarding] commit error:", err?.message ?? err);
     }
-    onNext();
   }
 
   const enough = picked.length >= 1;

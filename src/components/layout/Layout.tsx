@@ -32,6 +32,10 @@ export function Layout() {
     }
     // Admins skip onboarding entirely.
     if (user && profile?.role === "admin") return;
+    // Organizers (users who opted into the organizer flow) skip onboarding.
+    // They already have a brand and dashboard; routing them through the
+    // generic welcome flow creates a deadlock loop.
+    if (user && profile?.is_organizer) return;
     // If user is signed in but not yet onboarded (or profile hasn't loaded),
     // send them to /onboarding to complete the flow.
     if (user && !authLoading && (!profile || !profile.onboarded)) {
@@ -43,14 +47,17 @@ export function Layout() {
   //   - the user is signed in AND has completed onboarding, OR
   //   - the visitor is browsing as a guest, OR
   //   - the user is an admin (they have full access), OR
+  //   - the user is an organizer (skips attendee onboarding), OR
   //   - the user is on the organizer setup path (skip attendee onboarding)
   const guest = isGuest();
   const isAdminUser = profile?.role === "admin";
+  const isOrganizerUser = Boolean(profile?.is_organizer);
   const onOrganizerSetup = location.pathname.startsWith("/become-organizer");
   const ready =
     !authLoading && (
       guest ||
       isAdminUser ||
+      isOrganizerUser ||
       onOrganizerSetup ||
       (user && (profile?.onboarded ?? false))
     );
