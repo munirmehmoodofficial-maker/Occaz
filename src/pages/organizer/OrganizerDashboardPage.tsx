@@ -105,8 +105,18 @@ export function OrganizerDashboardPage() {
             choose a plan to start listing events on Occaz.
           </p>
           <button
-            onClick={() => navigate("/become-organizer")}
-            className="relative z-10 mt-5 inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-gradient-to-r from-accent-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              try {
+                navigate("/become-organizer");
+              } catch (err) {
+                // Fallback to hard navigation if SPA navigation fails
+                window.location.href = "/become-organizer";
+              }
+            }}
+            className="relative z-50 mt-5 inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-gradient-to-r from-accent-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:opacity-90 active:scale-[0.98]"
           >
             <Sparkles className="h-4 w-4" />
             Continue organizer setup
