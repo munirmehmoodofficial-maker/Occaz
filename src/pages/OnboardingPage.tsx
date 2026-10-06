@@ -76,6 +76,11 @@ export function OnboardingPage() {
   // Routing logic
   useEffect(() => {
     if (loading) return;
+    // Admins skip onboarding entirely — they have full access.
+    if (user && profile?.role === "admin") {
+      navigate("/organizer", { replace: true });
+      return;
+    }
     if (user && profile?.onboarded) {
       navigate("/", { replace: true });
     }
