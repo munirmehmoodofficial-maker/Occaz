@@ -260,6 +260,39 @@ export function ProfilePage() {
               </div>
             )}
 
+            {profile?.is_organizer && (
+              <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-accent-500/5 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/20 ring-1 ring-violet-500/30">
+                    <Building2 className="h-4 w-4 text-violet-400" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">You're an organizer</div>
+                    <div className="text-xs text-[var(--text-tertiary)]">
+                      Manage your events, profile, and billing.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => navigate("/organizer")}
+                    leftIcon={<Building2 className="h-3.5 w-3.5" />}
+                  >
+                    Dashboard
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate("/become-organizer")}
+                    rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
+                  >
+                    Re-do setup
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="mt-6 flex flex-wrap gap-2">
               {(cats.length ? cats : ["Concerts", "Workshops"]).map((i) => (
                 <Badge key={i} tone="accent">

@@ -119,30 +119,35 @@ export function BecomeOrganizerPage() {
     }
   }, [user]);
 
-  // If already an organizer, jump to dashboard
-  // Disabled: this was causing users to be redirected away from the
-  // setup form, which made the page "unclickable" because they could
-  // never see the form. Now they can re-do the flow if they want.
-  // useEffect(() => {
-  //   if (!user) return;
-  //   (async () => {
-  //     const { data } = await supabase
-  //       .from("organizer_profiles")
-  //       .select("id")
-  //       .eq("id", user.id)
-  //       .maybeSingle();
-  //     if (data?.id) navigate("/organizer");
-  //   })();
-  // }, [user]);
+  // If the user is already signed in, auto-skip step 1 (sign-up)
+  // and go straight to step 2 (profile setup) so they can fill out
+  // their organizer profile.
+  useEffect(() => {
+    if (!user) return;
+    // Wait a tick to avoid setState-during-render
+    const t = setTimeout(() => {
+      setStep(2);
+      // Also pre-fill the contact email
+      if (user.email && !contactEmail) setContactEmail(user.email);
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // STEP 1 handlers
   async function onSubmitRegister() {
     setErr(null);
-    if (!fullName.trim()) return setErr("Full name is required");
     if (!email.trim()) return setErr("Email is required");
-    if (!phone.trim()) return setErr("Phone is required");
-    if (!city.trim()) return setErr("City is required");
-    if (!isLogin && password.length < 6) return setErr("Password must be at least 6 characters");
+    // In login mode, only email + password are required. In register mode,
+    // we also need full name, phone, city, and a strong password.
+    if (!isLogin) {
+      if (!fullName.trim()) return setErr("Full name is required");
+      if (!phone.trim()) return setErr("Phone is required");
+      if (!city.trim()) return setErr("City is required");
+      if (password.length < 6) return setErr("Password must be at least 6 characters");
+    } else {
+      if (!password) return setErr("Password is required");
+    }
     setBusy(true);
     try {
       if (isLogin) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Crown,
@@ -29,6 +29,7 @@ export function OrganizerDashboardPage() {
   const user = auth.user;
   const profile = auth.profile;
   const isAdmin = Boolean(auth.isAdmin);
+  const navigate = useNavigate();
   const { plan, planId, subscription, organizerProfile, can } = useSubscription();
   const events = useEvents();
   const [stats, setStats] = useState<{
@@ -103,13 +104,13 @@ export function OrganizerDashboardPage() {
             You're almost there. Pick a brand, set up your profile, and
             choose a plan to start listing events on Occaz.
           </p>
-          <Link
-            to="/become-organizer"
-            className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          <button
+            onClick={() => navigate("/become-organizer")}
+            className="relative z-10 mt-5 inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-gradient-to-r from-accent-500 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
           >
             <Sparkles className="h-4 w-4" />
             Continue organizer setup
-          </Link>
+          </button>
           <div className="mt-3">
             <Link
               to="/"
