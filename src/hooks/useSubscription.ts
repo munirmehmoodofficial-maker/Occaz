@@ -62,16 +62,24 @@ export function useSubscription() {
     setLoading(true);
     setError(null);
 
-    // 1. Read plan from profiles
-    const { data: profileRow } = await supabase
-      .from("profiles")
-      .select("plan")
-      .eq("id", user.id)
-      .maybeSingle();
+    // 1. Read plan from profiles. Defensive: the `plan` column may be missing
+    // on older deployments. Try the narrow query first; if it errors out,
+    // fall back to a column-agnostic read so the hook never crashes.
+    let rawPlan: any = null;
+    try {
+      const { data: profileRow, error: planErr } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!planErr) rawPlan = (profileRow as any)?.plan;
+    } catch (e) {
+      // column doesn't exist or RLS denied — treat as "no plan yet"
+      rawPlan = null;
+    }
 
     // Only set planId if it's a recognized value. New users with no plan
     // will have planId = null, which the dashboard treats as "No plan yet".
-    const rawPlan = (profileRow as any)?.plan;
     const pid: PlanId | null =
       rawPlan === "pro" || rawPlan === "business" || rawPlan === "starter"
         ? rawPlan

@@ -104,15 +104,16 @@ export function OrganizerDashboardPage() {
             You're almost there. Pick a brand, set up your profile, and
             choose a plan to start listing events on Occaz.
           </p>
-          <button
-            type="button"
+          {/* Use a plain <a> tag so navigation works even if React Router
+              is wedged. Browser default navigation, no JS dependency. */}
+          <a
+            href="/become-organizer"
             onClick={(e) => {
+              // Prefer SPA navigation when available
               e.preventDefault();
-              e.stopPropagation();
               try {
                 navigate("/become-organizer");
-              } catch (err) {
-                // Fallback to hard navigation if SPA navigation fails
+              } catch {
                 window.location.href = "/become-organizer";
               }
             }}
@@ -120,7 +121,7 @@ export function OrganizerDashboardPage() {
           >
             <Sparkles className="h-4 w-4" />
             Continue organizer setup
-          </button>
+          </a>
           <div className="mt-3">
             <Link
               to="/"
