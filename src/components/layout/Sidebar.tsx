@@ -244,25 +244,7 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Organizer dashboard shortcut — only for organizers */}
-      {!collapsed && isOrganizer && (
-        <NavLink
-          to="/organizer"
-          onClick={onClose}
-          className="mx-3 mb-3 flex items-center gap-3 rounded-xl bg-gradient-to-br from-violet-500/15 to-accent-500/10 p-3 ring-1 ring-violet-500/30 transition hover:ring-violet-500/50"
-        >
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/20">
-            <Building2 className="h-4 w-4 text-violet-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold">Organizer hub</div>
-            <div className="text-[10px] text-[var(--text-tertiary)]">
-              {isAdmin ? "Admin · full access" : `Plan: ${planLabel}`}
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 text-violet-400" />
-        </NavLink>
-      )}
+      {/* Organizer dashboard shortcut — removed; users access /organizer from Profile */}
 
       {/* Bottom */}
       <div className="border-t border-[var(--border-default)] p-3">
