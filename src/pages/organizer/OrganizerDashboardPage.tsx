@@ -144,7 +144,7 @@ export function OrganizerDashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
-                {(planId === null || plan.id === "free") && <Sparkles className="h-5 w-5 text-[var(--text-tertiary)]" />}
+                {planId === null && <Sparkles className="h-5 w-5 text-[var(--text-tertiary)]" />}
                 {plan.id === "pro" && <Crown className="h-5 w-5 text-accent-400" />}
                 {plan.id === "business" && <Building2 className="h-5 w-5 text-violet-400" />}
               </div>
@@ -357,8 +357,8 @@ export function OrganizerDashboardPage() {
           )}
         </div>
 
-        {/* Empty upsell when no plan or on free */}
-        {(plan.id === "free" || planId === null) && (
+        {/* Empty upsell when no plan */}
+        {planId === null && (
           <div className="mt-10 overflow-hidden rounded-3xl border border-accent-500/30 bg-gradient-to-br from-accent-500/15 via-pink-500/10 to-transparent p-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>

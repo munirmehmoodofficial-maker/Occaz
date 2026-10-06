@@ -73,7 +73,7 @@ export function useSubscription() {
     // will have planId = null, which the dashboard treats as "No plan yet".
     const rawPlan = (profileRow as any)?.plan;
     const pid: PlanId | null =
-      rawPlan === "free" || rawPlan === "pro" || rawPlan === "business" || rawPlan === "starter"
+      rawPlan === "pro" || rawPlan === "business" || rawPlan === "starter"
         ? rawPlan
         : null;
     setPlanId(pid);
