@@ -53,17 +53,33 @@ interface AuthContextValue {
 const AuthCtx = createContext<AuthContextValue | null>(null);
 
 async function fetchProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, avatar_url, role, is_organizer, onboarded")
-    .eq("id", userId)
-    .maybeSingle();
-  if (error) {
+  try {
+    // Race the profile fetch against a 2s timeout so a slow / failed
+    // network call can't keep the app in the loading state forever.
+    const result = await Promise.race([
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, avatar_url, role, is_organizer, onboarded")
+        .eq("id", userId)
+        .maybeSingle(),
+      new Promise<{ data: null; error: { message: string } }>((resolve) =>
+        setTimeout(
+          () => resolve({ data: null, error: { message: "Profile fetch timed out" } }),
+          2000,
+        ),
+      ),
+    ]);
+    if (result.error) {
+      // eslint-disable-next-line no-console
+      console.warn("[auth] profile fetch failed", result.error.message);
+      return null;
+    }
+    return (result.data as Profile | null) ?? null;
+  } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn("[auth] profile fetch failed", error.message);
+    console.warn("[auth] profile fetch error", err);
     return null;
   }
-  return data as Profile | null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -85,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return false;
       });
-    }, 5000);
+    }, 1500);
 
     (async () => {
       try {
@@ -103,8 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
+const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
       setSession(s);
+      setLoading(false);
       if (s?.user) {
         setProfile(await fetchProfile(s.user.id));
       } else {

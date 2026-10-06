@@ -30,8 +30,22 @@ export function Layout() {
   // Show the main app only if:
   //   - the user is signed in AND has completed onboarding, OR
   //   - the visitor is browsing as a guest
+  const guest = isGuest();
   const ready =
-    !authLoading && (isGuest() || (user && (profile?.onboarded ?? false)));
+    !authLoading && (guest || (user && (profile?.onboarded ?? false)));
+
+  // If we know the user is not signed in and not a guest, don't show a
+  // long loading screen — let the useEffect above navigate to /onboarding.
+  if (!authLoading && !user && !guest) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-base)]">
+        <div className="flex items-center gap-3 text-sm text-[var(--text-tertiary)]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Redirecting…
+        </div>
+      </div>
+    );
+  }
 
   if (!ready) {
     return (
