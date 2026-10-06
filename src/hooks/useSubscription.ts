@@ -90,8 +90,9 @@ export function useSubscription() {
       .maybeSingle();
     setOrganizerProfile((orgByCreator as OrganizerProfile) ?? null);
 
-    // 3. Synthesize a Subscription stub based on plan
-    if (pid !== "starter") {
+    // 3. Synthesize a Subscription stub based on plan.
+    // pid === null means "no plan yet" — no subscription to synthesize.
+    if (pid === "pro" || pid === "business") {
       const amount = pid === "pro" ? 5000 : 12000;
       setSubscription({
         id: `sim-${user.id}`,
@@ -105,6 +106,7 @@ export function useSubscription() {
         interval: "monthly",
       });
     } else {
+      // starter or null — no active subscription shown
       setSubscription(null);
     }
     setPayments([]);
