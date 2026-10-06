@@ -86,12 +86,12 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/auth/confirmed" element={<AuthConfirmedPage />} />
-        <Route path="/become-organizer" element={<BecomeOrganizerPage />} />
         <Route path="/dev-confirm" element={<DevConfirmPage />} />
         <Route path="/__storage-debug" element={<StorageDebugPage />} />
         <Route path="/__status" element={<StatusPage />} />
 
         <Route element={<Layout />}>
+          <Route path="/become-organizer" element={<BecomeOrganizerPage />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/events" element={<EventsPage />} />

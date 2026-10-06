@@ -348,10 +348,10 @@ export function BecomeOrganizerPage() {
   const progress = ((step - 1) / (totalSteps - 1)) * 100;
 
   return (
-    <div className="page min-h-screen pb-20">
+    <div className="page pb-20">
       <div className="container mx-auto max-w-3xl">
         {/* Header */}
-        <div className="mb-6 mt-8 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-1 text-sm text-[var(--text-tertiary)] hover:text-white"

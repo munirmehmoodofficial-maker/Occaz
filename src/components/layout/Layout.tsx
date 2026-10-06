@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -16,6 +16,7 @@ export function Layout() {
   const [searchOpen, setSearchOpen] = useState(false);
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Gate the main app: only render the chrome (and Outlet) when the user
   // has either signed in (and completed onboarding) or is browsing as a
@@ -28,21 +29,31 @@ export function Layout() {
     }
     // Admins skip onboarding entirely.
     if (user && profile?.role === "admin") return;
+    // /become-organizer is the organizer setup flow — let users reach it
+    // even before they're "onboarded" as a regular attendee.
+    if (location.pathname.startsWith("/become-organizer")) return;
     // If user is signed in but not yet onboarded (or profile hasn't loaded),
     // send them to /onboarding to complete the flow.
     if (user && !authLoading && (!profile || !profile.onboarded)) {
       navigate("/onboarding", { replace: true });
     }
-  }, [user, profile, authLoading, navigate]);
+  }, [user, profile, authLoading, navigate, location.pathname]);
 
   // Show the main app only if:
   //   - the user is signed in AND has completed onboarding, OR
   //   - the visitor is browsing as a guest, OR
-  //   - the user is an admin (they have full access)
+  //   - the user is an admin (they have full access), OR
+  //   - the user is on the organizer setup path (skip attendee onboarding)
   const guest = isGuest();
   const isAdminUser = profile?.role === "admin";
+  const onOrganizerSetup = location.pathname.startsWith("/become-organizer");
   const ready =
-    !authLoading && (guest || isAdminUser || (user && (profile?.onboarded ?? false)));
+    !authLoading && (
+      guest ||
+      isAdminUser ||
+      onOrganizerSetup ||
+      (user && (profile?.onboarded ?? false))
+    );
 
   // If we know the user is not signed in and not a guest, don't show a
   // long loading screen — let the useEffect above navigate to /onboarding.
