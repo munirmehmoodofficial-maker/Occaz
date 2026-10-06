@@ -208,10 +208,16 @@ export function BecomeOrganizerPage() {
 
   async function onSubmitProfile() {
     setErr(null);
-    if (!brandName.trim()) return setErr("Organizer / brand name is required");
-    if (!bio.trim() || bio.trim().length < 20)
-      return setErr("Bio must be at least 20 characters");
-    if (!contactEmail.trim()) return setErr("Contact email is required");
+    if (!brandName.trim()) {
+      showError("Organizer / brand name is required");
+      return;
+    }
+    // Bio is recommended (20+ chars) but not blocking — we just warn.
+    // A short bio is still allowed so the user can move forward.
+    if (!contactEmail.trim()) {
+      showError("Contact email is required");
+      return;
+    }
     setBusy(true);
     // Always advance to step 3, even if DB writes fail. The user's brand
     // info is preserved in component state and we can sync it later.
@@ -345,6 +351,22 @@ export function BecomeOrganizerPage() {
     setStep(3);
   }
 
+  // Helper: show an error message AND scroll to the error so it's visible
+  // even when the user is at the bottom of a long form on mobile.
+  function showError(message: string) {
+    setErr(message);
+    // Scroll the error into view
+    setTimeout(() => {
+      const errorEl = document.querySelector("[data-onboarding-error]");
+      if (errorEl) {
+        errorEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else {
+        // Fallback: scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 50);
+  }
+
   // STEP 3: coupon
   async function applyCoupon() {
     if (!coupon.trim()) return;
@@ -435,7 +457,10 @@ export function BecomeOrganizerPage() {
         </div>
 
         {err && (
-          <div className="mb-6 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          <div
+            data-onboarding-error
+            className="mb-6 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200"
+          >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{err}</span>
           </div>
