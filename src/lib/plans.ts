@@ -2,7 +2,7 @@
 // subscriptions. Mirrors the `get_user_plan_features` SQL function so
 // client-side gating stays in sync with server-side enforcement.
 
-export type PlanId = "starter" | "pro" | "business";
+export type PlanId = "free" | "starter" | "pro" | "business";
 export type PlanInterval = "monthly" | "yearly";
 
 export interface PlanFeatures {
@@ -30,6 +30,30 @@ export interface Plan {
 }
 
 export const PLANS: Plan[] = [
+  {
+    id: "free",
+    name: "Free",
+    tagline: "Just getting started",
+    monthlyPKR: 0,
+    yearlyPKR: 0,
+    features: [
+      "Create up to 1 event",
+      "Basic event page",
+      "Email support",
+    ],
+    flags: {
+      maxEventsPerMonth: 1,
+      canFeature: false,
+      canCustomizeProfile: false,
+      hasAdvancedAnalytics: false,
+      hasPromotionalTools: false,
+      hasAudienceInsights: false,
+      hasMultipleOrganizers: false,
+      hasCampaignTools: false,
+      hasDedicatedSupport: false,
+      hasPriorityPromotion: false,
+    },
+  },
   {
     id: "starter",
     name: "Starter",

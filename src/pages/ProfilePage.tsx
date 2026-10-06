@@ -5,6 +5,7 @@ import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { Button } from "../components/ui/Button";
 import { useSaved } from "../hooks/useSaved";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { useEvents, useOpportunities } from "../hooks/useListings";
 import { supabase } from "../lib/supabase";
@@ -31,6 +32,7 @@ interface UserPrefs {
 
 export function ProfilePage() {
   const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const events = useEvents();
   const opportunities = useOpportunities();
   const { saved, toggleEvent, toggleOpportunity, loaded } = useSaved();
@@ -41,7 +43,7 @@ export function ProfilePage() {
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
-  const [becomingOrg, setBecomingOrg] = useState(false);
+  const [becomingOrg] = useState(false);
 
   const [cats, setCats] = useState<string[]>([]);
   const [distance, setDistance] = useState(25);
@@ -245,34 +247,10 @@ export function ProfilePage() {
                 </div>
                 <Button
                   size="sm"
-                  onClick={async () => {
-                    if (!user) return;
-                    setBecomingOrg(true);
-                    // 1. mark user as organizer
-                    await supabase
-                      .from("profiles")
-                      .update({ is_organizer: true })
-                      .eq("id", user.id);
-                    // 2. make sure an organizer profile row exists (handles
-                    //    accounts created before the trigger was added)
-                    const baseName =
-                      name ||
-                      (user.email?.split("@")[0] ?? "Organizer");
-                    const baseSlug = baseName
-                      .toLowerCase()
-                      .replace(/[^a-z0-9]+/g, "-")
-                      .replace(/^-+|-+$/g, "")
-                      .slice(0, 60) || "organizer";
-                    await supabase.from("organizer_profiles").upsert(
-                      {
-                        id: user.id,
-                        display_name: baseName,
-                        slug: baseSlug,
-                      },
-                      { onConflict: "id" },
-                    );
-                    setBecomingOrg(false);
-                    window.location.href = "/organizer";
+                  onClick={() => {
+                    // Go to the dedicated multi-step organizer onboarding flow.
+                    // The user fills in brand, plan, payment there.
+                    navigate("/become-organizer");
                   }}
                   disabled={becomingOrg}
                   rightIcon={<ArrowRight className="h-3.5 w-3.5" />}

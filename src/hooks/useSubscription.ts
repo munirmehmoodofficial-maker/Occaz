@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
-import { getPlan, PLANS, type Plan } from "../lib/plans";
+import { getPlan, PLANS, type Plan, type PlanId } from "../lib/plans";
 
 export interface OrganizerProfile {
   id: string;
@@ -44,7 +44,7 @@ export interface Payment {
 export function useSubscription() {
   const { user, isAdmin } = useAuth();
   const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile | null>(null);
-  const [planId, setPlanId] = useState<"starter" | "pro" | "business">("starter");
+  const [planId, setPlanId] = useState<PlanId | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ export function useSubscription() {
       setOrganizerProfile(null);
       setSubscription(null);
       setPayments([]);
-      setPlanId("starter");
+      setPlanId(null);
       setLoading(false);
       return;
     }
@@ -69,12 +69,13 @@ export function useSubscription() {
       .eq("id", user.id)
       .maybeSingle();
 
-    const pid =
-      (profileRow as any)?.plan === "pro" ||
-      (profileRow as any)?.plan === "business" ||
-      (profileRow as any)?.plan === "starter"
-        ? ((profileRow as any).plan as "starter" | "pro" | "business")
-        : "starter";
+    // Only set planId if it's a recognized value. New users with no plan
+    // will have planId = null, which the dashboard treats as "No plan yet".
+    const rawPlan = (profileRow as any)?.plan;
+    const pid: PlanId | null =
+      rawPlan === "free" || rawPlan === "pro" || rawPlan === "business" || rawPlan === "starter"
+        ? rawPlan
+        : null;
     setPlanId(pid);
 
     // 2. Read the user's organization

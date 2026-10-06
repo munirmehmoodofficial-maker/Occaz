@@ -152,7 +152,11 @@ export function OrganizerDashboardPage() {
                 <div className="text-xs text-[var(--text-tertiary)]">Plan</div>
                 <div className="flex items-center gap-2">
                   <div className="text-lg font-semibold">
-                    {isAdmin ? "Business (Admin)" : plan.name}
+                    {isAdmin
+                      ? "Business (Admin)"
+                      : planId === null
+                        ? "No plan yet"
+                        : plan.name}
                   </div>
                   {isAdmin && (
                     <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300 ring-1 ring-violet-500/30">

@@ -9,8 +9,9 @@
  * activated after admin approval.
  */
 import { supabase } from "./supabase";
+import type { PlanId } from "./plans";
 
-export type PlanId = "starter" | "pro" | "business";
+export type { PlanId };
 export type PlanInterval = "monthly" | "yearly";
 export type PaymentMethod = "card" | "manual";
 

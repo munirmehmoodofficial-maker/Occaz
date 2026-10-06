@@ -34,7 +34,7 @@ import { supabase } from "../lib/supabase";
 import { Button } from "../components/ui/Button";
 import { useToast } from "../lib/toast";
 import { uploadPublicImage } from "../lib/storage";
-import { PLANS } from "../lib/plans";
+import { PLANS, type PlanId } from "../lib/plans";
 import { validateCoupon } from "../lib/coupons";
 import { startCheckout } from "../lib/billing";
 import clsx from "clsx";
@@ -100,7 +100,7 @@ export function BecomeOrganizerPage() {
   const [coverUploading, setCoverUploading] = useState(false);
 
   // Step 3: plan
-  const [selectedPlan, setSelectedPlan] = useState<"starter" | "pro" | "business">("starter");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("pro");
   const [interval, setInterval] = useState<"monthly" | "yearly">("monthly");
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
@@ -235,7 +235,9 @@ export function BecomeOrganizerPage() {
         address: address.trim() || null,
         operating_cities: operatingCities,
         organizer_type: organizerType,
-        plan: "starter",
+        // Don't auto-assign a plan here — the user picks one during the
+        // payment step. Until then, the dashboard treats them as "No plan".
+        plan: null,
         verification_status: "pending",
         updated_at: new Date().toISOString(),
       };
@@ -269,7 +271,8 @@ export function BecomeOrganizerPage() {
         address: address.trim() || null,
         operating_cities: operatingCities,
         organizer_type: organizerType,
-        plan: "starter",
+        // No plan until the user picks one in the payment step.
+        plan: null,
         verification_status: "pending",
         is_published: false,
         updated_at: new Date().toISOString(),
@@ -469,6 +472,7 @@ export function BecomeOrganizerPage() {
               }
               onBack={() => setStep(3)}
               onPay={onPay}
+              onSkip={() => setStep(5)}
               busy={busy}
             />
           )}
@@ -1161,6 +1165,14 @@ function Step4(props: any) {
           {props.busy ? "Processing…" : `Pay ₨ ${props.finalPrice.toLocaleString()}`}
         </Button>
       </div>
+
+      <button
+        onClick={props.onSkip}
+        disabled={props.busy}
+        className="mt-3 w-full text-center text-xs text-[var(--text-tertiary)] hover:text-white disabled:opacity-50"
+      >
+        Skip for now — set up billing later
+      </button>
     </motion.div>
   );
 }
