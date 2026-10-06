@@ -48,6 +48,7 @@ interface AuthContextValue {
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   resendVerification: (email: string) => Promise<{ error: string | null }>;
   refreshSession: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthCtx = createContext<AuthContextValue | null>(null);
@@ -197,6 +198,17 @@ const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
 
       async refreshSession() {
         await supabase.auth.refreshSession();
+      },
+
+      async refreshProfile() {
+        // Re-fetch the profile row from the DB so the auth context
+        // picks up changes made elsewhere (e.g. after onboarding marks
+        // the user as onboarded).
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          const fresh = await fetchProfile(data.user.id);
+          setProfile(fresh);
+        }
       },
 
       async resetPassword(email) {

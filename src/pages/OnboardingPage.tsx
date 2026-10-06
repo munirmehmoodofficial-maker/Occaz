@@ -63,7 +63,7 @@ const INTERESTS: InterestOption[] = [
 export function OnboardingPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, loading, signIn, signUp } = useAuth();
+  const { user, profile, loading, signIn, signUp, refreshProfile } = useAuth();
 
   const initial: Step =
     (location.state as any)?.step === "interests" && user
@@ -494,6 +494,8 @@ function InterestsStep({
           city: city || null,
         })
         .eq("id", u.user.id);
+      // Refresh the auth context so the Layout's "ready" check sees onboarded=true
+      await refreshProfile();
     }
     onNext();
   }
@@ -606,6 +608,9 @@ function InterestsStep({
 // =========================================================================
 function DoneStep() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  // Admins land on their dashboard; everyone else lands on the home feed.
+  const target = profile?.role === "admin" ? "/organizer" : "/";
   return (
     <div className="text-center">
       <motion.div
@@ -648,7 +653,7 @@ function DoneStep() {
 
       <Button
         size="lg"
-        onClick={() => navigate("/", { replace: true })}
+        onClick={() => navigate(target, { replace: true })}
         className="mt-8"
         rightIcon={<ArrowRight className="h-4 w-4" />}
       >
