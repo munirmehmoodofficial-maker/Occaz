@@ -460,7 +460,6 @@ export function AdminOrganizers() {
   // Account
   const [addEmail, setAddEmail] = useState("");
   const [addFullName, setAddFullName] = useState("");
-  const [addRole, setAddRole] = useState<"user" | "admin">("user");
   // Brand & profile
   const [addDisplayName, setAddDisplayName] = useState("");
   const [addSlug, setAddSlug] = useState("");
@@ -534,7 +533,6 @@ export function AdminOrganizers() {
     setAddMode("existing");
     setAddEmail("");
     setAddFullName("");
-    setAddRole("user");
     setAddDisplayName("");
     setAddSlug("");
     setAddBio("");
@@ -641,13 +639,12 @@ export function AdminOrganizers() {
           });
           return;
         }
-        // 3. Optionally update the profile to mark as organizer + role
+        // 3. Optionally update the profile to mark as organizer
         await supabase
           .from("profiles")
           .update({
             is_organizer: true,
             full_name: addFullName.trim() || prof.full_name || null,
-            role: addRole,
           })
           .eq("id", prof.id);
       } else {
@@ -1778,17 +1775,6 @@ export function AdminOrganizers() {
                             placeholder="Muhammad Munir Khan"
                             className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                           />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-[var(--text-secondary)]">Account role</label>
-                          <select
-                            value={addRole}
-                            onChange={(e) => setAddRole(e.target.value as any)}
-                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                          >
-                            <option value="user">user</option>
-                            <option value="admin">admin</option>
-                          </select>
                         </div>
                       </div>
                     </div>
