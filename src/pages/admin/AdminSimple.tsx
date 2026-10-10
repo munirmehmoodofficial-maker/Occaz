@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Plus,
   Edit3,
@@ -24,6 +24,9 @@ import {
   Check,
   Ban,
   ExternalLink,
+  User as UserIcon,
+  Image as ImageIcon,
+  Link as LinkIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -1156,67 +1159,158 @@ export function AdminOrganizers() {
                   </div>
                 </div>
 
-                {/* Contact info */}
-                <div className="mt-4 space-y-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 text-sm">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-                    Contact & account
-                  </div>
-                  {profilesById[view.id]?.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                {/* Account & user info */}
+                <Section title="Account">
+                  <Row icon={<UserIcon className="h-3.5 w-3.5" />} label="Full name">
+                    {profilesById[view.id]?.full_name || "—"}
+                  </Row>
+                  <Row icon={<Mail className="h-3.5 w-3.5" />} label="Login email">
+                    {profilesById[view.id]?.email ? (
                       <a href={`mailto:${profilesById[view.id].email}`} className="hover:underline">
                         {profilesById[view.id].email}
                       </a>
+                    ) : "—"}
+                  </Row>
+                  <Row icon={<Shield className="h-3.5 w-3.5" />} label="Account role">
+                    {profilesById[view.id]?.role || "user"}
+                  </Row>
+                  <Row icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Organizer flag">
+                    {profilesById[view.id]?.is_organizer ? "Yes" : "No"}
+                  </Row>
+                  <Row icon={<Calendar className="h-3.5 w-3.5" />} label="Joined">
+                    {new Date(view.created_at).toLocaleString("en-PK", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </Row>
+                  <Row icon={<Calendar className="h-3.5 w-3.5" />} label="Last updated">
+                    {view.updated_at
+                      ? new Date(view.updated_at).toLocaleString("en-PK", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                      : "—"}
+                  </Row>
+                </Section>
+
+                {/* Brand & profile info */}
+                <Section title="Brand & profile">
+                  <Row label="Brand / organizer name">
+                    <span className="font-semibold">{view.display_name || "—"}</span>
+                  </Row>
+                  <Row label="Public slug">
+                    <code className="rounded bg-[var(--bg-elevated)] px-1.5 py-0.5 text-xs">
+                      /organizers/{view.slug || "—"}
+                    </code>
+                  </Row>
+                  {view.bio && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                        Bio
+                      </div>
+                      <div className="mt-1 rounded-lg bg-[var(--bg-elevated)] p-3 text-[var(--text-secondary)]">
+                        {view.bio}
+                      </div>
                     </div>
                   )}
-                  {view.contact_email && view.contact_email !== profilesById[view.id]?.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                  <Row label="Organizer type">
+                    {view.organizer_type ? (
+                      <span className="capitalize">{view.organizer_type.replace(/_/g, " ")}</span>
+                    ) : "—"}
+                  </Row>
+                  <Row label="Logo">
+                    {view.logo ? (
+                      <a href={view.logo} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-accent-400 hover:underline">
+                        <img src={view.logo} alt="logo" className="h-8 w-8 rounded-md object-cover" />
+                        View image ↗
+                      </a>
+                    ) : (
+                      <span className="text-[var(--text-tertiary)]">not uploaded</span>
+                    )}
+                  </Row>
+                  <Row label="Cover image">
+                    {view.cover_image ? (
+                      <a href={view.cover_image} target="_blank" rel="noreferrer" className="text-accent-400 hover:underline">
+                        View image ↗
+                      </a>
+                    ) : (
+                      <span className="text-[var(--text-tertiary)]">not uploaded</span>
+                    )}
+                  </Row>
+                </Section>
+
+                {/* Contact info */}
+                <Section title="Contact">
+                  <Row icon={<Mail className="h-3.5 w-3.5" />} label="Public contact email">
+                    {view.contact_email ? (
                       <a href={`mailto:${view.contact_email}`} className="hover:underline">
-                        {view.contact_email} <span className="text-[10px] text-[var(--text-tertiary)]">(public)</span>
+                        {view.contact_email}
                       </a>
-                    </div>
-                  )}
-                  {(view.contact_phone || view.phone) && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                      <a href={`tel:${view.contact_phone || view.phone}`} className="hover:underline">
-                        {view.contact_phone || view.phone}
+                    ) : "—"}
+                  </Row>
+                  <Row icon={<Phone className="h-3.5 w-3.5" />} label="Public contact phone">
+                    {view.contact_phone ? (
+                      <a href={`tel:${view.contact_phone}`} className="hover:underline">
+                        {view.contact_phone}
                       </a>
-                    </div>
-                  )}
-                  {view.website && (
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                    ) : "—"}
+                  </Row>
+                  <Row icon={<Phone className="h-3.5 w-3.5" />} label="Account phone">
+                    {view.phone || "—"}
+                  </Row>
+                  <Row icon={<MapPin className="h-3.5 w-3.5" />} label="Home city">
+                    {view.city || "—"}
+                  </Row>
+                  <Row icon={<MapPin className="h-3.5 w-3.5" />} label="Address / venue">
+                    {view.address || "—"}
+                  </Row>
+                  <Row icon={<Globe className="h-3.5 w-3.5" />} label="Website">
+                    {view.website ? (
                       <a href={view.website} target="_blank" rel="noreferrer" className="hover:underline">
                         {view.website}
                       </a>
+                    ) : "—"}
+                  </Row>
+                </Section>
+
+                {/* Social */}
+                {(view.instagram || view.facebook || view.tiktok) && (
+                  <Section title="Social media">
+                    {view.instagram && (
+                      <Row label="Instagram">
+                        <a href={view.instagram} target="_blank" rel="noreferrer" className="text-accent-400 hover:underline">
+                          {view.instagram} ↗
+                        </a>
+                      </Row>
+                    )}
+                    {view.facebook && (
+                      <Row label="Facebook">
+                        <a href={view.facebook} target="_blank" rel="noreferrer" className="text-accent-400 hover:underline">
+                          {view.facebook} ↗
+                        </a>
+                      </Row>
+                    )}
+                    {view.tiktok && (
+                      <Row label="TikTok">
+                        <a href={view.tiktok} target="_blank" rel="noreferrer" className="text-accent-400 hover:underline">
+                          {view.tiktok} ↗
+                        </a>
+                      </Row>
+                    )}
+                  </Section>
+                )}
+
+                {/* Operating cities */}
+                {Array.isArray(view.operating_cities) && view.operating_cities.length > 0 && (
+                  <Section title="Operating cities">
+                    <div className="flex flex-wrap gap-1.5">
+                      {view.operating_cities.map((c: string) => (
+                        <Badge key={c}>📍 {c}</Badge>
+                      ))}
                     </div>
-                  )}
-                  {view.city && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                      <span>
-                        {view.city}
-                        {view.address ? ` · ${view.address}` : ""}
-                      </span>
-                    </div>
-                  )}
-                  {view.organizer_type && (
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                      <span className="capitalize">{view.organizer_type.replace(/_/g, " ")}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                    <span>Joined {new Date(view.created_at).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                    <span>{eventsCountByOrg[view.display_name] ?? 0} event(s) on Occaz</span>
-                  </div>
-                </div>
+                  </Section>
+                )}
+
+                {/* Activity */}
+                <Section title="Activity">
+                  <Row icon={<Users className="h-3.5 w-3.5" />} label="Events on Occaz">
+                    {eventsCountByOrg[view.display_name] ?? 0}
+                  </Row>
+                </Section>
 
                 {/* Social */}
                 {(view.instagram || view.facebook || view.tiktok) && (
@@ -1575,6 +1669,41 @@ function ToggleRow({
           className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${on ? "left-5" : "left-0.5"}`}
         />
       </button>
+    </div>
+  );
+}
+
+// Helper: a labeled section card used inside the organizer review drawer
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
+      <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+        {title}
+      </div>
+      <div className="space-y-2 text-sm">{children}</div>
+    </div>
+  );
+}
+
+// Helper: a single label/value row
+function Row({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      {icon && <span className="mt-0.5 text-[var(--text-tertiary)]">{icon}</span>}
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+          {label}
+        </div>
+        <div className="mt-0.5 break-words">{children}</div>
+      </div>
     </div>
   );
 }
