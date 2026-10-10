@@ -570,7 +570,7 @@ export function AdminOrganizers() {
 
       // 3. Build the organizer_profiles payload
       const slugBase = addMode === "existing" ? (addSlug.trim() || slugify(addDisplayName) || slugify(userEmail ?? "user")) : addSlug.trim();
-      const payload: any = {
+      const fullPayload: any = {
         id: userId,
         display_name: addMode === "existing" ? (addDisplayName.trim() || userFullName || userEmail) : addDisplayName.trim(),
         slug: slugBase,
@@ -586,13 +586,46 @@ export function AdminOrganizers() {
         updated_at: new Date().toISOString(),
       };
 
-      // 4. Insert into organizer_profiles
-      const { error: insErr } = await supabase
-        .from("organizer_profiles")
-        .insert(payload);
+      // 4. Insert into organizer_profiles with two-stage fallback.
+      // Older deployments may not have all columns — try full first, then minimal.
+      let insErr: any = null;
+      try {
+        const r = await supabase
+          .from("organizer_profiles")
+          .insert(fullPayload);
+        insErr = r.error;
+      } catch (e: any) {
+        insErr = e;
+      }
       if (insErr) {
-        push({ tone: "red", title: "Insert failed", message: insErr.message });
-        return;
+        // Fallback: only the columns that are guaranteed to exist in any
+        // version of the schema (id, display_name, slug, bio, plan, verified).
+        try {
+          const minimalPayload: any = {
+            id: userId,
+            display_name: fullPayload.display_name,
+            slug: slugBase,
+            bio: fullPayload.bio,
+            plan: fullPayload.plan,
+            verified: false,
+          };
+          const r2 = await supabase
+            .from("organizer_profiles")
+            .insert(minimalPayload);
+          if (r2.error) {
+            push({ tone: "red", title: "Insert failed", message: r2.error.message });
+            return;
+          }
+          // Surface a non-blocking warning so admin knows some fields weren't saved
+          push({
+            tone: "amber",
+            title: "Saved with limited fields",
+            message: "Some optional columns don't exist yet on this database. Basic info saved; advanced fields were skipped.",
+          });
+        } catch (e2: any) {
+          push({ tone: "red", title: "Insert failed", message: e2?.message ?? "Unknown error" });
+          return;
+        }
       }
 
       // 5. For existing-user mode, also flag the profile as organizer
