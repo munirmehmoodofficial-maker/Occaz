@@ -687,6 +687,25 @@ export function AdminOrganizers() {
             // ignore — admin may need to re-login
           }
         }
+        // Wait briefly for the auth row to be visible to other queries
+        // (Supabase is eventually consistent).
+        await new Promise((r) => setTimeout(r, 350));
+        // Defensive: ensure a profiles row exists (the handle_new_user
+        // trigger may not fire on every deployment). Insert with a minimal
+        // payload; ignore conflict if a row already exists.
+        try {
+          await supabase.from("profiles").upsert(
+            {
+              id: userId,
+              email: newEmail,
+              full_name: addFullName.trim() || addDisplayName.trim(),
+              is_organizer: true,
+            },
+            { onConflict: "id", ignoreDuplicates: true },
+          );
+        } catch (e) {
+          // ignore — best effort
+        }
         push({
           tone: "amber",
           title: "New user created",
