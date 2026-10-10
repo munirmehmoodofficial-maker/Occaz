@@ -687,46 +687,38 @@ export function AdminOrganizers() {
             // ignore — admin may need to re-login
           }
         }
-        // Wait briefly for the auth row to be visible to other queries
-        // (Supabase is eventually consistent). 350ms wasn't always enough,
-        // so we do a retry loop below.
-        await new Promise((r) => setTimeout(r, 600));
-        // Defensive: ensure a profiles row exists (the handle_new_user
-        // trigger may not fire on every deployment). We retry up to 3
-        // times because the FK on organizer_profiles.id points to
-        // profiles.id on this deployment.
+        // Wait for the handle_new_user trigger to populate the profiles row.
+        // RLS prevents us from inserting into profiles as the admin, so we
+        // just have to wait for the auth trigger to do its job.
         let profileEnsured = false;
-        for (let attempt = 0; attempt < 3 && !profileEnsured; attempt++) {
-          const { error: profErr } = await supabase
+        for (let attempt = 0; attempt < 8 && !profileEnsured; attempt++) {
+          await new Promise((r) => setTimeout(r, 400));
+          const { data: prof, error: profErr } = await supabase
             .from("profiles")
-            .upsert(
-              {
-                id: userId,
-                email: newEmail,
-                full_name: addFullName.trim() || addDisplayName.trim(),
-                is_organizer: true,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: "id" },
-            );
-          if (!profErr) {
+            .select("id")
+            .eq("id", userId)
+            .maybeSingle();
+          if (prof?.id) {
             profileEnsured = true;
-          } else {
-            // 23505 = unique violation (row already exists, fine)
-            if (profErr.code === "23505") {
-              profileEnsured = true;
-            } else {
-              // eslint-disable-next-line no-console
-              console.warn(`[add-organizer] profiles upsert attempt ${attempt + 1} failed:`, profErr.message);
-              await new Promise((r) => setTimeout(r, 400));
-            }
+            // Also mark as organizer (RLS allows admin to read; if we can't
+            // update because of RLS that's fine — the organizer_profiles
+            // insert below will mark them via the auth flow)
+            try {
+              await supabase
+                .from("profiles")
+                .update({ is_organizer: true })
+                .eq("id", userId);
+            } catch {}
+          } else if (profErr) {
+            // eslint-disable-next-line no-console
+            console.warn(`[add-organizer] profile poll attempt ${attempt + 1} failed:`, profErr.message);
           }
         }
         if (!profileEnsured) {
           push({
-            tone: "red",
-            title: "Profile setup failed",
-            message: "The auth user was created but the profile row couldn't be set up. The organizer profile will fall back to minimal fields.",
+            tone: "amber",
+            title: "Profile setup slow",
+            message: "The auth user was created but the profile row is still being set up. The organizer profile will fall back to minimal fields if needed.",
           });
         }
         push({
@@ -737,9 +729,21 @@ export function AdminOrganizers() {
       }
 
       // 4. Build the full payload (all 17 fields the user filled in)
-      const slugBase = addMode === "existing"
+      let slugBase = addMode === "existing"
         ? (addSlug.trim() || slugify(addDisplayName) || slugify(userEmail ?? "user"))
         : addSlug.trim();
+      // If the slug is already taken, append a short suffix until it's free.
+      if (slugBase) {
+        for (let i = 0; i < 5; i++) {
+          const { data: dup } = await supabase
+            .from("organizer_profiles")
+            .select("id")
+            .eq("slug", slugBase)
+            .maybeSingle();
+          if (!dup || dup.id === userId) break;
+          slugBase = `${slugBase.replace(/-[0-9a-f]+$/, "")}-${Math.random().toString(36).slice(2, 6)}`;
+        }
+      }
       const fullPayload: any = {
         id: userId,
         display_name: addDisplayName.trim() || userFullName || userEmail,
