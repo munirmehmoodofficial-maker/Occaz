@@ -456,7 +456,13 @@ export function AdminOrganizers() {
   // contact, social, operating cities). On submit the user is then routed to
   // the standard plan-selection view where they pick a paid plan.
   const [addOpen, setAddOpen] = useState(false);
-  const [addMode, setAddMode] = useState<"existing" | "standalone">("existing");
+  // We have two modes:
+  //   - "existing": link to an existing auth.users account by email
+  //   - "new":       create a fresh Supabase auth user with a brand new
+  //                  email + temp password, then link the organizer profile
+  //                  to that user. (We don't support fully-orphan organizers
+  //                  because the FK to auth.users is strict.)
+  const [addMode, setAddMode] = useState<"existing" | "new">("existing");
   // Account
   const [addEmail, setAddEmail] = useState("");
   const [addFullName, setAddFullName] = useState("");
@@ -513,22 +519,6 @@ export function AdminOrganizers() {
     );
   }
 
-  // Standalone organizer: organizer_profiles.id has to reference auth.users(id).
-  // For a brand-only entry we generate a deterministic UUID from a stable seed.
-  // In practice the admin should add an existing user. We surface this clearly.
-  const STANDALONE_UUID_PREFIX = "00000000-0000-0000-0000-";
-
-  function makeStandaloneUuid(slug: string): string {
-    // Use a simple hash so the same slug always produces the same UUID.
-    // The first 24 chars are zeroed; the last 12 are 0-padded hex from a hash.
-    let h = 5381;
-    for (let i = 0; i < slug.length; i++) {
-      h = (h * 33) ^ slug.charCodeAt(i);
-    }
-    const hex = (h >>> 0).toString(16).padStart(8, "0");
-    return `${STANDALONE_UUID_PREFIX}${hex.slice(0, 12)}`;
-  }
-
   function resetAdd() {
     setAddMode("existing");
     setAddEmail("");
@@ -566,7 +556,7 @@ export function AdminOrganizers() {
         push({ tone: "red", title: "Invalid email", message: "Enter a valid email address." });
         return;
       }
-    } else {
+    } else if (addMode === "new") {
       if (!addDisplayName.trim()) {
         push({ tone: "red", title: "Brand name required", message: "Enter the brand / organizer name." });
         return;
@@ -579,6 +569,10 @@ export function AdminOrganizers() {
         push({ tone: "red", title: "Invalid slug", message: "Use lowercase letters, numbers, and dashes only." });
         return;
       }
+      if (!addPublicContactEmail.trim()) {
+        push({ tone: "red", title: "Login email required", message: "Provide an email for the new auth account." });
+        return;
+      }
     }
     if (!addDisplayName.trim() && addMode === "existing") {
       push({ tone: "red", title: "Brand name required", message: "Enter the brand / organizer name." });
@@ -588,7 +582,7 @@ export function AdminOrganizers() {
       push({ tone: "red", title: "Bio required", message: "Bio must be at least 20 characters." });
       return;
     }
-    if (addMode === "standalone" && !addPublicContactEmail.trim()) {
+    if (addMode === "new" && !addPublicContactEmail.trim()) {
       push({ tone: "red", title: "Contact email required", message: "Enter a public contact email for the brand." });
       return;
     }
@@ -648,10 +642,55 @@ export function AdminOrganizers() {
           })
           .eq("id", prof.id);
       } else {
-        // Standalone mode: use a deterministic UUID derived from the slug
-        userId = makeStandaloneUuid(addSlug.trim());
-        userEmail = addPublicContactEmail.trim() || null;
-        userFullName = addDisplayName.trim();
+        // "new" mode: create a fresh Supabase auth user with a temp password
+        // so the FK constraint (id -> auth.users.id) is satisfied. After
+        // sign-up we restore the admin session so the admin stays logged in.
+        const newEmail = addPublicContactEmail.trim().toLowerCase();
+        if (!newEmail) {
+          push({ tone: "red", title: "Contact email required", message: "Provide the login email for the new organizer account." });
+          return;
+        }
+        // Capture current admin session token so we can restore it after
+        const { data: adminSessionData } = await supabase.auth.getSession();
+        const adminToken = adminSessionData?.session?.access_token;
+        const adminRefresh = adminSessionData?.session?.refresh_token;
+
+        const tempPassword = crypto.randomUUID() + crypto.randomUUID();
+        const { data: signData, error: signErr } = await supabase.auth.signUp({
+          email: newEmail,
+          password: tempPassword,
+          options: {
+            data: { full_name: addFullName.trim() || addDisplayName.trim() },
+            emailRedirectTo: `${window.location.origin}/auth/confirmed`,
+          },
+        });
+        if (signErr) {
+          push({ tone: "red", title: "Could not create user", message: signErr.message });
+          return;
+        }
+        if (!signData.user) {
+          push({ tone: "red", title: "Could not create user", message: "Sign-up did not return a user. Email may already be registered." });
+          return;
+        }
+        userId = signData.user.id;
+        userEmail = newEmail;
+        userFullName = addFullName.trim() || addDisplayName.trim();
+        // Restore admin session (sign-up may have replaced it locally)
+        if (adminToken && adminRefresh) {
+          try {
+            await supabase.auth.setSession({
+              access_token: adminToken,
+              refresh_token: adminRefresh,
+            });
+          } catch {
+            // ignore — admin may need to re-login
+          }
+        }
+        push({
+          tone: "amber",
+          title: "New user created",
+          message: `Auth account created for ${newEmail}. They must verify their email to set a real password.`,
+        });
       }
 
       // 4. Build the full payload (all 17 fields the user filled in)
@@ -660,13 +699,13 @@ export function AdminOrganizers() {
         : addSlug.trim();
       const fullPayload: any = {
         id: userId,
-        display_name: addMode === "existing" ? (addDisplayName.trim() || userFullName || userEmail) : addDisplayName.trim(),
+        display_name: addDisplayName.trim() || userFullName || userEmail,
         slug: slugBase,
         bio: addBio.trim() || null,
         city: addCity.trim() || null,
         address: addAddress.trim() || null,
         website: addWebsite.trim() || null,
-        contact_email: (addMode === "existing" ? userEmail : addPublicContactEmail.trim()) || null,
+        contact_email: addPublicContactEmail.trim() || userEmail || null,
         contact_phone: addPublicContactPhone.trim() || null,
         phone: addAccountPhone.trim() || null,
         instagram: addInstagram.trim() || null,
@@ -1727,22 +1766,22 @@ export function AdminOrganizers() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAddMode("standalone")}
+                    onClick={() => setAddMode("new")}
                     className={clsx(
                       "flex-1 rounded-lg py-1.5 text-xs font-medium transition",
-                      addMode === "standalone"
+                      addMode === "new"
                         ? "bg-white text-black"
                         : "text-[var(--text-tertiary)] hover:text-white",
                     )}
                   >
-                    Standalone brand
+                    Create new account
                   </button>
                 </div>
 
                 <p className="mt-3 text-[10px] text-[var(--text-tertiary)]">
                   {addMode === "existing"
                     ? "Link an Occaz user account to an organizer profile. They must already have signed up."
-                    : "Create a brand-only organizer without a user login. Useful for partners, sponsors, or groups managed by an admin."}
+                    : "Create a brand-new Supabase auth account and link the organizer profile to it. The user will receive a verification email to set their password."}
                 </p>
 
                 <div className="mt-4 space-y-4">
@@ -1799,7 +1838,7 @@ export function AdminOrganizers() {
                       </div>
                       <div>
                         <label className="text-xs font-medium text-[var(--text-secondary)]">
-                          Public slug {addMode === "standalone" ? <span className="text-red-400">*</span> : <span className="text-[10px] text-[var(--text-tertiary)]">(optional)</span>}
+                          Public slug {addMode === "new" ? <span className="text-red-400">*</span> : <span className="text-[10px] text-[var(--text-tertiary)]">(optional)</span>}
                         </label>
                         <div className="mt-1 flex items-stretch overflow-hidden rounded-lg bg-[var(--bg-elevated)] ring-1 ring-[var(--border-subtle)] focus-within:ring-2 focus-within:ring-accent-500/40">
                           <span className="grid place-items-center bg-[var(--bg-elevated)] px-3 text-xs text-[var(--text-tertiary)]">
@@ -1887,7 +1926,7 @@ export function AdminOrganizers() {
                       Contact
                     </div>
                     <div className="space-y-2.5">
-                      {addMode === "standalone" ? (
+                      {addMode === "new" ? (
                         <div>
                           <label className="text-xs font-medium text-[var(--text-secondary)]">
                             Public contact email <span className="text-red-400">*</span>
