@@ -27,6 +27,7 @@ import { OnboardingPage } from "./pages/OnboardingPage";
 import { OrganizerCheckoutPage } from "./pages/organizer/OrganizerCheckoutPage";
 import { AdminOrganizerFeaturesPage } from "./pages/admin/AdminOrganizerFeaturesPage";
 import { AdminOrganizerVerifications } from "./pages/admin/AdminOrganizerVerifications";
+import { AdminOrganizerBillingPage } from "./pages/admin/AdminOrganizerBillingPage";
 import { LandingPage } from "./pages/LandingPage";
 import { OrganizerProfilePage } from "./pages/organizer/OrganizerProfilePage";
 import { OrganizerDashboardPage } from "./pages/organizer/OrganizerDashboardPage";
@@ -127,6 +128,7 @@ export default function App() {
           <Route path="organizers" element={<AdminOrganizers />} />
           <Route path="organizer-features" element={<AdminOrganizerFeaturesPage />} />
           <Route path="organizer-verifications" element={<AdminOrganizerVerifications />} />
+          <Route path="organizer-billing/:id" element={<AdminOrganizerBillingPage />} />
           <Route path="registrations" element={<AdminRegistrations />} />
           <Route path="roles" element={<AdminRoles />} />
           <Route path="tickets" element={<AdminTickets />} />

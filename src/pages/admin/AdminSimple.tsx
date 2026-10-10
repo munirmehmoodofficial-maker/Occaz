@@ -452,20 +452,67 @@ export function AdminOrganizers() {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "published" | "unpublished">("all");
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Manual add organizer modal
+  // Manual add organizer modal — captures the FULL profile (account, brand,
+  // contact, social, operating cities). On submit the user is then routed to
+  // the standard plan-selection view where they pick a paid plan.
   const [addOpen, setAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<"existing" | "standalone">("existing");
+  // Account
   const [addEmail, setAddEmail] = useState("");
+  const [addFullName, setAddFullName] = useState("");
+  const [addRole, setAddRole] = useState<"user" | "admin">("user");
+  // Brand & profile
   const [addDisplayName, setAddDisplayName] = useState("");
   const [addSlug, setAddSlug] = useState("");
-  const [addPlan, setAddPlan] = useState<"starter" | "pro" | "business" | "none">("starter");
   const [addBio, setAddBio] = useState("");
-  const [addCity, setAddCity] = useState("");
-  const [addContactEmail, setAddEmail2] = useState("");
-  const [addContactPhone, setAddPhone] = useState("");
   const [addOrganizerType, setAddOrganizerType] = useState<"individual" | "event_company" | "university_society" | "business_venue" | "ngo_organization" | "other">("individual");
+  const [addLogoUrl, setAddLogoUrl] = useState("");
+  const [addCoverUrl, setAddCoverUrl] = useState("");
+  // Contact
+  const [addPublicContactEmail, setAddPublicContactEmail] = useState("");
+  const [addPublicContactPhone, setAddPublicContactPhone] = useState("");
+  const [addAccountPhone, setAddAccountPhone] = useState("");
+  const [addCity, setAddCity] = useState("");
+  const [addAddress, setAddAddress] = useState("");
+  const [addWebsite, setAddWebsite] = useState("");
+  // Social
+  const [addInstagram, setAddInstagram] = useState("");
+  const [addFacebook, setAddFacebook] = useState("");
+  const [addTiktok, setAddTiktok] = useState("");
+  // Operating cities (toggles for the standard Pakistan list)
+  const [addOperatingCities, setAddOperatingCities] = useState<string[]>([]);
+  // Plan + workflow
+  const [addPlan, setAddPlan] = useState<"starter" | "pro" | "business" | "none">("starter");
   const [addPublishImmediately, setAddPublishImmediately] = useState(false);
   const [addVerifying, setAddVerifying] = useState(false);
+  const [addViewPlansAfter, setAddViewPlansAfter] = useState(true);
+
+  // Standard list of Pakistan cities (used for the operating-cities selector)
+  const PAKISTAN_CITIES = [
+    "Karachi",
+    "Lahore",
+    "Islamabad",
+    "Rawalpindi",
+    "Faisalabad",
+    "Multan",
+    "Peshawar",
+    "Quetta",
+    "Sialkot",
+    "Gujranwala",
+    "Hyderabad",
+    "Bahawalpur",
+    "Sargodha",
+    "Sahiwal",
+    "Larkana",
+    "Mardan",
+    "Abbottabad",
+  ];
+
+  function toggleAddCity(c: string) {
+    setAddOperatingCities((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+    );
+  }
 
   // Standalone organizer: organizer_profiles.id has to reference auth.users(id).
   // For a brand-only entry we generate a deterministic UUID from a stable seed.
@@ -484,24 +531,41 @@ export function AdminOrganizers() {
   }
 
   function resetAdd() {
+    setAddMode("existing");
     setAddEmail("");
+    setAddFullName("");
+    setAddRole("user");
     setAddDisplayName("");
     setAddSlug("");
-    setAddPlan("starter");
     setAddBio("");
-    setAddCity("");
-    setAddEmail2("");
-    setAddPhone("");
     setAddOrganizerType("individual");
+    setAddLogoUrl("");
+    setAddCoverUrl("");
+    setAddPublicContactEmail("");
+    setAddPublicContactPhone("");
+    setAddAccountPhone("");
+    setAddCity("");
+    setAddAddress("");
+    setAddWebsite("");
+    setAddInstagram("");
+    setAddFacebook("");
+    setAddTiktok("");
+    setAddOperatingCities([]);
+    setAddPlan("starter");
     setAddPublishImmediately(false);
     setAddVerifying(false);
-    setAddMode("existing");
+    setAddViewPlansAfter(true);
   }
 
   async function submitAdd() {
+    // ---- Validation ----
     if (addMode === "existing") {
       if (!addEmail.trim()) {
         push({ tone: "red", title: "Email required", message: "Enter the user's email address." });
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addEmail.trim())) {
+        push({ tone: "red", title: "Invalid email", message: "Enter a valid email address." });
         return;
       }
     } else {
@@ -513,12 +577,28 @@ export function AdminOrganizers() {
         push({ tone: "red", title: "Slug required", message: "Enter a public slug (e.g. blooms-bloomers)." });
         return;
       }
-      // validate slug format
       if (!/^[a-z0-9-]+$/.test(addSlug.trim())) {
         push({ tone: "red", title: "Invalid slug", message: "Use lowercase letters, numbers, and dashes only." });
         return;
       }
     }
+    if (!addDisplayName.trim() && addMode === "existing") {
+      push({ tone: "red", title: "Brand name required", message: "Enter the brand / organizer name." });
+      return;
+    }
+    if (!addBio.trim() || addBio.trim().length < 20) {
+      push({ tone: "red", title: "Bio required", message: "Bio must be at least 20 characters." });
+      return;
+    }
+    if (addMode === "standalone" && !addPublicContactEmail.trim()) {
+      push({ tone: "red", title: "Contact email required", message: "Enter a public contact email for the brand." });
+      return;
+    }
+    if (addWebsite.trim() && !/^https?:\/\//.test(addWebsite.trim())) {
+      push({ tone: "amber", title: "Website URL", message: "Adding https:// for you." });
+      setAddWebsite(`https://${addWebsite.trim()}`);
+    }
+
     setAddVerifying(true);
     try {
       let userId: string | null = null;
@@ -561,23 +641,43 @@ export function AdminOrganizers() {
           });
           return;
         }
+        // 3. Optionally update the profile to mark as organizer + role
+        await supabase
+          .from("profiles")
+          .update({
+            is_organizer: true,
+            full_name: addFullName.trim() || prof.full_name || null,
+            role: addRole,
+          })
+          .eq("id", prof.id);
       } else {
         // Standalone mode: use a deterministic UUID derived from the slug
         userId = makeStandaloneUuid(addSlug.trim());
-        userEmail = addContactEmail.trim() || null;
+        userEmail = addPublicContactEmail.trim() || null;
         userFullName = addDisplayName.trim();
       }
 
-      // 3. Build the organizer_profiles payload
-      const slugBase = addMode === "existing" ? (addSlug.trim() || slugify(addDisplayName) || slugify(userEmail ?? "user")) : addSlug.trim();
+      // 4. Build the full payload (all 17 fields the user filled in)
+      const slugBase = addMode === "existing"
+        ? (addSlug.trim() || slugify(addDisplayName) || slugify(userEmail ?? "user"))
+        : addSlug.trim();
       const fullPayload: any = {
         id: userId,
         display_name: addMode === "existing" ? (addDisplayName.trim() || userFullName || userEmail) : addDisplayName.trim(),
         slug: slugBase,
         bio: addBio.trim() || null,
         city: addCity.trim() || null,
-        contact_email: (addMode === "existing" ? userEmail : addContactEmail.trim()) || null,
-        contact_phone: addContactPhone.trim() || null,
+        address: addAddress.trim() || null,
+        website: addWebsite.trim() || null,
+        contact_email: (addMode === "existing" ? userEmail : addPublicContactEmail.trim()) || null,
+        contact_phone: addPublicContactPhone.trim() || null,
+        phone: addAccountPhone.trim() || null,
+        instagram: addInstagram.trim() || null,
+        facebook: addFacebook.trim() || null,
+        tiktok: addTiktok.trim() || null,
+        logo: addLogoUrl.trim() || null,
+        cover_image: addCoverUrl.trim() || null,
+        operating_cities: addOperatingCities,
         organizer_type: addOrganizerType,
         plan: addPlan === "none" ? null : addPlan,
         verification_status: addPublishImmediately ? "approved" : "pending",
@@ -586,20 +686,15 @@ export function AdminOrganizers() {
         updated_at: new Date().toISOString(),
       };
 
-      // 4. Insert into organizer_profiles with two-stage fallback.
-      // Older deployments may not have all columns — try full first, then minimal.
+      // 5. Insert with two-stage fallback for older databases
       let insErr: any = null;
       try {
-        const r = await supabase
-          .from("organizer_profiles")
-          .insert(fullPayload);
+        const r = await supabase.from("organizer_profiles").insert(fullPayload);
         insErr = r.error;
       } catch (e: any) {
         insErr = e;
       }
       if (insErr) {
-        // Fallback: only the columns that are guaranteed to exist in any
-        // version of the schema (id, display_name, slug, bio, plan, verified).
         try {
           const minimalPayload: any = {
             id: userId,
@@ -616,7 +711,6 @@ export function AdminOrganizers() {
             push({ tone: "red", title: "Insert failed", message: r2.error.message });
             return;
           }
-          // Surface a non-blocking warning so admin knows some fields weren't saved
           push({
             tone: "amber",
             title: "Saved with limited fields",
@@ -626,24 +720,28 @@ export function AdminOrganizers() {
           push({ tone: "red", title: "Insert failed", message: e2?.message ?? "Unknown error" });
           return;
         }
+      } else {
+        push({
+          tone: "green",
+          title: "Organizer added",
+          message: `${fullPayload.display_name} is now ${addPublishImmediately ? "live on Occaz" : "pending review"}.`,
+        });
       }
 
-      // 5. For existing-user mode, also flag the profile as organizer
-      if (addMode === "existing" && userId) {
-        await supabase
-          .from("profiles")
-          .update({ is_organizer: true })
-          .eq("id", userId);
-      }
-
-      push({
-        tone: "green",
-        title: "Organizer added",
-        message: `${payload.display_name} is now ${addPublishImmediately ? "live on Occaz" : "pending review"}.`,
-      });
+      // 6. Close modal and refresh
       setAddOpen(false);
+      const createdSlug = slugBase;
       resetAdd();
       load();
+
+      // 7. Optionally route to the standard plan-selection view so the admin
+      // (or the organizer, if you pass the URL to them) can pick a paid plan.
+      if (addViewPlansAfter) {
+        // Slight delay so the toast is visible before navigation
+        setTimeout(() => {
+          window.location.href = `/admin/organizer-billing/${encodeURIComponent(userId!)}?ref=admin-add&slug=${encodeURIComponent(createdSlug)}`;
+        }, 600);
+      }
     } finally {
       setAddVerifying(false);
     }
@@ -1650,141 +1748,333 @@ export function AdminOrganizers() {
                     : "Create a brand-only organizer without a user login. Useful for partners, sponsors, or groups managed by an admin."}
                 </p>
 
-                <div className="mt-4 space-y-3">
-                  {addMode === "existing" ? (
-                    <div>
-                      <label className="text-xs font-medium text-[var(--text-secondary)]">
-                        User email <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        value={addEmail}
-                        onChange={(e) => setAddEmail(e.target.value)}
-                        placeholder="user@example.com"
-                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                      />
+                <div className="mt-4 space-y-4">
+                  {/* === Account === */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Account
                     </div>
-                  ) : null}
-
-                  <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)]">
-                      Brand / organizer name <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      value={addDisplayName}
-                      onChange={(e) => setAddDisplayName(e.target.value)}
-                      placeholder="e.g. Bloomfield Hall Schools"
-                      className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                    />
+                    <div className="space-y-2.5">
+                      {addMode === "existing" && (
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">
+                            Login email <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            value={addEmail}
+                            onChange={(e) => setAddEmail(e.target.value.toLowerCase())}
+                            placeholder="user@example.com"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Full name</label>
+                          <input
+                            value={addFullName}
+                            onChange={(e) => setAddFullName(e.target.value)}
+                            placeholder="Muhammad Munir Khan"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Account role</label>
+                          <select
+                            value={addRole}
+                            onChange={(e) => setAddRole(e.target.value as any)}
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          >
+                            <option value="user">user</option>
+                            <option value="admin">admin</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)]">
-                      Public slug {addMode === "standalone" ? <span className="text-red-400">*</span> : <span className="text-[10px] text-[var(--text-tertiary)]">(optional)</span>}
-                    </label>
-                    <div className="mt-1 flex items-stretch overflow-hidden rounded-lg ring-1 ring-[var(--border-subtle)] focus-within:ring-2 focus-within:ring-accent-500/40">
-                      <span className="grid place-items-center bg-[var(--bg-elevated)] px-3 text-xs text-[var(--text-tertiary)]">
-                        /organizers/
+                  {/* === Brand & profile === */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Brand & profile
+                    </div>
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">
+                          Brand / organizer name <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          value={addDisplayName}
+                          onChange={(e) => setAddDisplayName(e.target.value)}
+                          placeholder="e.g. Bloomfield Hall Schools"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">
+                          Public slug {addMode === "standalone" ? <span className="text-red-400">*</span> : <span className="text-[10px] text-[var(--text-tertiary)]">(optional)</span>}
+                        </label>
+                        <div className="mt-1 flex items-stretch overflow-hidden rounded-lg bg-[var(--bg-elevated)] ring-1 ring-[var(--border-subtle)] focus-within:ring-2 focus-within:ring-accent-500/40">
+                          <span className="grid place-items-center bg-[var(--bg-elevated)] px-3 text-xs text-[var(--text-tertiary)]">
+                            /organizers/
+                          </span>
+                          <input
+                            value={addSlug}
+                            onChange={(e) => setAddSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                            placeholder="bloomfield"
+                            className="h-10 flex-1 bg-transparent px-3 text-sm focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">
+                          Bio <span className="text-red-400">*</span> <span className="text-[10px] text-[var(--text-tertiary)]">(20+ chars)</span>
+                        </label>
+                        <textarea
+                          value={addBio}
+                          onChange={(e) => setAddBio(e.target.value)}
+                          placeholder="One paragraph describing this organizer — mission, audience, what events they run."
+                          rows={3}
+                          className="mt-1 w-full rounded-lg bg-[var(--bg-elevated)] p-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                        <div className="mt-0.5 text-right text-[10px] text-[var(--text-tertiary)]">
+                          {addBio.length} chars
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Organizer type</label>
+                          <select
+                            value={addOrganizerType}
+                            onChange={(e) => setAddOrganizerType(e.target.value as any)}
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          >
+                            <option value="individual">Individual</option>
+                            <option value="event_company">Event company</option>
+                            <option value="university_society">University society</option>
+                            <option value="business_venue">Business / venue</option>
+                            <option value="ngo_organization">NGO / nonprofit</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Plan</label>
+                          <select
+                            value={addPlan}
+                            onChange={(e) => setAddPlan(e.target.value as any)}
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          >
+                            <option value="none">No plan</option>
+                            <option value="starter">Starter</option>
+                            <option value="pro">Pro</option>
+                            <option value="business">Business</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Logo URL</label>
+                          <input
+                            value={addLogoUrl}
+                            onChange={(e) => setAddLogoUrl(e.target.value)}
+                            placeholder="https://…/logo.png"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Cover image URL</label>
+                          <input
+                            value={addCoverUrl}
+                            onChange={(e) => setAddCoverUrl(e.target.value)}
+                            placeholder="https://…/cover.png"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* === Contact === */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Contact
+                    </div>
+                    <div className="space-y-2.5">
+                      {addMode === "standalone" ? (
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">
+                            Public contact email <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            value={addPublicContactEmail}
+                            onChange={(e) => setAddPublicContactEmail(e.target.value.toLowerCase())}
+                            placeholder="hello@bloomfield.pk"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Public contact email</label>
+                          <input
+                            type="email"
+                            value={addPublicContactEmail}
+                            onChange={(e) => setAddPublicContactEmail(e.target.value.toLowerCase())}
+                            placeholder="(optional, defaults to login email)"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Public contact phone</label>
+                          <input
+                            value={addPublicContactPhone}
+                            onChange={(e) => setAddPublicContactPhone(e.target.value)}
+                            placeholder="+92 300 1234567"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Account phone</label>
+                          <input
+                            value={addAccountPhone}
+                            onChange={(e) => setAddAccountPhone(e.target.value)}
+                            placeholder="(private)"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Home city</label>
+                          <input
+                            value={addCity}
+                            onChange={(e) => setAddCity(e.target.value)}
+                            placeholder="e.g. Lahore"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Website</label>
+                          <input
+                            value={addWebsite}
+                            onChange={(e) => setAddWebsite(e.target.value)}
+                            placeholder="https://example.com"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Address / venue</label>
+                        <input
+                          value={addAddress}
+                          onChange={(e) => setAddAddress(e.target.value)}
+                          placeholder="e.g. 123 Main St, F-7 Markaz, Islamabad"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* === Social === */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Social media
+                    </div>
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Instagram</label>
+                        <input
+                          value={addInstagram}
+                          onChange={(e) => setAddInstagram(e.target.value)}
+                          placeholder="https://instagram.com/brand"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Facebook</label>
+                        <input
+                          value={addFacebook}
+                          onChange={(e) => setAddFacebook(e.target.value)}
+                          placeholder="https://facebook.com/brand"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">TikTok</label>
+                        <input
+                          value={addTiktok}
+                          onChange={(e) => setAddTiktok(e.target.value)}
+                          placeholder="https://tiktok.com/@brand"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* === Operating cities === */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Operating cities
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PAKISTAN_CITIES.map((c) => {
+                        const active = addOperatingCities.includes(c);
+                        return (
+                          <button
+                            type="button"
+                            key={c}
+                            onClick={() => toggleAddCity(c)}
+                            className={clsx(
+                              "rounded-full border px-2.5 py-1 text-xs font-medium transition",
+                              active
+                                ? "border-accent-500 bg-accent-500/20 text-accent-200"
+                                : "border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-default)]",
+                            )}
+                          >
+                            {c}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[10px] text-[var(--text-tertiary)]">
+                      Tap all cities where this organizer plans to host events or run operations.
+                    </p>
+                  </div>
+
+                  {/* === Publish controls === */}
+                  <div className="space-y-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <label className="flex items-start gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={addPublishImmediately}
+                        onChange={(e) => setAddPublishImmediately(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-[var(--border-default)]"
+                      />
+                      <span>
+                        <span className="font-medium">Publish immediately</span>
+                        <span className="block text-[10px] text-[var(--text-tertiary)]">
+                          Mark as approved and visible on /organizers. If unchecked, the organizer is created in <strong>pending</strong> state.
+                        </span>
                       </span>
+                    </label>
+                    <label className="flex items-start gap-2 text-xs">
                       <input
-                        value={addSlug}
-                        onChange={(e) => setAddSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                        placeholder="bloomfield"
-                        className="h-10 flex-1 bg-[var(--bg-card)] px-3 text-sm focus:outline-none"
+                        type="checkbox"
+                        checked={addViewPlansAfter}
+                        onChange={(e) => setAddViewPlansAfter(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-[var(--border-default)]"
                       />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-[var(--text-secondary)]">Plan</label>
-                      <select
-                        value={addPlan}
-                        onChange={(e) => setAddPlan(e.target.value as any)}
-                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                      >
-                        <option value="none">No plan</option>
-                        <option value="starter">Starter</option>
-                        <option value="pro">Pro</option>
-                        <option value="business">Business</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-[var(--text-secondary)]">Organizer type</label>
-                      <select
-                        value={addOrganizerType}
-                        onChange={(e) => setAddOrganizerType(e.target.value as any)}
-                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                      >
-                        <option value="individual">Individual</option>
-                        <option value="event_company">Event company</option>
-                        <option value="university_society">University society</option>
-                        <option value="business_venue">Business / venue</option>
-                        <option value="ngo_organization">NGO / nonprofit</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-[var(--text-secondary)]">City</label>
-                      <input
-                        value={addCity}
-                        onChange={(e) => setAddCity(e.target.value)}
-                        placeholder="e.g. Lahore"
-                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-[var(--text-secondary)]">Contact phone</label>
-                      <input
-                        value={addContactPhone}
-                        onChange={(e) => setAddPhone(e.target.value)}
-                        placeholder="+92 300 1234567"
-                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                      />
-                    </div>
-                  </div>
-
-                  {addMode === "standalone" && (
-                    <div>
-                      <label className="text-xs font-medium text-[var(--text-secondary)]">Public contact email</label>
-                      <input
-                        type="email"
-                        value={addContactEmail}
-                        onChange={(e) => setAddEmail2(e.target.value)}
-                        placeholder="hello@bloomfield.pk"
-                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)]">Short bio</label>
-                    <textarea
-                      value={addBio}
-                      onChange={(e) => setAddBio(e.target.value)}
-                      placeholder="One paragraph describing this organizer"
-                      rows={3}
-                      className="mt-1 w-full rounded-lg bg-[var(--bg-card)] p-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                    />
-                  </div>
-
-                  <label className="flex items-start gap-2 rounded-lg bg-[var(--bg-elevated)] p-3 text-xs">
-                    <input
-                      type="checkbox"
-                      checked={addPublishImmediately}
-                      onChange={(e) => setAddPublishImmediately(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-[var(--border-default)]"
-                    />
-                    <span>
-                      <span className="font-medium">Publish immediately</span>
-                      <span className="block text-[10px] text-[var(--text-tertiary)]">
-                        Mark as approved and visible on /organizers. If unchecked, the organizer is created in <strong>pending</strong> state.
+                      <span>
+                        <span className="font-medium">View pricing plans after save</span>
+                        <span className="block text-[10px] text-[var(--text-tertiary)]">
+                          When checked, the modal closes and the standard plan-selection page opens so a plan can be picked.
+                        </span>
                       </span>
-                    </span>
-                  </label>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
