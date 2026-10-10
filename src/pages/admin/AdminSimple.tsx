@@ -688,23 +688,46 @@ export function AdminOrganizers() {
           }
         }
         // Wait briefly for the auth row to be visible to other queries
-        // (Supabase is eventually consistent).
-        await new Promise((r) => setTimeout(r, 350));
+        // (Supabase is eventually consistent). 350ms wasn't always enough,
+        // so we do a retry loop below.
+        await new Promise((r) => setTimeout(r, 600));
         // Defensive: ensure a profiles row exists (the handle_new_user
-        // trigger may not fire on every deployment). Insert with a minimal
-        // payload; ignore conflict if a row already exists.
-        try {
-          await supabase.from("profiles").upsert(
-            {
-              id: userId,
-              email: newEmail,
-              full_name: addFullName.trim() || addDisplayName.trim(),
-              is_organizer: true,
-            },
-            { onConflict: "id", ignoreDuplicates: true },
-          );
-        } catch (e) {
-          // ignore — best effort
+        // trigger may not fire on every deployment). We retry up to 3
+        // times because the FK on organizer_profiles.id points to
+        // profiles.id on this deployment.
+        let profileEnsured = false;
+        for (let attempt = 0; attempt < 3 && !profileEnsured; attempt++) {
+          const { error: profErr } = await supabase
+            .from("profiles")
+            .upsert(
+              {
+                id: userId,
+                email: newEmail,
+                full_name: addFullName.trim() || addDisplayName.trim(),
+                is_organizer: true,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "id" },
+            );
+          if (!profErr) {
+            profileEnsured = true;
+          } else {
+            // 23505 = unique violation (row already exists, fine)
+            if (profErr.code === "23505") {
+              profileEnsured = true;
+            } else {
+              // eslint-disable-next-line no-console
+              console.warn(`[add-organizer] profiles upsert attempt ${attempt + 1} failed:`, profErr.message);
+              await new Promise((r) => setTimeout(r, 400));
+            }
+          }
+        }
+        if (!profileEnsured) {
+          push({
+            tone: "red",
+            title: "Profile setup failed",
+            message: "The auth user was created but the profile row couldn't be set up. The organizer profile will fall back to minimal fields.",
+          });
         }
         push({
           tone: "amber",
