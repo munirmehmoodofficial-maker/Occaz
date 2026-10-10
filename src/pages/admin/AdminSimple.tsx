@@ -27,6 +27,7 @@ import {
   User as UserIcon,
   Image as ImageIcon,
   Link as LinkIcon,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -451,6 +452,170 @@ export function AdminOrganizers() {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "published" | "unpublished">("all");
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Manual add organizer modal
+  const [addOpen, setAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<"existing" | "standalone">("existing");
+  const [addEmail, setAddEmail] = useState("");
+  const [addDisplayName, setAddDisplayName] = useState("");
+  const [addSlug, setAddSlug] = useState("");
+  const [addPlan, setAddPlan] = useState<"starter" | "pro" | "business" | "none">("starter");
+  const [addBio, setAddBio] = useState("");
+  const [addCity, setAddCity] = useState("");
+  const [addContactEmail, setAddEmail2] = useState("");
+  const [addContactPhone, setAddPhone] = useState("");
+  const [addOrganizerType, setAddOrganizerType] = useState<"individual" | "event_company" | "university_society" | "business_venue" | "ngo_organization" | "other">("individual");
+  const [addPublishImmediately, setAddPublishImmediately] = useState(false);
+  const [addVerifying, setAddVerifying] = useState(false);
+
+  // Standalone organizer: organizer_profiles.id has to reference auth.users(id).
+  // For a brand-only entry we generate a deterministic UUID from a stable seed.
+  // In practice the admin should add an existing user. We surface this clearly.
+  const STANDALONE_UUID_PREFIX = "00000000-0000-0000-0000-";
+
+  function makeStandaloneUuid(slug: string): string {
+    // Use a simple hash so the same slug always produces the same UUID.
+    // The first 24 chars are zeroed; the last 12 are 0-padded hex from a hash.
+    let h = 5381;
+    for (let i = 0; i < slug.length; i++) {
+      h = (h * 33) ^ slug.charCodeAt(i);
+    }
+    const hex = (h >>> 0).toString(16).padStart(8, "0");
+    return `${STANDALONE_UUID_PREFIX}${hex.slice(0, 12)}`;
+  }
+
+  function resetAdd() {
+    setAddEmail("");
+    setAddDisplayName("");
+    setAddSlug("");
+    setAddPlan("starter");
+    setAddBio("");
+    setAddCity("");
+    setAddEmail2("");
+    setAddPhone("");
+    setAddOrganizerType("individual");
+    setAddPublishImmediately(false);
+    setAddVerifying(false);
+    setAddMode("existing");
+  }
+
+  async function submitAdd() {
+    if (addMode === "existing") {
+      if (!addEmail.trim()) {
+        push({ tone: "red", title: "Email required", message: "Enter the user's email address." });
+        return;
+      }
+    } else {
+      if (!addDisplayName.trim()) {
+        push({ tone: "red", title: "Brand name required", message: "Enter the brand / organizer name." });
+        return;
+      }
+      if (!addSlug.trim()) {
+        push({ tone: "red", title: "Slug required", message: "Enter a public slug (e.g. blooms-bloomers)." });
+        return;
+      }
+      // validate slug format
+      if (!/^[a-z0-9-]+$/.test(addSlug.trim())) {
+        push({ tone: "red", title: "Invalid slug", message: "Use lowercase letters, numbers, and dashes only." });
+        return;
+      }
+    }
+    setAddVerifying(true);
+    try {
+      let userId: string | null = null;
+      let userEmail: string | null = null;
+      let userFullName: string | null = null;
+
+      if (addMode === "existing") {
+        // 1. Look up the user by email from profiles
+        const { data: prof, error: profErr } = await supabase
+          .from("profiles")
+          .select("id, email, full_name, is_organizer")
+          .eq("email", addEmail.trim().toLowerCase())
+          .maybeSingle();
+        if (profErr) {
+          push({ tone: "red", title: "Lookup failed", message: profErr.message });
+          return;
+        }
+        if (!prof) {
+          push({
+            tone: "red",
+            title: "User not found",
+            message: `No user with email "${addEmail}". They must sign up first.`,
+          });
+          return;
+        }
+        userId = prof.id;
+        userEmail = prof.email ?? addEmail.trim().toLowerCase();
+        userFullName = prof.full_name ?? null;
+        // 2. Check if an organizer profile already exists
+        const { data: existing } = await supabase
+          .from("organizer_profiles")
+          .select("id")
+          .eq("id", prof.id)
+          .maybeSingle();
+        if (existing) {
+          push({
+            tone: "amber",
+            title: "Already an organizer",
+            message: `${prof.email} already has an organizer profile.`,
+          });
+          return;
+        }
+      } else {
+        // Standalone mode: use a deterministic UUID derived from the slug
+        userId = makeStandaloneUuid(addSlug.trim());
+        userEmail = addContactEmail.trim() || null;
+        userFullName = addDisplayName.trim();
+      }
+
+      // 3. Build the organizer_profiles payload
+      const slugBase = addMode === "existing" ? (addSlug.trim() || slugify(addDisplayName) || slugify(userEmail ?? "user")) : addSlug.trim();
+      const payload: any = {
+        id: userId,
+        display_name: addMode === "existing" ? (addDisplayName.trim() || userFullName || userEmail) : addDisplayName.trim(),
+        slug: slugBase,
+        bio: addBio.trim() || null,
+        city: addCity.trim() || null,
+        contact_email: (addMode === "existing" ? userEmail : addContactEmail.trim()) || null,
+        contact_phone: addContactPhone.trim() || null,
+        organizer_type: addOrganizerType,
+        plan: addPlan === "none" ? null : addPlan,
+        verification_status: addPublishImmediately ? "approved" : "pending",
+        is_published: addPublishImmediately,
+        verified: false,
+        updated_at: new Date().toISOString(),
+      };
+
+      // 4. Insert into organizer_profiles
+      const { error: insErr } = await supabase
+        .from("organizer_profiles")
+        .insert(payload);
+      if (insErr) {
+        push({ tone: "red", title: "Insert failed", message: insErr.message });
+        return;
+      }
+
+      // 5. For existing-user mode, also flag the profile as organizer
+      if (addMode === "existing" && userId) {
+        await supabase
+          .from("profiles")
+          .update({ is_organizer: true })
+          .eq("id", userId);
+      }
+
+      push({
+        tone: "green",
+        title: "Organizer added",
+        message: `${payload.display_name} is now ${addPublishImmediately ? "live on Occaz" : "pending review"}.`,
+      });
+      setAddOpen(false);
+      resetAdd();
+      load();
+    } finally {
+      setAddVerifying(false);
+    }
+  }
+
   // Columns we want from organizer_profiles. Falls back to a minimal set
   // on older deployments where some columns are missing.
   const FULL_COLS = "id, display_name, slug, logo, cover_image, bio, website, instagram, facebook, tiktok, contact_email, contact_phone, phone, city, address, operating_cities, organizer_type, plan, verification_status, is_published, verified, created_at, updated_at";
@@ -735,7 +900,12 @@ export function AdminOrganizers() {
           <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>
             Export
           </Button>
-          <Button leftIcon={<Plus className="h-4 w-4" />}>Invite organizer</Button>
+          <Button
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setAddOpen(true)}
+          >
+            Add organizer
+          </Button>
         </div>
       </div>
 
@@ -1373,6 +1543,241 @@ export function AdminOrganizers() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Add organizer modal */}
+      <AnimatePresence>
+        {addOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !addVerifying && setAddOpen(false)}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ type: "spring", stiffness: 320, damping: 30 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-base)] p-6 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">Add organizer</h2>
+                    <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                      Create a new organizer record. For existing users, link it to their account so they can sign in and manage it.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => !addVerifying && setAddOpen(false)}
+                    className="grid h-9 w-9 place-items-center rounded-full bg-[var(--bg-card)] text-[var(--text-tertiary)] hover:text-white"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Mode toggle */}
+                <div className="mt-4 flex gap-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setAddMode("existing")}
+                    className={clsx(
+                      "flex-1 rounded-lg py-1.5 text-xs font-medium transition",
+                      addMode === "existing"
+                        ? "bg-white text-black"
+                        : "text-[var(--text-tertiary)] hover:text-white",
+                    )}
+                  >
+                    Existing user
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddMode("standalone")}
+                    className={clsx(
+                      "flex-1 rounded-lg py-1.5 text-xs font-medium transition",
+                      addMode === "standalone"
+                        ? "bg-white text-black"
+                        : "text-[var(--text-tertiary)] hover:text-white",
+                    )}
+                  >
+                    Standalone brand
+                  </button>
+                </div>
+
+                <p className="mt-3 text-[10px] text-[var(--text-tertiary)]">
+                  {addMode === "existing"
+                    ? "Link an Occaz user account to an organizer profile. They must already have signed up."
+                    : "Create a brand-only organizer without a user login. Useful for partners, sponsors, or groups managed by an admin."}
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  {addMode === "existing" ? (
+                    <div>
+                      <label className="text-xs font-medium text-[var(--text-secondary)]">
+                        User email <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={addEmail}
+                        onChange={(e) => setAddEmail(e.target.value)}
+                        placeholder="user@example.com"
+                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      />
+                    </div>
+                  ) : null}
+
+                  <div>
+                    <label className="text-xs font-medium text-[var(--text-secondary)]">
+                      Brand / organizer name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      value={addDisplayName}
+                      onChange={(e) => setAddDisplayName(e.target.value)}
+                      placeholder="e.g. Bloomfield Hall Schools"
+                      className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-[var(--text-secondary)]">
+                      Public slug {addMode === "standalone" ? <span className="text-red-400">*</span> : <span className="text-[10px] text-[var(--text-tertiary)]">(optional)</span>}
+                    </label>
+                    <div className="mt-1 flex items-stretch overflow-hidden rounded-lg ring-1 ring-[var(--border-subtle)] focus-within:ring-2 focus-within:ring-accent-500/40">
+                      <span className="grid place-items-center bg-[var(--bg-elevated)] px-3 text-xs text-[var(--text-tertiary)]">
+                        /organizers/
+                      </span>
+                      <input
+                        value={addSlug}
+                        onChange={(e) => setAddSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                        placeholder="bloomfield"
+                        className="h-10 flex-1 bg-[var(--bg-card)] px-3 text-sm focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-[var(--text-secondary)]">Plan</label>
+                      <select
+                        value={addPlan}
+                        onChange={(e) => setAddPlan(e.target.value as any)}
+                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      >
+                        <option value="none">No plan</option>
+                        <option value="starter">Starter</option>
+                        <option value="pro">Pro</option>
+                        <option value="business">Business</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-[var(--text-secondary)]">Organizer type</label>
+                      <select
+                        value={addOrganizerType}
+                        onChange={(e) => setAddOrganizerType(e.target.value as any)}
+                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      >
+                        <option value="individual">Individual</option>
+                        <option value="event_company">Event company</option>
+                        <option value="university_society">University society</option>
+                        <option value="business_venue">Business / venue</option>
+                        <option value="ngo_organization">NGO / nonprofit</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-[var(--text-secondary)]">City</label>
+                      <input
+                        value={addCity}
+                        onChange={(e) => setAddCity(e.target.value)}
+                        placeholder="e.g. Lahore"
+                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-[var(--text-secondary)]">Contact phone</label>
+                      <input
+                        value={addContactPhone}
+                        onChange={(e) => setAddPhone(e.target.value)}
+                        placeholder="+92 300 1234567"
+                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      />
+                    </div>
+                  </div>
+
+                  {addMode === "standalone" && (
+                    <div>
+                      <label className="text-xs font-medium text-[var(--text-secondary)]">Public contact email</label>
+                      <input
+                        type="email"
+                        value={addContactEmail}
+                        onChange={(e) => setAddEmail2(e.target.value)}
+                        placeholder="hello@bloomfield.pk"
+                        className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-card)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-xs font-medium text-[var(--text-secondary)]">Short bio</label>
+                    <textarea
+                      value={addBio}
+                      onChange={(e) => setAddBio(e.target.value)}
+                      placeholder="One paragraph describing this organizer"
+                      rows={3}
+                      className="mt-1 w-full rounded-lg bg-[var(--bg-card)] p-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                    />
+                  </div>
+
+                  <label className="flex items-start gap-2 rounded-lg bg-[var(--bg-elevated)] p-3 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={addPublishImmediately}
+                      onChange={(e) => setAddPublishImmediately(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-[var(--border-default)]"
+                    />
+                    <span>
+                      <span className="font-medium">Publish immediately</span>
+                      <span className="block text-[10px] text-[var(--text-tertiary)]">
+                        Mark as approved and visible on /organizers. If unchecked, the organizer is created in <strong>pending</strong> state.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setAddOpen(false);
+                      resetAdd();
+                    }}
+                    disabled={addVerifying}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={submitAdd}
+                    disabled={addVerifying}
+                    leftIcon={addVerifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  >
+                    {addVerifying ? "Adding…" : "Add organizer"}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1706,4 +2111,18 @@ function Row({
       </div>
     </div>
   );
+}
+
+// Local helpers
+function slugify(s: string) {
+  return (s ?? "")
+    .toString()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 64);
 }
