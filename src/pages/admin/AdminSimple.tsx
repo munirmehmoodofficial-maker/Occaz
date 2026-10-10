@@ -40,6 +40,7 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { useToast } from "../../lib/toast";
 import clsx from "clsx";
+import { SingleImageDrop } from "../../components/admin/SingleImageDrop";
 
 export function AdminCategories() {
   const { push } = useToast();
@@ -1899,21 +1900,23 @@ export function AdminOrganizers() {
                       </div>
                       <div className="grid grid-cols-2 gap-2.5">
                         <div>
-                          <label className="text-xs font-medium text-[var(--text-secondary)]">Logo URL</label>
-                          <input
-                            value={addLogoUrl}
-                            onChange={(e) => setAddLogoUrl(e.target.value)}
-                            placeholder="https://…/logo.png"
-                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          <SingleImageDrop
+                            value={addLogoUrl || null}
+                            onChange={(u) => setAddLogoUrl(u ?? "")}
+                            label="Logo"
+                            storageKind="organizers"
+                            aspect="1:1"
+                            hint="Square image, used as the avatar"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-[var(--text-secondary)]">Cover image URL</label>
-                          <input
-                            value={addCoverUrl}
-                            onChange={(e) => setAddCoverUrl(e.target.value)}
-                            placeholder="https://…/cover.png"
-                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          <SingleImageDrop
+                            value={addCoverUrl || null}
+                            onChange={(u) => setAddCoverUrl(u ?? "")}
+                            label="Cover image"
+                            storageKind="organizers"
+                            aspect="16:9"
+                            hint="Wide banner shown on the public page"
                           />
                         </div>
                       </div>
