@@ -651,6 +651,33 @@ export function AdminOrganizers() {
           push({ tone: "red", title: "Contact email required", message: "Provide the login email for the new organizer account." });
           return;
         }
+        // Detect email collision before signUp so we can show a clear error.
+        // We probe by trying to look up the email in profiles (anon can read
+        // public profile fields like email/full_name; if it exists the user
+        // already has an account and we should suggest "Existing user" mode).
+        try {
+          const { data: existing } = await supabase
+            .from("profiles")
+            .select("id, email, is_organizer")
+            .eq("email", newEmail)
+            .maybeSingle();
+          if (existing?.id) {
+            if (existing.is_organizer) {
+              push({
+                tone: "amber",
+                title: "Already an organizer",
+                message: `${newEmail} is already an organizer. Switch to "Existing user" mode.`,
+              });
+            } else {
+              push({
+                tone: "amber",
+                title: "Email already registered",
+                message: `${newEmail} already has an account. Switch to "Existing user" mode to link their organizer profile.`,
+              });
+            }
+            return;
+          }
+        } catch {}
         // Capture current admin session token so we can restore it after
         const { data: adminSessionData } = await supabase.auth.getSession();
         const adminToken = adminSessionData?.session?.access_token;
