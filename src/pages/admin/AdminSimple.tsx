@@ -457,6 +457,154 @@ export function AdminOrganizers() {
   // contact, social, operating cities). On submit the user is then routed to
   // the standard plan-selection view where they pick a paid plan.
   const [addOpen, setAddOpen] = useState(false);
+
+  // Edit organizer modal
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editOrganizerType, setEditOrganizerType] = useState<"individual" | "event_company" | "university_society" | "business_venue" | "ngo_organization" | "other">("individual");
+  const [editCity, setEditCity] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editWebsite, setEditWebsite] = useState("");
+  const [editContactEmail, setEditContactEmail] = useState("");
+  const [editContactPhone, setEditContactPhone] = useState("");
+  const [editAccountPhone, setEditAccountPhone] = useState("");
+  const [editInstagram, setEditInstagram] = useState("");
+  const [editFacebook, setEditFacebook] = useState("");
+  const [editTiktok, setEditTiktok] = useState("");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
+  const [editCoverUrl, setEditCoverUrl] = useState("");
+  const [editOperatingCities, setEditOperatingCities] = useState<string[]>([]);
+  const [editSaving, setEditSaving] = useState(false);
+
+  function openEdit(o: any) {
+    setEditTarget(o);
+    setEditDisplayName(o.display_name ?? "");
+    setEditSlug(o.slug ?? "");
+    setEditBio(o.bio ?? "");
+    setEditOrganizerType(o.organizer_type ?? "individual");
+    setEditCity(o.city ?? "");
+    setEditAddress(o.address ?? "");
+    setEditWebsite(o.website ?? "");
+    setEditContactEmail(o.contact_email ?? "");
+    setEditContactPhone(o.contact_phone ?? "");
+    setEditAccountPhone(o.phone ?? "");
+    setEditInstagram(o.instagram ?? "");
+    setEditFacebook(o.facebook ?? "");
+    setEditTiktok(o.tiktok ?? "");
+    setEditLogoUrl(o.logo ?? "");
+    setEditCoverUrl(o.cover_image ?? "");
+    setEditOperatingCities(Array.isArray(o.operating_cities) ? o.operating_cities : []);
+    setEditOpen(true);
+  }
+
+  function toggleEditCity(c: string) {
+    setEditOperatingCities((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+    );
+  }
+
+  async function submitEdit() {
+    if (!editTarget) return;
+    if (!editDisplayName.trim()) {
+      push({ tone: "red", title: "Brand name required", message: "Enter the brand / organizer name." });
+      return;
+    }
+    if (!editSlug.trim()) {
+      push({ tone: "red", title: "Slug required", message: "Enter a public slug." });
+      return;
+    }
+    if (!/^[a-z0-9-]+$/.test(editSlug.trim())) {
+      push({ tone: "red", title: "Invalid slug", message: "Use lowercase letters, numbers, and dashes only." });
+      return;
+    }
+    if (editWebsite.trim() && !/^https?:\/\//.test(editWebsite.trim())) {
+      setEditWebsite(`https://${editWebsite.trim()}`);
+    }
+    setEditSaving(true);
+    try {
+      // Try the admin_update_organizer RPC first (bypasses RLS).
+      let ok = false;
+      try {
+        const { data, error } = await supabase.rpc("admin_update_organizer", {
+          p_id: editTarget.id,
+          p_display_name: editDisplayName.trim(),
+          p_slug: editSlug.trim(),
+          p_bio: editBio.trim() || null,
+          p_organizer_type: editOrganizerType,
+          p_city: editCity.trim() || null,
+          p_address: editAddress.trim() || null,
+          p_website: editWebsite.trim() || null,
+          p_contact_email: editContactEmail.trim() || null,
+          p_contact_phone: editContactPhone.trim() || null,
+          p_phone: editAccountPhone.trim() || null,
+          p_instagram: editInstagram.trim() || null,
+          p_facebook: editFacebook.trim() || null,
+          p_tiktok: editTiktok.trim() || null,
+          p_logo: editLogoUrl.trim() || null,
+          p_cover_image: editCoverUrl.trim() || null,
+          p_operating_cities: editOperatingCities,
+        });
+        if (!error && Array.isArray(data) && data[0]?.success) {
+          ok = true;
+        } else if (error) {
+          // eslint-disable-next-line no-console
+          console.warn("[admin] edit RPC failed, falling back:", error.message);
+        }
+      } catch (e: any) {
+        // eslint-disable-next-line no-console
+        console.warn("[admin] edit RPC not available:", e?.message);
+      }
+
+      if (!ok) {
+        // Fallback: direct update (may hit RLS — that's why the RPC is preferred)
+        const payload: any = {
+          display_name: editDisplayName.trim(),
+          slug: editSlug.trim(),
+          bio: editBio.trim() || null,
+          organizer_type: editOrganizerType,
+          city: editCity.trim() || null,
+          address: editAddress.trim() || null,
+          website: editWebsite.trim() || null,
+          contact_email: editContactEmail.trim() || null,
+          contact_phone: editContactPhone.trim() || null,
+          phone: editAccountPhone.trim() || null,
+          instagram: editInstagram.trim() || null,
+          facebook: editFacebook.trim() || null,
+          tiktok: editTiktok.trim() || null,
+          logo: editLogoUrl.trim() || null,
+          cover_image: editCoverUrl.trim() || null,
+          operating_cities: editOperatingCities,
+          updated_at: new Date().toISOString(),
+        };
+        const { error } = await supabase
+          .from("organizer_profiles")
+          .update(payload)
+          .eq("id", editTarget.id);
+        if (error) {
+          push({
+            tone: "red",
+            title: "Update failed",
+            message: `${error.message}\n\nIf RLS is blocking, run supabase/admin_create_organizer.sql (it adds admin_update_organizer too) in the SQL editor.`,
+          });
+          return;
+        }
+      }
+
+      push({
+        tone: "green",
+        title: "Organizer updated",
+        message: `${editDisplayName.trim()} has been saved.`,
+      });
+      setEditOpen(false);
+      setEditTarget(null);
+      load();
+    } finally {
+      setEditSaving(false);
+    }
+  }
   // We have two modes:
   //   - "existing": link to an existing auth.users account by email
   //   - "new":       create a fresh Supabase auth user with a brand new
@@ -1418,6 +1566,14 @@ export function AdminOrganizers() {
                     >
                       Review
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openEdit(o)}
+                      leftIcon={<Edit3 className="h-3 w-3" />}
+                    >
+                      Edit
+                    </Button>
                     {o.slug && (
                       <a
                         href={`/organizers/${o.slug}`}
@@ -2261,6 +2417,285 @@ export function AdminOrganizers() {
                     leftIcon={addVerifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                   >
                     {addVerifying ? "Adding…" : "Add organizer"}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Edit organizer modal */}
+      <AnimatePresence>
+        {editOpen && editTarget && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !editSaving && setEditOpen(false)}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ type: "spring", stiffness: 320, damping: 30 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-base)] p-6 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">Edit organizer</h2>
+                    <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                      Update the brand & profile information for{" "}
+                      <strong>{editTarget.display_name}</strong>. Changes save immediately.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => !editSaving && setEditOpen(false)}
+                    className="grid h-9 w-9 place-items-center rounded-full bg-[var(--bg-card)] text-[var(--text-tertiary)] hover:text-white"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="mt-4 space-y-4">
+                  {/* Brand & profile */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Brand & profile
+                    </div>
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">
+                          Brand / organizer name <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          value={editDisplayName}
+                          onChange={(e) => setEditDisplayName(e.target.value)}
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">
+                          Public slug <span className="text-red-400">*</span>
+                        </label>
+                        <div className="mt-1 flex items-stretch overflow-hidden rounded-lg bg-[var(--bg-elevated)] ring-1 ring-[var(--border-subtle)] focus-within:ring-2 focus-within:ring-accent-500/40">
+                          <span className="grid place-items-center bg-[var(--bg-elevated)] px-3 text-xs text-[var(--text-tertiary)]">
+                            /organizers/
+                          </span>
+                          <input
+                            value={editSlug}
+                            onChange={(e) => setEditSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                            className="h-10 flex-1 bg-transparent px-3 text-sm focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Bio</label>
+                        <textarea
+                          value={editBio}
+                          onChange={(e) => setEditBio(e.target.value)}
+                          rows={3}
+                          className="mt-1 w-full rounded-lg bg-[var(--bg-elevated)] p-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                        <div className="mt-0.5 text-right text-[10px] text-[var(--text-tertiary)]">
+                          {editBio.length} chars
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Organizer type</label>
+                        <select
+                          value={editOrganizerType}
+                          onChange={(e) => setEditOrganizerType(e.target.value as any)}
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        >
+                          <option value="individual">Individual</option>
+                          <option value="event_company">Event company</option>
+                          <option value="university_society">University society</option>
+                          <option value="business_venue">Business / venue</option>
+                          <option value="ngo_organization">NGO / nonprofit</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <SingleImageDrop
+                            value={editLogoUrl || null}
+                            onChange={(u) => setEditLogoUrl(u ?? "")}
+                            label="Logo"
+                            storageKind="organizers"
+                            aspect="1:1"
+                            hint="Square image, used as the avatar"
+                          />
+                        </div>
+                        <div>
+                          <SingleImageDrop
+                            value={editCoverUrl || null}
+                            onChange={(u) => setEditCoverUrl(u ?? "")}
+                            label="Cover image"
+                            storageKind="organizers"
+                            aspect="16:9"
+                            hint="Wide banner shown on the public page"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Contact
+                    </div>
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Public contact email</label>
+                          <input
+                            type="email"
+                            value={editContactEmail}
+                            onChange={(e) => setEditContactEmail(e.target.value.toLowerCase())}
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Public contact phone</label>
+                          <input
+                            value={editContactPhone}
+                            onChange={(e) => setEditContactPhone(e.target.value)}
+                            placeholder="+92 300 1234567"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Account phone</label>
+                          <input
+                            value={editAccountPhone}
+                            onChange={(e) => setEditAccountPhone(e.target.value)}
+                            placeholder="(private)"
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[var(--text-secondary)]">Home city</label>
+                          <input
+                            value={editCity}
+                            onChange={(e) => setEditCity(e.target.value)}
+                            className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Website</label>
+                        <input
+                          value={editWebsite}
+                          onChange={(e) => setEditWebsite(e.target.value)}
+                          placeholder="https://example.com"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Address / venue</label>
+                        <input
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          placeholder="e.g. 123 Main St, F-7 Markaz, Islamabad"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Social */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Social media
+                    </div>
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Instagram</label>
+                        <input
+                          value={editInstagram}
+                          onChange={(e) => setEditInstagram(e.target.value)}
+                          placeholder="https://instagram.com/brand"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">Facebook</label>
+                        <input
+                          value={editFacebook}
+                          onChange={(e) => setEditFacebook(e.target.value)}
+                          placeholder="https://facebook.com/brand"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">TikTok</label>
+                        <input
+                          value={editTiktok}
+                          onChange={(e) => setEditTiktok(e.target.value)}
+                          placeholder="https://tiktok.com/@brand"
+                          className="mt-1 h-10 w-full rounded-lg bg-[var(--bg-elevated)] px-3 text-sm ring-1 ring-[var(--border-subtle)] focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Operating cities */}
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Operating cities
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PAKISTAN_CITIES.map((c) => {
+                        const active = editOperatingCities.includes(c);
+                        return (
+                          <button
+                            type="button"
+                            key={c}
+                            onClick={() => toggleEditCity(c)}
+                            className={clsx(
+                              "rounded-full border px-2.5 py-1 text-xs font-medium transition",
+                              active
+                                ? "border-accent-500 bg-accent-500/20 text-accent-200"
+                                : "border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-default)]",
+                            )}
+                          >
+                            {c}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setEditOpen(false);
+                      setEditTarget(null);
+                    }}
+                    disabled={editSaving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={submitEdit}
+                    disabled={editSaving}
+                    leftIcon={editSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  >
+                    {editSaving ? "Saving…" : "Save changes"}
                   </Button>
                 </div>
               </div>

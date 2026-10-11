@@ -99,3 +99,75 @@ begin
 exception when others then
   return query select p_id, false, SQLERRM;
 end $$;
+
+
+-- ============================================================
+-- admin_update_organizer: edit an existing organizer profile
+-- ============================================================
+create or replace function public.admin_update_organizer(
+  p_id uuid,
+  p_display_name text,
+  p_slug text,
+  p_bio text,
+  p_organizer_type text,
+  p_city text default null,
+  p_address text default null,
+  p_website text default null,
+  p_contact_email text default null,
+  p_contact_phone text default null,
+  p_phone text default null,
+  p_instagram text default null,
+  p_facebook text default null,
+  p_tiktok text default null,
+  p_logo text default null,
+  p_cover_image text default null,
+  p_operating_cities text[] default '{}'::text[]
+)
+returns table(id uuid, success boolean, error text, slug text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actual_slug text;
+  v_attempt int;
+  v_collision_id uuid;
+begin
+  -- Detect slug collision against a *different* organizer
+  v_actual_slug := p_slug;
+  for v_attempt in 1..5 loop
+    select id into v_collision_id
+      from public.organizer_profiles
+      where slug = v_actual_slug
+        and id <> p_id
+      limit 1;
+    if v_collision_id is null then
+      exit;
+    end if;
+    v_actual_slug := p_slug || '-' || substr(md5(random()::text), 1, 4);
+  end loop;
+
+  update public.organizer_profiles set
+    display_name = p_display_name,
+    slug = v_actual_slug,
+    bio = p_bio,
+    organizer_type = p_organizer_type,
+    city = p_city,
+    address = p_address,
+    website = p_website,
+    contact_email = p_contact_email,
+    contact_phone = p_contact_phone,
+    phone = p_phone,
+    instagram = p_instagram,
+    facebook = p_facebook,
+    tiktok = p_tiktok,
+    logo = p_logo,
+    cover_image = p_cover_image,
+    operating_cities = p_operating_cities,
+    updated_at = now()
+  where id = p_id;
+
+  return query select p_id, true, null::text, v_actual_slug;
+exception when others then
+  return query select p_id, false, SQLERRM, p_slug;
+end $$;
