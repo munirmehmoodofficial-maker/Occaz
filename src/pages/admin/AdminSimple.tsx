@@ -716,9 +716,9 @@ export function AdminOrganizers() {
         }
         if (!profileEnsured) {
           push({
-            tone: "amber",
-            title: "Profile setup slow",
-            message: "The auth user was created but the profile row is still being set up. The organizer profile will fall back to minimal fields if needed.",
+            tone: "red",
+            title: "Profile setup failed",
+            message: "The auth user was created but the profiles row couldn't be set up. Run supabase/fix_profile_policies.sql in the SQL editor to grant admin INSERT, then retry.",
           });
         }
         push({
