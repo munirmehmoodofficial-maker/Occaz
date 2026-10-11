@@ -223,17 +223,18 @@ export function LoginPage() {
             )}
 
             {mode === "password" ? (
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <Link
                   to="/forgot-password"
-                  className="text-[var(--text-tertiary)] hover:text-white"
+                  className="inline-flex items-center gap-1.5 font-semibold text-pink-400 hover:text-pink-300 hover:underline"
                 >
+                  <KeyRound className="h-3.5 w-3.5" />
                   Forgot password?
                 </Link>
                 <button
                   type="button"
                   onClick={() => setMode("magic")}
-                  className="text-[var(--text-tertiary)] hover:text-white"
+                  className="text-xs text-[var(--text-tertiary)] hover:text-white"
                 >
                   Use magic link instead
                 </button>
