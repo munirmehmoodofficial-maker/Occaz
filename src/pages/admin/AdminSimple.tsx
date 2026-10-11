@@ -769,51 +769,117 @@ export function AdminOrganizers() {
         updated_at: new Date().toISOString(),
       };
 
-      // 5. Insert with two-stage fallback for older databases
-      let insErr: any = null;
+      // 5. Use the admin_create_organizer RPC if available (bypasses RLS,
+      // handles profile + organizer atomically). Falls back to direct
+      // inserts if the RPC doesn't exist (older deployments).
+      let actualSlug = slugBase;
+      let rpcOk = false;
       try {
-        const r = await supabase.from("organizer_profiles").insert(fullPayload);
-        insErr = r.error;
+        const { data: rpcData, error: rpcErr } = await supabase.rpc("admin_create_organizer", {
+          p_id: userId,
+          p_email: userEmail,
+          p_full_name: addFullName.trim() || addDisplayName.trim(),
+          p_display_name: addDisplayName.trim() || userFullName || userEmail,
+          p_slug: slugBase,
+          p_bio: addBio.trim() || null,
+          p_plan: addPlan === "none" ? null : addPlan,
+          p_verification_status: addPublishImmediately ? "approved" : "pending",
+          p_is_published: addPublishImmediately,
+          p_city: addCity.trim() || null,
+          p_address: addAddress.trim() || null,
+          p_website: addWebsite.trim() || null,
+          p_contact_email: addPublicContactEmail.trim() || userEmail || null,
+          p_contact_phone: addPublicContactPhone.trim() || null,
+          p_phone: addAccountPhone.trim() || null,
+          p_instagram: addInstagram.trim() || null,
+          p_facebook: addFacebook.trim() || null,
+          p_tiktok: addTiktok.trim() || null,
+          p_logo: addLogoUrl.trim() || null,
+          p_cover_image: addCoverUrl.trim() || null,
+          p_operating_cities: addOperatingCities,
+          p_organizer_type: addOrganizerType,
+        });
+        if (rpcErr) {
+          // eslint-disable-next-line no-console
+          console.warn("[admin] RPC failed, falling back to direct insert:", rpcErr.message);
+        } else if (Array.isArray(rpcData) && rpcData[0]?.success) {
+          rpcOk = true;
+          actualSlug = (rpcData[0] as any).slug ?? slugBase;
+        } else if (Array.isArray(rpcData) && rpcData[0]?.error) {
+          // eslint-disable-next-line no-console
+          console.warn("[admin] RPC returned error:", rpcData[0].error);
+        }
       } catch (e: any) {
-        insErr = e;
+        // eslint-disable-next-line no-console
+        console.warn("[admin] RPC not available:", e?.message);
       }
-      if (insErr) {
+
+      if (!rpcOk) {
+        // Fallback: direct inserts with two-stage error handling.
+        // First try to ensure profile row exists (silent failure is OK
+        // here — many deployments have handle_new_user trigger doing this).
         try {
-          const minimalPayload: any = {
-            id: userId,
-            display_name: fullPayload.display_name,
-            slug: slugBase,
-            bio: fullPayload.bio,
-            plan: fullPayload.plan,
-            verified: false,
-          };
-          const r2 = await supabase
-            .from("organizer_profiles")
-            .insert(minimalPayload);
-          if (r2.error) {
-            push({ tone: "red", title: "Insert failed", message: r2.error.message });
+          await supabase.from("profiles").upsert(
+            {
+              id: userId,
+              email: userEmail,
+              full_name: addFullName.trim() || addDisplayName.trim(),
+              is_organizer: true,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "id" },
+          );
+        } catch {}
+
+        let insErr: any = null;
+        try {
+          const r = await supabase.from("organizer_profiles").insert(fullPayload);
+          insErr = r.error;
+        } catch (e: any) {
+          insErr = e;
+        }
+        if (insErr) {
+          try {
+            const minimalPayload: any = {
+              id: userId,
+              display_name: fullPayload.display_name,
+              slug: slugBase,
+              bio: fullPayload.bio,
+              plan: fullPayload.plan,
+              verified: false,
+            };
+            const r2 = await supabase
+              .from("organizer_profiles")
+              .insert(minimalPayload);
+            if (r2.error) {
+              push({
+                tone: "red",
+                title: "Insert failed",
+                message: `${r2.error.message}\n\nIf the FK error persists, run supabase/admin_create_organizer.sql in the SQL editor to enable the atomic RPC.`,
+              });
+              return;
+            }
+            push({
+              tone: "amber",
+              title: "Saved with limited fields",
+              message: "Some optional columns don't exist yet on this database. Basic info saved; advanced fields were skipped.",
+            });
+          } catch (e2: any) {
+            push({ tone: "red", title: "Insert failed", message: e2?.message ?? "Unknown error" });
             return;
           }
-          push({
-            tone: "amber",
-            title: "Saved with limited fields",
-            message: "Some optional columns don't exist yet on this database. Basic info saved; advanced fields were skipped.",
-          });
-        } catch (e2: any) {
-          push({ tone: "red", title: "Insert failed", message: e2?.message ?? "Unknown error" });
-          return;
         }
-      } else {
-        push({
-          tone: "green",
-          title: "Organizer added",
-          message: `${fullPayload.display_name} is now ${addPublishImmediately ? "live on Occaz" : "pending review"}.`,
-        });
       }
+
+      push({
+        tone: "green",
+        title: "Organizer added",
+        message: `${addDisplayName.trim() || userEmail} is now ${addPublishImmediately ? "live on Occaz" : "pending review"}.`,
+      });
 
       // 6. Close modal and refresh
       setAddOpen(false);
-      const createdSlug = slugBase;
+      const createdSlug = actualSlug;
       resetAdd();
       load();
 
