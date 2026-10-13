@@ -14,7 +14,13 @@ export const supabase = createClient(url ?? "", anon ?? "", {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    // IMPORTANT: keep this OFF so the password-reset / email-confirm links
+    // don't auto-create a session on first page load. Auth pages
+    // (ResetPasswordPage / AuthConfirmedPage) call
+    // `supabase.auth.exchangeCodeForSession` / getSession manually so we
+    // can decide what to do with the recovery session before it becomes
+    // "the active session" for the rest of the app.
+    detectSessionInUrl: false,
     storageKey: "occaz.auth",
   },
   realtime: {

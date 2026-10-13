@@ -24,31 +24,42 @@ export function AuthConfirmedPage() {
     let cancelled = false;
     (async () => {
       try {
-        // The Supabase client's `detectSessionInUrl: true` setting already
-        // processes any token/code in the URL on first load. We just need
-        // to wait for the resulting session to appear.
-        const { data } = await (
-          await import("../lib/supabase")
-        ).supabase.auth.getSession();
+        const { supabase } = await import("../lib/supabase");
+        // detectSessionInUrl is disabled in the client config, so we have
+        // to manually exchange any code/token in the URL ourselves.
+        const url = window.location.href;
+        const hasToken =
+          url.includes("access_token=") ||
+          url.includes("code=") ||
+          url.includes("type=") ||
+          url.includes("error_description=");
+
+        if (hasToken) {
+          // Try the recovery / signup / magic-link code exchange first.
+          const { data: ex, error: exErr } =
+            await supabase.auth.exchangeCodeForSession(url);
+          if (cancelled) return;
+          if (exErr) {
+            // PKCE errors are common if the code is malformed or expired.
+            // We still want to try getSession() in case the token was already
+            // persisted by another tab.
+            // eslint-disable-next-line no-console
+            console.warn("[auth-confirmed] exchange error:", exErr.message);
+          } else if (ex?.session) {
+            setPhase("ok");
+            setMsg("Email confirmed. Signing you in…");
+            return;
+          }
+        }
+
+        // No code in URL, or exchange failed — check if a session already
+        // exists from a previous step (e.g. auto-confirmed signup).
+        const { data } = await supabase.auth.getSession();
         if (cancelled) return;
         if (data.session) {
           setPhase("ok");
           setMsg("You're signed in. Redirecting…");
-          return;
-        }
-        // No session yet — try exchanging the URL ourselves (older code flow).
-        const { data: ex, error: exErr } = await (
-          await import("../lib/supabase")
-        ).supabase.auth.exchangeCodeForSession(window.location.href);
-        if (cancelled) return;
-        if (exErr) {
-          setPhase("error");
-          setMsg(exErr.message);
-        } else if (ex.session) {
-          setPhase("ok");
-          setMsg("Email confirmed. Signing you in…");
         } else {
-          await refreshSession();
           setPhase("error");
           setMsg(
             "This link is invalid or has expired. Try requesting a new one.",

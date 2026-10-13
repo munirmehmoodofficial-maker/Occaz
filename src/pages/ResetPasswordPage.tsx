@@ -34,16 +34,40 @@ export function ResetPasswordPage() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      // The hash from the email link contains the access token; Supabase parses it
-      // and creates a session automatically.
-      const { data, error } = await supabase.auth.getSession();
-      if (!alive) return;
-      if (error) {
-        setError(error.message);
+      try {
+        // Step 1: try to exchange any token in the URL (since we disabled
+        // detectSessionInUrl, we have to do this manually).
+        const url = window.location.href;
+        // Only attempt if there's a code/access_token in the URL
+        if (
+          url.includes("access_token=") ||
+          url.includes("code=") ||
+          url.includes("type=recovery")
+        ) {
+          const { error: exErr } =
+            await supabase.auth.exchangeCodeForSession(url);
+          if (exErr) {
+            // Not a fatal error yet — maybe the session was already set
+            // (e.g. via PKCE) and getSession below will pick it up.
+            // eslint-disable-next-line no-console
+            console.warn("[reset-password] exchangeCodeForSession:", exErr.message);
+          }
+        }
+
+        // Step 2: read the resulting session (if any).
+        const { data, error } = await supabase.auth.getSession();
+        if (!alive) return;
+        if (error) {
+          setError(error.message);
+          setHasSession(false);
+          return;
+        }
+        setHasSession(!!data.session);
+      } catch (e: any) {
+        if (!alive) return;
+        setError(e?.message ?? "Failed to verify reset link.");
         setHasSession(false);
-        return;
       }
-      setHasSession(!!data.session);
     })();
     return () => {
       alive = false;
