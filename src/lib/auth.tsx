@@ -41,6 +41,7 @@ interface AuthContextValue {
     email: string,
     password: string,
     fullName?: string,
+    asOrganizer?: boolean,
   ) => Promise<{ error: string | null; needsVerification: boolean }>;
   signInWithOAuth: (provider: Provider) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -149,12 +150,15 @@ const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
         return { error: error?.message ?? null };
       },
 
-      async signUp(email, password, fullName) {
+      async signUp(email, password, fullName, asOrganizer = false) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { full_name: fullName ?? "" },
+            data: {
+              full_name: fullName ?? "",
+              as_organizer: asOrganizer ? "true" : "false",
+            },
             emailRedirectTo: `${window.location.origin}/auth/confirmed`,
           },
         });

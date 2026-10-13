@@ -1,13 +1,32 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, User as UserIcon, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Mail,
+  Lock,
+  User as UserIcon,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  UserPlus,
+  Building2,
+  Sparkles,
+  ArrowLeftRight,
+} from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { Button } from "../components/ui/Button";
 import { motion } from "framer-motion";
+import clsx from "clsx";
+
+type AccountKind = "user" | "organizer";
 
 export function SignupPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { signUp, signInWithOAuth } = useAuth();
+
+  const initialKind: AccountKind =
+    params.get("as") === "organizer" ? "organizer" : "user";
+  const [kind, setKind] = useState<AccountKind>(initialKind);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -25,11 +44,16 @@ export function SignupPage() {
       setError("Password must be at least 6 characters.");
       return;
     }
+    if (kind === "organizer" && !fullName.trim()) {
+      setError("Please enter your full name — we'll show it on your organizer profile.");
+      return;
+    }
     setLoading(true);
     const { error, needsVerification } = await signUp(
       email,
       password,
       fullName,
+      kind === "organizer",
     );
     setLoading(false);
     if (error) {
@@ -40,13 +64,18 @@ export function SignupPage() {
       // Email confirmation is enabled — bounce to the verify screen.
       navigate("/verify-email", {
         replace: true,
-        state: { email },
+        state: { email, asOrganizer: kind === "organizer" },
       });
       return;
     }
-    // Confirmation disabled or auto-confirmed — go home.
-    setInfo("Account created. Welcome!");
-    setTimeout(() => navigate("/"), 800);
+    // Confirmation disabled or auto-confirmed.
+    if (kind === "organizer") {
+      // Organizer just signed up — go to the full organizer onboarding flow
+      navigate("/become-organizer", { replace: true });
+    } else {
+      setInfo("Account created. Welcome!");
+      setTimeout(() => navigate("/"), 800);
+    }
   }
 
   async function oauth(provider: "google" | "github" | "facebook") {
@@ -62,14 +91,67 @@ export function SignupPage() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-8 shadow-2xl"
       >
+        {/* Account kind toggle: regular user vs organizer */}
+        <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-[var(--bg-elevated)] p-1">
+          <button
+            type="button"
+            onClick={() => setKind("user")}
+            className={clsx(
+              "flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition",
+              kind === "user"
+                ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow ring-1 ring-[var(--border-subtle)]"
+                : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]",
+            )}
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Attendee
+          </button>
+          <button
+            type="button"
+            onClick={() => setKind("organizer")}
+            className={clsx(
+              "flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition",
+              kind === "organizer"
+                ? "bg-gradient-to-r from-pink-500/20 to-accent-500/20 text-white shadow ring-1 ring-pink-500/40"
+                : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]",
+            )}
+          >
+            <Building2 className="h-3.5 w-3.5" />
+            Organizer
+          </button>
+        </div>
+
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-            Create your account
+            {kind === "organizer" ? "Create organizer account" : "Create your account"}
           </h1>
           <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-            Save events, get tickets, apply to opportunities.
+            {kind === "organizer"
+              ? "Host events, sell tickets, and grow your brand on Occaz."
+              : "Save events, get tickets, apply to opportunities."}
           </p>
         </div>
+
+        {kind === "organizer" && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 p-3 text-xs text-pink-100">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-pink-300" />
+            <div>
+              <span className="font-semibold">Organizer signup</span> unlocks event
+              creation, ticket sales, payouts and the organizer dashboard.
+              Your account is created with organizer role and you'll be guided
+              through the multi-step setup.
+              {" "}
+              <button
+                type="button"
+                onClick={() => setKind("user")}
+                className="inline-flex items-center gap-1 font-medium text-pink-200 hover:underline"
+              >
+                <ArrowLeftRight className="h-3 w-3" />
+                Sign up as attendee instead
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
@@ -99,8 +181,9 @@ export function SignupPage() {
             <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
             <input
               type="text"
+              required={kind === "organizer"}
               autoComplete="name"
-              placeholder="Full name"
+              placeholder={kind === "organizer" ? "Brand / organizer name" : "Full name"}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="input pl-10"
@@ -136,7 +219,11 @@ export function SignupPage() {
             disabled={loading}
             className="mt-1 w-full"
           >
-            {loading ? "Creating account…" : "Create account"}
+            {loading
+              ? "Creating account…"
+              : kind === "organizer"
+                ? "Create organizer account"
+                : "Create account"}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </form>
@@ -167,7 +254,7 @@ export function SignupPage() {
         <p className="mt-6 text-center text-sm text-[var(--text-tertiary)]">
           Already have an account?{" "}
           <Link
-            to="/login"
+            to={kind === "organizer" ? "/login?as=organizer" : "/login"}
             className="font-medium text-[var(--text-primary)] hover:underline"
           >
             Log in

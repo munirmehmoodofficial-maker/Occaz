@@ -940,7 +940,7 @@ export function AdminOrganizers() {
         plan: addPlan === "none" ? null : addPlan,
         verification_status: addPublishImmediately ? "approved" : "pending",
         is_published: addPublishImmediately,
-        verified: false,
+        verified: true, // admin-created accounts are auto-verified
         updated_at: new Date().toISOString(),
       };
 
@@ -1021,7 +1021,7 @@ export function AdminOrganizers() {
               slug: slugBase,
               bio: fullPayload.bio,
               plan: fullPayload.plan,
-              verified: false,
+              verified: true, // admin-created accounts are auto-verified
             };
             const r2 = await supabase
               .from("organizer_profiles")
@@ -2383,6 +2383,11 @@ export function AdminOrganizers() {
                         </span>
                       </span>
                     </label>
+                    <p className="text-[10px] text-emerald-300/90">
+                      ✓ Admin-created organizer accounts are <strong>auto-verified</strong> on creation.
+                      The new organizer can sign in immediately and complete the rest of their profile from
+                      their dashboard.
+                    </p>
                     <label className="flex items-start gap-2 text-xs">
                       <input
                         type="checkbox"

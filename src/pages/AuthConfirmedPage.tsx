@@ -74,6 +74,32 @@ export function AuthConfirmedPage() {
     return () => window.clearTimeout(t);
   }, [phase, navigate, params]);
 
+  // After session is set, fetch the profile to know if this is an organizer
+  // — if so, send them to the multi-step onboarding instead of the homepage.
+  useEffect(() => {
+    if (phase !== "ok") return;
+    const sessionUser = session?.user;
+    if (!sessionUser) return;
+    (async () => {
+      try {
+        const { supabase } = await import("../lib/supabase");
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("is_organizer, onboarded")
+          .eq("id", sessionUser.id)
+          .maybeSingle();
+        if (!prof) return;
+        // If the user just signed up as an organizer and hasn't onboarded yet,
+        // bounce them to the multi-step setup.
+        if (prof.is_organizer && !prof.onboarded) {
+          navigate("/become-organizer", { replace: true });
+        }
+      } catch {
+        // best-effort
+      }
+    })();
+  }, [phase, session, navigate]);
+
   return (
     <div className="page flex min-h-[80vh] items-center justify-center py-10">
       <motion.div

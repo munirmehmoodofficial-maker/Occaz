@@ -158,7 +158,12 @@ export function BecomeOrganizerPage() {
           return;
         }
       } else {
-        const { error, needsVerification } = await signUp(email, password, fullName);
+        const { error, needsVerification } = await signUp(
+          email,
+          password,
+          fullName,
+          true, // as_organizer = true: trigger sets profile.is_organizer
+        );
         if (error) {
           setErr(error);
           setBusy(false);
