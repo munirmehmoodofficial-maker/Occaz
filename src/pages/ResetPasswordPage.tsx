@@ -10,6 +10,7 @@ import {
   EyeOff,
   Shield,
   KeyRound,
+  LogOut,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { Button } from "../components/ui/Button";
@@ -17,10 +18,28 @@ import { useToast } from "../lib/toast";
 import { motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
 
+/**
+ * Reset-password flow.
+ *
+ * Important: when a user clicks the reset link in the email, Supabase
+ * issues a "recovery" access token. The recovery token is also a fully
+ * valid session — meaning the user is *already signed in* on the device
+ * that opened the link. Without a strong gate, the app would just route
+ * them to the dashboard and the password would never get changed.
+ *
+ * To prevent that, this page:
+ *   1. Inspects the URL for the recovery token (we disabled
+ *      detectSessionInUrl, so we have to exchange the code ourselves).
+ *   2. While we're on /reset-password with a recovery session, the
+ *      global auth listener sees the URL flag `occaz.resetting=1` and
+ *      *forces* this page to be rendered, even after the user navigates.
+ *   3. The user is locked on this page until they submit a new password
+ *      (or sign out — which clears the recovery session).
+ */
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { updatePassword } = useAuth();
+  const { updatePassword, signOut } = useAuth();
   const { push } = useToast();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -29,32 +48,60 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
 
-  // Check that we have a valid recovery session
+  // Step 1: process the URL — exchange the recovery code if present.
+  // Step 2: check that we have a valid session.
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        // Step 1: try to exchange any token in the URL (since we disabled
-        // detectSessionInUrl, we have to do this manually).
         const url = window.location.href;
-        // Only attempt if there's a code/access_token in the URL
-        if (
+        const hasTokenInUrl =
           url.includes("access_token=") ||
           url.includes("code=") ||
-          url.includes("type=recovery")
-        ) {
+          url.includes("type=recovery");
+
+        if (hasTokenInUrl) {
+          // A recovery / magic-link token is in the URL. Mark the flow
+          // BEFORE we exchange so the global auth listener can intercept
+          // any state changes and keep us on this page.
+          try {
+            sessionStorage.setItem("occaz.resetting", "1");
+          } catch {
+            // ignore
+          }
+
+          // If the user already has a stored session, sign out first so
+          // there's no confusion between the existing session and the
+          // recovery session we're about to create.
+          const { data: existing } = await supabase.auth.getSession();
+          if (existing.session) {
+            await supabase.auth.signOut();
+          }
+
+          // Exchange the recovery code / token.
           const { error: exErr } =
             await supabase.auth.exchangeCodeForSession(url);
           if (exErr) {
-            // Not a fatal error yet — maybe the session was already set
-            // (e.g. via PKCE) and getSession below will pick it up.
             // eslint-disable-next-line no-console
             console.warn("[reset-password] exchangeCodeForSession:", exErr.message);
           }
+
+          // Clean up the URL fragment so the back button / refresh
+          // doesn't replay the recovery flow.
+          try {
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname,
+            );
+          } catch {
+            // ignore
+          }
         }
 
-        // Step 2: read the resulting session (if any).
+        // Now read the resulting session.
         const { data, error } = await supabase.auth.getSession();
         if (!alive) return;
         if (error) {
@@ -72,7 +119,28 @@ export function ResetPasswordPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [location.pathname]);
+
+  // While the user is on the reset page, prevent accidental navigation
+  // away. If they close the tab, that's their call — but in-app
+  // navigation must keep them here until the password is set.
+  useEffect(() => {
+    if (done) return;
+    if (!hasSession) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!done) {
+        e.preventDefault();
+        e.returnValue =
+          "You haven't set a new password yet. Leave anyway?";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [done, hasSession]);
+
+  // If the user lands on /reset-password with NO session at all, the
+  // recovery token was missing or already used — show the error state.
+  // If they DO have a session, force them through the form.
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -93,8 +161,51 @@ export function ResetPasswordPage() {
       return;
     }
     setDone(true);
-    push("ok", "Password updated! Logging you in…");
-    setTimeout(() => navigate("/", { replace: true }), 1500);
+    // Clear the resetting flag so the global auth listener stops
+    // trying to keep us on this page.
+    try {
+      sessionStorage.removeItem("occaz.resetting");
+    } catch {
+      // ignore
+    }
+    push({
+      tone: "green",
+      title: "Password updated!",
+      message: "Signing you in with the new password…",
+    });
+    // Reload the page so the auth state picks up the new password
+    // session cleanly (otherwise the stale recovery token may persist
+    // in some auth caches).
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 900);
+  }
+
+  async function onAbandon() {
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      // ignore
+    }
+    try {
+      sessionStorage.removeItem("occaz.resetting");
+    } catch {
+      // ignore
+    }
+    window.location.href = "/login";
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────
+  if (hasSession === null) {
+    return (
+      <div className="page flex min-h-[80vh] items-center justify-center py-10">
+        <div className="flex items-center gap-3 text-sm text-[var(--text-tertiary)]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Verifying reset link…
+        </div>
+      </div>
+    );
   }
 
   if (hasSession === false) {
@@ -129,17 +240,7 @@ export function ResetPasswordPage() {
     );
   }
 
-  if (hasSession === null) {
-    return (
-      <div className="page flex min-h-[80vh] items-center justify-center py-10">
-        <div className="flex items-center gap-3 text-sm text-[var(--text-tertiary)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Verifying reset link…
-        </div>
-      </div>
-    );
-  }
-
+  // We have a recovery session — show the form.
   return (
     <div className="page flex min-h-[80vh] items-center justify-center py-10">
       <motion.div
@@ -155,6 +256,15 @@ export function ResetPasswordPage() {
           <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             Choose something strong and memorable. At least 6 characters.
           </p>
+        </div>
+
+        {/* Lock banner — makes it clear the user must update the password */}
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          <Shield className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            You must set a new password before you can use Occaz. You can
+            sign out to abandon this reset and go back to the login page.
+          </div>
         </div>
 
         {error && (
@@ -241,14 +351,20 @@ export function ResetPasswordPage() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-[var(--text-tertiary)]">
-          Remembered it?{" "}
-          <Link
-            to="/login"
-            className="font-medium text-[var(--text-primary)] hover:underline"
+        {!done && (
+          <button
+            type="button"
+            onClick={onAbandon}
+            disabled={signingOut}
+            className="mt-4 inline-flex w-full items-center justify-center gap-1.5 text-xs text-[var(--text-tertiary)] hover:text-white disabled:opacity-50"
           >
-            Back to log in
-          </Link>
+            <LogOut className="h-3 w-3" />
+            {signingOut ? "Signing out…" : "Cancel — sign out & go back to login"}
+          </button>
+        )}
+
+        <p className="mt-4 text-center text-[10px] text-[var(--text-tertiary)]">
+          For security, this page will lock until your password is updated.
         </p>
       </motion.div>
     </div>
@@ -273,19 +389,18 @@ function PasswordStrength({ value }: { value: string }) {
     { color: "bg-emerald-500", label: "Very strong" },
   ];
   const lvl = levels[Math.min(score, 5)];
-  const pct = Math.min(100, (score / 5) * 100);
 
   return (
-    <div>
-      <div className="h-1 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
-        <div
-          className={`h-full transition-all ${lvl.color}`}
-          style={{ width: `${pct}%` }}
-        />
+    <div className="flex items-center gap-2 text-[10px] text-[var(--text-tertiary)]">
+      <div className="flex-1">
+        <div className="h-1 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
+          <div
+            className={`h-full transition-all ${lvl.color}`}
+            style={{ width: `${(score / 5) * 100}%` }}
+          />
+        </div>
       </div>
-      <div className="mt-1 text-right text-[10px] text-[var(--text-tertiary)]">
-        {lvl.label}
-      </div>
+      <span>{lvl.label}</span>
     </div>
   );
 }

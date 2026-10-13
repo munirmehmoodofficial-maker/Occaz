@@ -126,6 +126,20 @@ const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
       setLoading(false);
       if (s?.user) {
         setProfile(await fetchProfile(s.user.id));
+        // If we are in a "resetting" flow (the user clicked the password
+        // reset link and is supposed to be on /reset-password), force
+        // them to stay there. This prevents the app from rendering the
+        // dashboard before the password is actually updated.
+        try {
+          const resetting = sessionStorage.getItem("occaz.resetting") === "1";
+          if (resetting && typeof window !== "undefined") {
+            if (window.location.pathname !== "/reset-password") {
+              window.location.replace("/reset-password");
+            }
+          }
+        } catch {
+          // ignore
+        }
       } else {
         setProfile(null);
       }
