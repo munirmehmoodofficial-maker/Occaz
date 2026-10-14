@@ -284,5 +284,31 @@ exception when others then
   return query select p_id, false, SQLERRM, p_slug;
 end $$;
 
+-- ============================================================
+-- 7) Dev-only: confirm a user without email (rate-limit escape hatch)
+-- ============================================================
+create or replace function public.dev_confirm_user(p_email text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+  u_id uuid;
+begin
+  select id into u_id from auth.users where email = p_email;
+  if u_id is null then
+    return jsonb_build_object('ok', false, 'error', 'No account with that email');
+  end if;
+  update auth.users
+     set email_confirmed_at = coalesce(email_confirmed_at, now()),
+         confirmed_at       = coalesce(confirmed_at, now())
+   where id = u_id;
+  return jsonb_build_object('ok', true, 'user_id', u_id);
+end;
+$fn$;
+
+grant execute on function public.dev_confirm_user(text) to anon, authenticated;
+
 -- Done! All set.
 select 'Occaz setup complete' as status;

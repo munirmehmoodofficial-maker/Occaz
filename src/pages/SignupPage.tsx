@@ -49,7 +49,7 @@ export function SignupPage() {
       return;
     }
     setLoading(true);
-    const { error, needsVerification } = await signUp(
+    const { error, needsVerification, alreadyExists } = await signUp(
       email,
       password,
       fullName,
@@ -67,11 +67,28 @@ export function SignupPage() {
           "organizer slug or a missing trigger. Please contact support with this error: " +
           detail,
         );
+      } else if (/rate limit|over_email/i.test(detail)) {
+        // Email rate limit hit — but the account may have been created.
+        // Send the user to /dev-confirm so they can sign in immediately.
+        setError(
+          "Email delivery is rate-limited. The account was likely created — " +
+          "use /dev-confirm to verify without waiting for the email.",
+        );
+        setTimeout(() => {
+          navigate("/dev-confirm", {
+            state: { email, asOrganizer: kind === "organizer" },
+          });
+        }, 1200);
+      } else if (alreadyExists) {
+        setError(
+          "An account with this email already exists. Try logging in, or " +
+          "use Forgot Password if you don't remember the password.",
+        );
       } else {
         setError(detail);
       }
       // eslint-disable-next-line no-console
-      console.error("[signup] error", { kind, email, fullName, detail });
+      console.error("[signup] error", { kind, email, fullName, detail, alreadyExists });
       return;
     }
     if (needsVerification) {

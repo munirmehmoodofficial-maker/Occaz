@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { Mail, Lock, AlertCircle, CheckCircle2, Wrench } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Mail, Lock, AlertCircle, CheckCircle2, Wrench, Sparkles, Building2 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/ui/Button";
@@ -15,9 +15,11 @@ import { motion } from "framer-motion";
  */
 export function DevConfirmPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn } = useAuth();
 
-  const [email, setEmail] = useState("");
+  const prefill = (location.state as any) ?? {};
+  const [email, setEmail] = useState(prefill.email ?? "");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,8 @@ export function DevConfirmPage() {
       return;
     }
     setInfo("You're in. Redirecting…");
-    setTimeout(() => navigate("/"), 700);
+    const isOrg = (prefill.asOrganizer === true);
+    setTimeout(() => navigate(isOrg ? "/become-organizer" : "/"), 700);
   }
 
   return (

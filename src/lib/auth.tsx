@@ -42,7 +42,7 @@ interface AuthContextValue {
     password: string,
     fullName?: string,
     asOrganizer?: boolean,
-  ) => Promise<{ error: string | null; needsVerification: boolean }>;
+  ) => Promise<{ error: string | null; needsVerification: boolean; alreadyExists?: boolean }>;
   signInWithOAuth: (provider: Provider) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -178,7 +178,13 @@ const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
         });
         // If session is null after signup, email confirmation is required.
         const needsVerification = !!data.user && !data.session;
-        return { error: error?.message ?? null, needsVerification };
+        // Supabase returns a 422 with a specific identity-already-exists
+        // error when the email is taken.
+        const alreadyExists =
+          /already registered|already been registered|user already|identity_exists/i.test(
+            error?.message ?? "",
+          ) || (data?.user?.identities?.length ?? 0) === 0;
+        return { error: error?.message ?? null, needsVerification, alreadyExists };
       },
 
       async signInWithMagicLink(email) {
