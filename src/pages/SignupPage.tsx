@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { Button } from "../components/ui/Button";
+import { useToast } from "../lib/toast";
 import { motion } from "framer-motion";
 import clsx from "clsx";
 
@@ -27,6 +28,7 @@ export function SignupPage() {
   const initialKind: AccountKind =
     params.get("as") === "organizer" ? "organizer" : "user";
   const [kind, setKind] = useState<AccountKind>(initialKind);
+  const { push } = useToast();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -68,17 +70,39 @@ export function SignupPage() {
           detail,
         );
       } else if (/rate limit|over_email/i.test(detail)) {
-        // Email rate limit hit — but the account may have been created.
-        // Send the user to /dev-confirm so they can sign in immediately.
+        // Email rate limit hit. The account was created server-side, the
+        // handle_new_user trigger auto-confirmed the email, but the
+        // signUp() promise itself rejected. Try to sign them in directly.
         setError(
-          "Email delivery is rate-limited. The account was likely created — " +
-          "use /dev-confirm to verify without waiting for the email.",
+          "Email delivery is rate-limited. Auto-confirming and signing you in…",
         );
-        setTimeout(() => {
+        setTimeout(async () => {
+          try {
+            const { supabase } = await import("../lib/supabase");
+            // Auto-confirm (idempotent, server-side).
+            await supabase.rpc("dev_confirm_user", { p_email: email });
+            // Try to sign in.
+            const r = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            if (!r.error) {
+              push({
+                tone: "green",
+                title: "Welcome!",
+                message: kind === "organizer" ? "Setting up your organizer account…" : "Account created.",
+              });
+              navigate(kind === "organizer" ? "/become-organizer" : "/", { replace: true });
+              return;
+            }
+          } catch {
+            // fall through to /dev-confirm
+          }
           navigate("/dev-confirm", {
             state: { email, asOrganizer: kind === "organizer" },
           });
-        }, 1200);
+        }, 800);
+        return;
       } else if (alreadyExists) {
         setError(
           "An account with this email already exists. Try logging in, or " +

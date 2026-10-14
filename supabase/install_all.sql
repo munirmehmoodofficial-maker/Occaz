@@ -69,6 +69,8 @@ create policy "profile admin update"
 -- ============================================================
 -- 4) Robust handle_new_user trigger
 --    (only creates profile; organizer_profiles is created by app code)
+--    ALSO auto-confirms the email so signup doesn't get blocked by
+--    the Supabase email rate limit during development.
 -- ============================================================
 create or replace function public.handle_new_user()
 returns trigger
@@ -99,6 +101,19 @@ begin
   exception when others then
     raise exception 'handle_new_user: profiles insert failed: % (SQLSTATE %)',
       SQLERRM, SQLSTATE;
+  end;
+
+  -- DEV-ONLY: auto-confirm the user at signup so the email rate limit
+  -- doesn't block development signups. Remove this block when you
+  -- configure a real SMTP provider in Supabase Auth settings.
+  begin
+    update auth.users
+       set email_confirmed_at = coalesce(email_confirmed_at, now()),
+           confirmed_at       = coalesce(confirmed_at, now())
+     where id = new.id;
+  exception when others then
+    -- Don't fail signup if this update doesn't work
+    raise notice 'handle_new_user: auto-confirm update skipped: %', SQLERRM;
   end;
 
   return new;
