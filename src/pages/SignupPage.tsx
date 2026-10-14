@@ -57,7 +57,21 @@ export function SignupPage() {
     );
     setLoading(false);
     if (error) {
-      setError(error);
+      // Surface the real underlying error from Supabase instead of the
+      // generic "Database error saving new user" so the user (and we,
+      // debugging) can see what went wrong.
+      const detail = (error as any)?.message ?? error;
+      if (/Database error saving/i.test(detail) || /saving new user/i.test(detail)) {
+        setError(
+          "Account creation is failing on the server. The most common cause is a duplicate " +
+          "organizer slug or a missing trigger. Please contact support with this error: " +
+          detail,
+        );
+      } else {
+        setError(detail);
+      }
+      // eslint-disable-next-line no-console
+      console.error("[signup] error", { kind, email, fullName, detail });
       return;
     }
     if (needsVerification) {
