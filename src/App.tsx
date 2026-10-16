@@ -25,6 +25,21 @@ import { OrganizerAnalyticsPage } from "./pages/organizer/OrganizerAnalyticsPage
 import { OrganizerPromotePage } from "./pages/organizer/OrganizerPromotePage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OrganizerCheckoutPage } from "./pages/organizer/OrganizerCheckoutPage";
+import { OrganizerShell } from "./components/organizer/OrganizerShell";
+import {
+  Section1Dashboard,
+  Section2Events,
+  Section3Orders,
+  Section4Checkin,
+  Section5Finance,
+  Section6Analytics,
+  Section7Marketing,
+  Section8Profile,
+  Section9Subscription,
+  Section10Team,
+  Section11Support,
+  Section12Settings,
+} from "./pages/organizer/v2";
 import { AdminOrganizerFeaturesPage } from "./pages/admin/AdminOrganizerFeaturesPage";
 import { AdminOrganizerVerifications } from "./pages/admin/AdminOrganizerVerifications";
 import { AdminOrganizerBillingPage } from "./pages/admin/AdminOrganizerBillingPage";
@@ -104,12 +119,22 @@ export default function App() {
           <Route path="/profile" element={<RequireUser><ProfilePage /></RequireUser>} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/checkout" element={<RequireUser><CheckoutPage /></RequireUser>} />
-          <Route path="/organizer" element={<RequireOrganizer><OrganizerDashboardPage /></RequireOrganizer>} />
+          <Route path="/organizer" element={<RequireOrganizer><OrganizerShell /></RequireOrganizer>}>
+            <Route index element={<Section1Dashboard />} />
+            <Route path="events" element={<Section2Events />} />
+            <Route path="orders" element={<Section3Orders />} />
+            <Route path="check-in" element={<Section4Checkin />} />
+            <Route path="finance" element={<Section5Finance />} />
+            <Route path="analytics" element={<Section6Analytics />} />
+            <Route path="marketing" element={<Section7Marketing />} />
+            <Route path="profile" element={<Section8Profile />} />
+            <Route path="subscription" element={<Section9Subscription />} />
+            <Route path="team" element={<Section10Team />} />
+            <Route path="support" element={<Section11Support />} />
+            <Route path="settings" element={<Section12Settings />} />
+          </Route>
           <Route path="/organizer/billing" element={<RequireOrganizer><OrganizerBillingPage /></RequireOrganizer>} />
           <Route path="/organizer/billing/checkout/:paymentId" element={<RequireOrganizer><OrganizerCheckoutPage /></RequireOrganizer>} />
-          <Route path="/organizer/profile" element={<RequireOrganizer><OrganizerProfilePage /></RequireOrganizer>} />
-          <Route path="/organizer/events" element={<RequireOrganizer><OrganizerEventsPage /></RequireOrganizer>} />
-          <Route path="/organizer/analytics" element={<RequireOrganizer><OrganizerAnalyticsPage /></RequireOrganizer>} />
           <Route path="/organizer/promote" element={<RequireOrganizer><OrganizerPromotePage /></RequireOrganizer>} />
           <Route path="/organizers" element={<OrganizersDirectoryPage />} />
           <Route path="/organizers/:slug" element={<PublicOrganizerPage />} />
