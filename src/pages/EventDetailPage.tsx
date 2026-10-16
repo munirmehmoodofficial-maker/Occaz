@@ -29,10 +29,21 @@ import { BookingModal, type BookingDraft } from "../components/booking/BookingMo
 export function EventDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const event = useEvent(id || "");
+  const eventRaw = useEvent(id || "");
   const events = useEvents();
   const { isEventSaved, toggleEvent } = useSaved();
-  const [selectedTicket, setSelectedTicket] = useState(event?.ticketTypes[0]?.id);
+  // Normalize ticket types: support camelCase (store) and snake_case
+  // (raw Supabase) shapes. Older events may not have it set.
+  const event: any = eventRaw
+    ? {
+        ...(eventRaw as any),
+        ticketTypes:
+          (eventRaw as any).ticketTypes ?? (eventRaw as any).ticket_types ?? [],
+      }
+    : undefined;
+  const [selectedTicket, setSelectedTicket] = useState<string | undefined>(
+    event?.ticketTypes?.[0]?.id,
+  );
   const [bookingOpen, setBookingOpen] = useState(false);
 
   if (!event) {
@@ -318,7 +329,7 @@ function TicketPanel({
     // single-price case (no ticket_types array on the event).
     onBook();
   }
-  const ticket = event.ticketTypes.find((t) => t.id === selectedTicket);
+  const ticket = (event.ticketTypes ?? []).find((t: any) => t.id === selectedTicket);
   return (
     <motion.aside
       initial={{ opacity: 0, y: 16 }}
@@ -338,7 +349,7 @@ function TicketPanel({
           Choose a ticket
         </div>
         <div className="mt-3 space-y-2">
-          {event.ticketTypes.map((t) => (
+          {(event.ticketTypes ?? []).map((t: any) => (
             <motion.label
               key={t.id}
               whileHover={{ x: 2 }}
@@ -364,7 +375,7 @@ function TicketPanel({
                   </span>
                 </div>
                 <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--text-tertiary)]">
-                  {t.perks.map((p) => (
+                  {(t.perks ?? []).map((p: string) => (
                     <li key={p}>· {p}</li>
                   ))}
                 </ul>

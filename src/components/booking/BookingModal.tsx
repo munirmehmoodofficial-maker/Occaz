@@ -63,7 +63,10 @@ interface Props {
 export function BookingModal({ event, open, onClose, onContinue }: Props) {
   const { user, profile } = useAuth();
   const { push } = useToast();
-  const [ticketTypeId, setTicketTypeId] = useState(event.ticketTypes[0]?.id);
+  // Normalize ticket types: support both camelCase (mock) and snake_case
+  // (Supabase) shapes. Older events may not have ticket_types set.
+  const ticketTypes = (event as any).ticket_types ?? event.ticketTypes ?? [];
+  const [ticketTypeId, setTicketTypeId] = useState<string | undefined>(ticketTypes[0]?.id);
   const [qty, setQty] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -80,7 +83,7 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const isFree = (event.price ?? 0) === 0 && (!event.ticketTypes || event.ticketTypes.length === 0);
+  const isFree = (event.price ?? 0) === 0 && ticketTypes.length === 0;
 
   // hydrate from auth user/profile
   useEffect(() => {
@@ -143,8 +146,8 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
   }, [open]);
 
   const ticketType =
-    event.ticketTypes.find((t) => t.id === ticketTypeId) ??
-    event.ticketTypes[0] ?? {
+    ticketTypes.find((t: any) => t.id === ticketTypeId) ??
+    ticketTypes[0] ?? {
       id: "_general",
       name: "General Admission",
       price: event.price,
@@ -355,13 +358,13 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
             </div>
 
             {/* Ticket type */}
-            {event.ticketTypes && event.ticketTypes.length > 0 && (
+            {ticketTypes && ticketTypes.length > 0 && (
               <div className="mt-5">
                 <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
                   Ticket type
                 </div>
                 <div className="mt-2 space-y-2">
-                  {event.ticketTypes.map((t) => {
+                  {ticketTypes.map((t: any) => {
                     const active = t.id === ticketTypeId;
                     return (
                       <button
