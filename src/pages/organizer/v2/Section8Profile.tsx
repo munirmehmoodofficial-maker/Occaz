@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Building2, Save } from "lucide-react";
+import { Building2, Save, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabase";
 import { useToast } from "../../../lib/toast";
+import { SingleImageDrop } from "../../../components/admin/SingleImageDrop";
 
 /**
  * Section 8 — Organizer Profile
@@ -27,6 +28,8 @@ export function Section8Profile() {
     tiktok: "",
     organizer_type: "individual",
     operating_cities: [] as string[],
+    logo: "",
+    cover_image: "",
   });
 
   useEffect(() => {
@@ -53,6 +56,8 @@ export function Section8Profile() {
           tiktok: data.tiktok ?? "",
           organizer_type: data.organizer_type ?? "individual",
           operating_cities: data.operating_cities ?? [],
+          logo: data.logo ?? "",
+          cover_image: data.cover_image ?? "",
         });
       }
       setLoading(false);
@@ -61,6 +66,10 @@ export function Section8Profile() {
 
   async function save() {
     if (!user) return;
+    if (!form.display_name.trim()) {
+      push({ tone: "red", title: "Name required", message: "Enter your brand name." });
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("organizer_profiles")
@@ -154,6 +163,37 @@ export function Section8Profile() {
       </div>
 
       <div className="rounded-2xl border border-white/5 bg-[var(--bg-card)] p-5">
+        <h3 className="text-sm font-bold text-white">Brand visuals</h3>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          Logo and cover image are shown on your public organizer page
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              Logo
+            </div>
+            <SingleImageDrop
+              value={form.logo}
+              onChange={(url) => setForm({ ...form, logo: url })}
+              storageKind="organizer-logos"
+              label="Logo"
+            />
+          </div>
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              Cover image
+            </div>
+            <SingleImageDrop
+              value={form.cover_image}
+              onChange={(url) => setForm({ ...form, cover_image: url })}
+              storageKind="organizer-covers"
+              label="Cover"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/5 bg-[var(--bg-card)] p-5">
         <h3 className="text-sm font-bold text-white">Contact</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Field label="Contact email">
@@ -213,10 +253,6 @@ export function Section8Profile() {
           </Field>
         </div>
       </div>
-
-      <p className="text-center text-[10px] text-zinc-600">
-        Logo & cover image upload coming in the next build.
-      </p>
     </div>
   );
 }

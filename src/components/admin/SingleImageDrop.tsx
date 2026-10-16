@@ -9,7 +9,7 @@ interface Props {
   onChange: (url: string | null) => void;
   label: string;
   /** Path prefix in the public bucket, e.g. "organizers" */
-  storageKind?: "events" | "opportunities" | "organizers" | "misc";
+  storageKind?: "events" | "opportunities" | "organizers" | "organizer-logos" | "organizer-covers" | "misc";
   /** Recommended aspect: e.g. "1:1" for logos, "16:9" for covers */
   aspect?: "1:1" | "16:9" | "free";
   /** Whether this image is required (shows a red asterisk) */

@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
-import { Ticket, Download, Search } from "lucide-react";
+import { Ticket, Download, Search, RotateCcw, Eye } from "lucide-react";
 import { useAuth } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabase";
+import { useToast } from "../../../lib/toast";
 
 /**
  * Section 3 — Tickets & Orders
- * Real data from registrations table.
+ * Real data from registrations. Refund + CSV export wired.
  */
 export function Section3Orders() {
   const { user } = useAuth();
+  const { push } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [events, setEvents] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "paid" | "pending" | "cancelled" | "refunded">("all");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -21,7 +24,7 @@ export function Section3Orders() {
       setLoading(true);
       const { data: regs } = await supabase
         .from("registrations")
-        .select("id, event_id, attendee_name, attendee_email, total, currency, status, payment_status, payment_method, ticket_code, created_at")
+        .select("id, event_id, attendee_name, attendee_email, attendee_phone, total, currency, status, payment_status, payment_method, ticket_code, created_at, commission_amount")
         .eq("organizer_id", user.id)
         .order("created_at", { ascending: false });
       setOrders(regs ?? []);
@@ -49,6 +52,81 @@ export function Section3Orders() {
     return true;
   });
 
+  async function refund(o: any) {
+    if (!confirm(`Refund ${o.attendee_name ?? "attendee"} for ₨ ${Number(o.total).toLocaleString()}? This will mark the order as refunded.`)) return;
+    setBusyId(o.id);
+    const { error } = await supabase
+      .from("registrations")
+      .update({
+        payment_status: "refunded",
+        status: "cancelled",
+        refunded_at: new Date().toISOString(),
+        refunded_amount: o.total,
+      })
+      .eq("id", o.id);
+    setBusyId(null);
+    if (error) {
+      push({ tone: "red", title: "Refund failed", message: error.message });
+      return;
+    }
+    setOrders((os) =>
+      os.map((x) =>
+        x.id === o.id
+          ? {
+              ...x,
+              payment_status: "refunded",
+              status: "cancelled",
+              refunded_at: new Date().toISOString(),
+              refunded_amount: o.total,
+            }
+          : x,
+      ),
+    );
+    push({ tone: "green", title: "Refunded", message: "Order marked as refunded." });
+  }
+
+  function exportCSV() {
+    if (filtered.length === 0) {
+      push({ tone: "red", title: "Nothing to export", message: "No orders match your filter." });
+      return;
+    }
+    const headers = [
+      "Ticket code",
+      "Attendee name",
+      "Email",
+      "Phone",
+      "Event",
+      "Total (PKR)",
+      "Payment status",
+      "Method",
+      "Created at",
+    ];
+    const rows = filtered.map((o) => [
+      o.ticket_code ?? "",
+      (o.attendee_name ?? "").replace(/,/g, " "),
+      (o.attendee_email ?? "").replace(/,/g, " "),
+      o.attendee_phone ?? "",
+      (events[o.event_id]?.title ?? o.event_id).replace(/,/g, " "),
+      o.total,
+      o.payment_status ?? "paid",
+      o.payment_method ?? "",
+      o.created_at ?? "",
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `occaz-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    push({ tone: "green", title: "CSV exported", message: `${filtered.length} orders` });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -58,7 +136,10 @@ export function Section3Orders() {
             All registrations, refunds, and QR tickets across your events
           </p>
         </div>
-        <button className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-white/10">
+        <button
+          onClick={exportCSV}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-white/10"
+        >
           <Download className="h-3.5 w-3.5" /> Export CSV
         </button>
       </div>
@@ -105,52 +186,76 @@ export function Section3Orders() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-white/5 bg-[var(--bg-card)]">
-          <table className="w-full text-xs">
-            <thead className="bg-white/[0.02] text-[10px] uppercase tracking-wider text-zinc-500">
-              <tr>
-                <th className="px-3 py-2 text-left">Attendee</th>
-                <th className="px-3 py-2 text-left">Event</th>
-                <th className="px-3 py-2 text-left">Ticket</th>
-                <th className="px-3 py-2 text-right">Total</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-left">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((o) => (
-                <tr
-                  key={o.id}
-                  className="border-t border-white/5 hover:bg-white/[0.02]"
-                >
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-white">{o.attendee_name ?? "—"}</div>
-                    <div className="text-[10px] text-zinc-500">{o.attendee_email ?? "—"}</div>
-                  </td>
-                  <td className="max-w-[180px] truncate px-3 py-2 text-zinc-400">
-                    {events[o.event_id]?.title ?? o.event_id}
-                  </td>
-                  <td className="px-3 py-2 font-mono text-[10px] text-zinc-500">
-                    {o.ticket_code ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right font-semibold text-white">
-                    ₨ {Number(o.total ?? 0).toLocaleString()}
-                  </td>
-                  <td className="px-3 py-2">
-                    <StatusPill status={o.payment_status ?? o.status} />
-                  </td>
-                  <td className="px-3 py-2 text-[10px] text-zinc-500">
-                    {o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-white/[0.02] text-[10px] uppercase tracking-wider text-zinc-500">
+                <tr>
+                  <th className="px-3 py-2 text-left">Attendee</th>
+                  <th className="px-3 py-2 text-left">Event</th>
+                  <th className="px-3 py-2 text-left">Ticket</th>
+                  <th className="px-3 py-2 text-right">Total</th>
+                  <th className="px-3 py-2 text-left">Status</th>
+                  <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((o) => {
+                  const isBusy = busyId === o.id;
+                  return (
+                    <tr
+                      key={o.id}
+                      className="border-t border-white/5 hover:bg-white/[0.02]"
+                    >
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-white">{o.attendee_name ?? "—"}</div>
+                        <div className="text-[10px] text-zinc-500">{o.attendee_email ?? "—"}</div>
+                      </td>
+                      <td className="max-w-[180px] truncate px-3 py-2 text-zinc-400">
+                        {events[o.event_id]?.title ?? o.event_id}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-[10px] text-zinc-500">
+                        {o.ticket_code ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold text-white">
+                        ₨ {Number(o.total ?? 0).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2">
+                        <StatusPill status={o.payment_status ?? o.status} />
+                      </td>
+                      <td className="px-3 py-2 text-[10px] text-zinc-500">
+                        {o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center justify-end gap-1">
+                          {o.ticket_code && (
+                            <a
+                              href={`/tickets?code=${encodeURIComponent(o.ticket_code)}`}
+                              className="grid h-7 w-7 place-items-center rounded-lg text-zinc-400 hover:bg-white/5 hover:text-white"
+                              title="View ticket"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          {o.payment_status === "paid" && (
+                            <button
+                              onClick={() => refund(o)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1 rounded-lg bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/25 disabled:opacity-50"
+                            >
+                              <RotateCcw className="h-3 w-3" /> Refund
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-
-      <p className="text-center text-[10px] text-zinc-600">
-        QR code generation, refund flow, attendee download — coming in the next build.
-      </p>
     </div>
   );
 }

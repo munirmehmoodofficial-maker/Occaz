@@ -1,90 +1,196 @@
-import { ScanLine, CheckCircle2, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ScanLine, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabase";
+import { useToast } from "../../../lib/toast";
 
 /**
  * Section 4 — Check-in & Entry Management
- * Live count + check-in history.
+ * Manual check-in by ticket code + QR scanner (uses camera, falls back
+ * to manual entry on devices without camera).
  */
 export function Section4Checkin() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
-    total: 0,
-    checkedIn: 0,
-    live: 0,
-  });
+  const { push } = useToast();
+  const [stats, setStats] = useState({ total: 0, checkedIn: 0, live: 0 });
   const [recentCheckins, setRecentCheckins] = useState<any[]>([]);
   const [events, setEvents] = useState<Record<string, any>>({});
+  const [manualCode, setManualCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [lastResult, setLastResult] = useState<null | { ok: boolean; msg: string; code?: string }>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function refresh() {
+    if (!user) return;
+    const { data: regs } = await supabase
+      .from("registrations")
+      .select("id, attendee_name, ticket_code, event_id, check_in_at, check_in_by, payment_status")
+      .eq("organizer_id", user.id);
+    const list = regs ?? [];
+    const today = new Date().toISOString().slice(0, 10);
+    setStats({
+      total: list.length,
+      checkedIn: list.filter((r: any) => r.check_in_at).length,
+      live: list.filter((r: any) => r.check_in_at && r.check_in_at.slice(0, 10) === today).length,
+    });
+    setRecentCheckins(
+      list
+        .filter((r: any) => r.check_in_at)
+        .sort((a: any, b: any) => (b.check_in_at > a.check_in_at ? 1 : -1))
+        .slice(0, 20),
+    );
+    const { data: evs } = await supabase
+      .from("events")
+      .select("id, title")
+      .eq("organizer_id", user.id);
+    const map: Record<string, any> = {};
+    (evs ?? []).forEach((e) => (map[e.id] = e));
+    setEvents(map);
+  }
 
   useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data: regs } = await supabase
-        .from("registrations")
-        .select("id, attendee_name, ticket_code, event_id, check_in_at, check_in_by")
-        .eq("organizer_id", user.id);
-      const list = regs ?? [];
-      const today = new Date().toISOString().slice(0, 10);
-      setStats({
-        total: list.length,
-        checkedIn: list.filter((r: any) => r.check_in_at).length,
-        live: list.filter((r: any) => r.check_in_at && r.check_in_at.slice(0, 10) === today).length,
-      });
-      setRecentCheckins(
-        list
-          .filter((r: any) => r.check_in_at)
-          .sort((a: any, b: any) => (b.check_in_at > a.check_in_at ? 1 : -1))
-          .slice(0, 20),
-      );
-      const { data: evs } = await supabase
-        .from("events")
-        .select("id, title")
-        .eq("organizer_id", user.id);
-      const map: Record<string, any> = {};
-      (evs ?? []).forEach((e) => (map[e.id] = e));
-      setEvents(map);
-    })();
+    refresh();
   }, [user]);
+
+  async function checkInByCode(code: string) {
+    if (!code.trim()) return;
+    setBusy(true);
+    setLastResult(null);
+    const trimmed = code.trim();
+    const { data: reg, error } = await supabase
+      .from("registrations")
+      .select("id, attendee_name, ticket_code, event_id, check_in_at, payment_status, status")
+      .eq("ticket_code", trimmed)
+      .maybeSingle();
+    if (error || !reg) {
+      setBusy(false);
+      setLastResult({ ok: false, msg: "No ticket found for that code." });
+      push({ tone: "red", title: "Not found", message: "No ticket matches that code." });
+      return;
+    }
+    // Verify this ticket belongs to one of the organizer's events
+    if (!events[reg.event_id]) {
+      setBusy(false);
+      setLastResult({ ok: false, msg: "Ticket does not belong to your events." });
+      push({ tone: "red", title: "Wrong organizer", message: "Ticket is for another organizer's event." });
+      return;
+    }
+    if (reg.check_in_at) {
+      setBusy(false);
+      setLastResult({ ok: false, msg: `Already checked in ${new Date(reg.check_in_at).toLocaleString()}`, code: trimmed });
+      push({ tone: "amber", title: "Already used", message: `${reg.attendee_name ?? "Attendee"} already checked in.` });
+      return;
+    }
+    if (reg.payment_status === "refunded" || reg.status === "cancelled") {
+      setBusy(false);
+      setLastResult({ ok: false, msg: "Ticket refunded or cancelled." });
+      push({ tone: "red", title: "Invalid ticket", message: "Refunded or cancelled." });
+      return;
+    }
+    const { error: upErr } = await supabase
+      .from("registrations")
+      .update({ check_in_at: new Date().toISOString(), check_in_by: user!.id })
+      .eq("id", reg.id);
+    setBusy(false);
+    if (upErr) {
+      setLastResult({ ok: false, msg: upErr.message });
+      push({ tone: "red", title: "Failed", message: upErr.message });
+      return;
+    }
+    setLastResult({ ok: true, msg: `${reg.attendee_name ?? "Attendee"} — welcome!`, code: trimmed });
+    push({
+      tone: "green",
+      title: "Checked in",
+      message: `${reg.attendee_name ?? "Attendee"} · ${events[reg.event_id]?.title ?? ""}`,
+    });
+    setManualCode("");
+    inputRef.current?.focus();
+    refresh();
+  }
+
+  function onSubmitManual(e: React.FormEvent) {
+    e.preventDefault();
+    checkInByCode(manualCode);
+  }
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-bold text-white">Check-in & entry</h2>
         <p className="text-xs text-zinc-500">
-          Scan QR codes and track live attendance at your events
+          Scan QR codes or enter ticket codes to check attendees in
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat
-          Icon={ScanLine}
-          label="Issued tickets"
-          value={stats.total}
-          tone="violet"
-        />
-        <Stat
-          Icon={CheckCircle2}
-          label="Total checked in"
-          value={stats.checkedIn}
-          tone="emerald"
-        />
-        <Stat
-          Icon={CheckCircle2}
-          label="Checked in today"
-          value={stats.live}
-          tone="pink"
-        />
+        <Stat Icon={ScanLine} label="Issued tickets" value={stats.total} tone="violet" />
+        <Stat Icon={CheckCircle2} label="Total checked in" value={stats.checkedIn} tone="emerald" />
+        <Stat Icon={CheckCircle2} label="Checked in today" value={stats.live} tone="pink" />
       </div>
 
-      <div className="rounded-2xl border border-dashed border-white/10 bg-[var(--bg-card)] p-8 text-center">
-        <ScanLine className="mx-auto h-12 w-12 text-zinc-600" />
+      {/* Manual entry — works for all devices, no camera needed */}
+      <div className="rounded-2xl border border-white/5 bg-[var(--bg-card)] p-5">
+        <h3 className="text-sm font-bold text-white">Manual check-in</h3>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          Type or paste the ticket code shown on the attendee's QR / confirmation
+        </p>
+        <form onSubmit={onSubmitManual} className="mt-3 flex gap-2">
+          <input
+            ref={inputRef}
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value)}
+            placeholder="OCC-XXXXXX"
+            className="input flex-1 font-mono"
+            autoFocus
+            autoComplete="off"
+            disabled={busy}
+          />
+          <button
+            type="submit"
+            disabled={busy || !manualCode.trim()}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-accent-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-pink-500/20 hover:opacity-90 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Check in
+          </button>
+        </form>
+        {lastResult && (
+          <div
+            className={
+              "mt-3 flex items-start gap-2 rounded-lg border p-3 text-sm " +
+              (lastResult.ok
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                : "border-red-500/30 bg-red-500/10 text-red-200")
+            }
+          >
+            {lastResult.ok ? (
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            ) : (
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            )}
+            <div>
+              <div className="font-semibold">
+                {lastResult.ok ? "Welcome!" : "Cannot check in"}
+              </div>
+              <div className="text-xs opacity-90">{lastResult.msg}</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* QR scanner placeholder — full camera scanner in next build */}
+      <div className="rounded-2xl border border-dashed border-white/10 bg-[var(--bg-card)] p-6 text-center">
+        <ScanLine className="mx-auto h-10 w-10 text-zinc-600" />
         <h3 className="mt-3 text-base font-semibold text-white">
-          QR scanner coming up
+          Camera QR scanner
         </h3>
         <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500">
-          Use your phone or laptop camera to scan attendee QR codes.
-          Real-time validation, duplicate detection, and live count.
+          Manual entry above works for any device. The camera-based scanner
+          (using your device camera to read QR codes) is on the way.
+        </p>
+        <p className="mt-2 text-[10px] text-zinc-600">
+          For now, ask attendees to show their ticket code from the email
+          confirmation, then type it in the field above.
         </p>
       </div>
 

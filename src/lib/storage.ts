@@ -12,7 +12,7 @@ export const STORAGE_BUCKET = "occaz";
  */
 export async function uploadPublicImage(
   file: File,
-  kind: "events" | "opportunities" | "organizers" | "misc",
+  kind: "events" | "opportunities" | "organizers" | "organizer-logos" | "organizer-covers" | "misc",
 ): Promise<{ url: string; path: string }> {
   const ext = (file.name.split(".").pop() || "png")
     .toLowerCase()
