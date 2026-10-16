@@ -338,14 +338,14 @@ drop function if exists public.promote_first_user_to_admin();
 
 -- ============================================================
 -- 9) DEMOTE any user that was wrongly promoted to admin
--- Keeps ONLY the original dev (munirmehmoodofficial@gmail.com) as
+-- Keeps ONLY the original dev (m.munirmehmood@gmail.com) as
 -- admin. Everyone else (new signups, organizer test accounts, etc.)
 -- gets demoted to a regular user.
 -- ============================================================
 update public.profiles
    set role = 'user'
  where role = 'admin'
-   and email <> 'munirmehmoodofficial@gmail.com';
+   and email <> 'm.munirmehmood@gmail.com';
 
 -- If you need to manually grant admin to another user, run:
 --   update public.profiles set role = 'admin' where email = 'you@example.com';
