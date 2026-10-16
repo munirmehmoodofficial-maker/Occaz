@@ -128,8 +128,14 @@ export function SignupPage() {
       // Organizer just signed up — go to the full organizer onboarding flow
       navigate("/become-organizer", { replace: true });
     } else {
-      setInfo("Account created. Welcome!");
-      setTimeout(() => navigate("/"), 800);
+      // Regular user just signed up — show them the welcome tab
+      // (interests picker) so they personalize their feed.
+      push({
+        tone: "green",
+        title: "Account created!",
+        message: "Pick a few interests to personalize your feed.",
+      });
+      setTimeout(() => navigate("/onboarding", { replace: true }), 700);
     }
   }
 

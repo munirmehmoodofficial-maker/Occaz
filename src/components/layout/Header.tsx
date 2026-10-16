@@ -36,7 +36,7 @@ export function Header({
   onOpenSidebar: () => void;
   onOpenSearch: () => void;
 }) {
-  const [city] = useState("New York, USA");
+  const [city] = useState("");
   const { theme, toggle } = useTheme();
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();

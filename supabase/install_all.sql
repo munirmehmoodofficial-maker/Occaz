@@ -325,5 +325,30 @@ $fn$;
 
 grant execute on function public.dev_confirm_user(text) to anon, authenticated;
 
+-- ============================================================
+-- 8) REMOVE the bootstrap_admin trigger
+-- It was promoting the first user to admin automatically, which
+-- meant any new signup would inherit admin role if the original
+-- admin hadn't signed up yet. Disable it here so the role stays
+-- "user" by default and only the original dev (munirmehmoodofficial
+-- @gmail.com) is admin.
+-- ============================================================
+drop trigger if exists bootstrap_admin on public.profiles;
+drop function if exists public.promote_first_user_to_admin();
+
+-- ============================================================
+-- 9) DEMOTE any user that was wrongly promoted to admin
+-- Keeps ONLY the original dev (munirmehmoodofficial@gmail.com) as
+-- admin. Everyone else (new signups, organizer test accounts, etc.)
+-- gets demoted to a regular user.
+-- ============================================================
+update public.profiles
+   set role = 'user'
+ where role = 'admin'
+   and email <> 'munirmehmoodofficial@gmail.com';
+
+-- If you need to manually grant admin to another user, run:
+--   update public.profiles set role = 'admin' where email = 'you@example.com';
+
 -- Done! All set.
 select 'Occaz setup complete' as status;

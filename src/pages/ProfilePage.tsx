@@ -57,7 +57,7 @@ export function ProfilePage() {
     // try reading user_metadata for extras
     const meta = (user?.user_metadata as any) ?? {};
     setBio(meta.bio ?? "");
-    setCity(meta.city ?? "New York, USA");
+    setCity(meta.city ?? ""); // empty string — user fills in their own
   }, [profile, user]);
 
   // load preferences
@@ -168,7 +168,7 @@ export function ProfilePage() {
                   />
                 ) : (
                   <p className="mt-3 max-w-xl text-sm text-[var(--text-secondary)]">
-                    {bio || "Designer, runner, terrible cook. Always looking for concerts and design meetups."}
+                    {bio || "No bio yet — click Edit to tell people about yourself."}
                   </p>
                 )}
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--text-tertiary)]">

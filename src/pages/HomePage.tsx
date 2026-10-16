@@ -31,7 +31,7 @@ export function HomePage() {
   const { user, loading: authLoading } = useAuth();
   const { isEventSaved, isOpportunitySaved, toggleEvent, toggleOpportunity } =
     useSaved();
-  const [city, setCity] = useState("New York, USA");
+  const [city, setCity] = useState("");
   const [q, setQ] = useState("");
   const [sectionOrder, setSectionOrder] = useState<string[] | null>(null);
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
@@ -292,9 +292,9 @@ export function HomePage() {
               onChange={(e) => setCity(e.target.value)}
               className="flex-1 bg-transparent text-sm outline-none"
             >
-              <option className="bg-[var(--bg-card)]">New York, USA</option>
-              <option className="bg-[var(--bg-card)]">London, UK</option>
-              <option className="bg-[var(--bg-card)]">San Francisco, USA</option>
+              <option className="bg-[var(--bg-card)]">All cities</option>
+              <option className="bg-[var(--bg-card)]">Karachi</option>
+              <option className="bg-[var(--bg-card)]">Lahore</option>
               <option className="bg-[var(--bg-card)]">Berlin, Germany</option>
               <option className="bg-[var(--bg-card)]">Lahore, Pakistan</option>
               <option className="bg-[var(--bg-card)]">Remote / Online</option>

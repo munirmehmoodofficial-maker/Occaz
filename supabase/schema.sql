@@ -67,26 +67,28 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-
--- Promote first signed-in user to admin (convenience for solo dev).
-create or replace function public.promote_first_user_to_admin()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if not exists (select 1 from public.profiles where role = 'admin') then
-    update public.profiles set role = 'admin' where id = new.id;
-  end if;
-  return new;
-end;
-$$;
-
-drop trigger if exists bootstrap_admin on public.profiles;
-create trigger bootstrap_admin
-  after insert on public.profiles
-  for each row execute function public.promote_first_user_to_admin();
+-- Promote first signed-in user to admin (DISABLED — was too dangerous,
+-- any new signup would become admin if the original dev hadn't signed up yet.
+-- To grant admin manually: update profiles set role='admin' where email='you@example.com';)
+--
+-- create or replace function public.promote_first_user_to_admin()
+-- returns trigger
+-- language plpgsql
+-- security definer
+-- set search_path = public
+-- as $$
+-- begin
+--   if not exists (select 1 from public.profiles where role = 'admin') then
+--     update public.profiles set role = 'admin' where id = new.id;
+--   end if;
+--   return new;
+-- end;
+-- $$;
+--
+-- drop trigger if exists bootstrap_admin on public.profiles;
+-- create trigger bootstrap_admin
+--   after insert on public.profiles
+--   for each row execute function public.promote_first_user_to_admin();
 
 -- 2. categories --------------------------------------------------------
 create table if not exists public.categories (
