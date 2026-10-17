@@ -110,7 +110,7 @@ export function ProfilePage() {
 
   return (
     <div className="page">
-      <div className="container max-w-4xl">
+      <div className="container w-full max-w-3xl overflow-hidden">
         {/* Header card */}
         <div className="overflow-hidden rounded-3xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
           <div className="relative h-32 md:h-40">
@@ -122,7 +122,7 @@ export function ProfilePage() {
             <div className="absolute inset-0 bg-gradient-to-t from-bg-card to-transparent" />
           </div>
           <div className="px-5 pb-5 md:px-7">
-            <div className="-mt-10 flex flex-col gap-4 md:-mt-14 md:flex-row md:items-end">
+            <div className="-mt-10 flex flex-col gap-4 md:-mt-14 md:flex-row md:items-end md:flex-wrap">
               <div className="relative">
                 {profile?.avatar_url ? (
                   <img
@@ -296,13 +296,13 @@ export function ProfilePage() {
         </div>
 
         {/* Tabs */}
-        <div className="mt-8 mb-6 flex gap-2 rounded-full bg-[var(--bg-card)] p-1 ring-1 ring-[var(--border-subtle)] w-fit">
+        <div className="mt-6 mb-4 flex w-fit gap-1 rounded-full bg-[var(--bg-card)] p-1 ring-1 ring-[var(--border-subtle)]">
           {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key as any)}
               className={clsx(
-                "rounded-full px-5 py-2 text-sm font-medium transition",
+                "whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium transition",
                 tab === t.key
                   ? "bg-white text-black"
                   : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
@@ -315,11 +315,11 @@ export function ProfilePage() {
 
         {tab === "events" &&
           (savedEvents.length === 0 ? (
-            <p className="rounded-2xl bg-[var(--bg-card)] p-12 text-center text-sm text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
+            <div className="rounded-2xl bg-[var(--bg-card)] p-8 text-center text-sm text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
               {loaded ? "You haven't saved any events yet." : "Loading your saved events…"}
-            </p>
+            </div>
           ) : (
-            <CardGrid>
+            <div className="grid gap-3 sm:grid-cols-2">
               {savedEvents.map((e) => (
                 <EventCard
                   key={e.id}
@@ -328,16 +328,16 @@ export function ProfilePage() {
                   onToggleSave={toggleEvent}
                 />
               ))}
-            </CardGrid>
+            </div>
           ))}
 
         {tab === "opps" &&
           (savedOpps.length === 0 ? (
-            <p className="rounded-2xl bg-[var(--bg-card)] p-12 text-center text-sm text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
+            <div className="rounded-2xl bg-[var(--bg-card)] p-8 text-center text-sm text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
               {loaded ? "You haven't saved any opportunities yet." : "Loading…"}
-            </p>
+            </div>
           ) : (
-            <CardGrid>
+            <div className="grid gap-3 sm:grid-cols-2">
               {savedOpps.map((o) => (
                 <OpportunityCard
                   key={o.id}
@@ -346,7 +346,7 @@ export function ProfilePage() {
                   onToggleSave={toggleOpportunity}
                 />
               ))}
-            </CardGrid>
+            </div>
           ))}
 
         {tab === "preferences" && (
