@@ -63,6 +63,10 @@ import {
   AdminReports,
   AdminSettings,
 } from "./pages/admin/AdminSimple";
+import { AdminSubscriptions } from "./pages/admin/AdminSubscriptions";
+import { AdminSystemMonitor } from "./pages/admin/AdminSystemMonitor";
+import { AdminOrganizerDetail } from "./pages/admin/AdminOrganizerDetail";
+import { AdminAuditLog as AdminAuditLogReal } from "./pages/admin/AdminAuditLog";
 import {
   AdminAnalytics,
   AdminRegistrations,
@@ -154,6 +158,7 @@ export default function App() {
           <Route path="organizer-features" element={<AdminOrganizerFeaturesPage />} />
           <Route path="organizer-verifications" element={<AdminOrganizerVerifications />} />
           <Route path="organizer-billing/:id" element={<AdminOrganizerBillingPage />} />
+          <Route path="organizer-detail/:id" element={<AdminOrganizerDetail />} />
           <Route path="registrations" element={<AdminRegistrations />} />
           <Route path="roles" element={<AdminRoles />} />
           <Route path="tickets" element={<AdminTickets />} />
@@ -162,7 +167,9 @@ export default function App() {
           <Route path="email" element={<AdminEmailCampaigns />} />
           <Route path="coupons" element={<AdminCoupons />} />
           <Route path="reports" element={<AdminReports />} />
-          <Route path="activity" element={<AdminAuditLog />} />
+          <Route path="activity" element={<AdminAuditLogReal />} />
+          <Route path="subscriptions" element={<AdminSubscriptions />} />
+          <Route path="system-monitor" element={<AdminSystemMonitor />} />
           <Route path="support" element={<AdminSupport />} />
           <Route path="payouts" element={<AdminPayouts />} />
           <Route path="revenue" element={<AdminRevenue />} />

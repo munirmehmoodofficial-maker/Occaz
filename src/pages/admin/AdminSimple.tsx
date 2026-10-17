@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import {
   Plus,
   Edit3,
@@ -1981,7 +1982,7 @@ export function AdminOrganizers() {
                 )}
 
                 {/* Actions footer */}
-                <div className="mt-6 flex gap-2">
+                <div className="mt-6 flex flex-wrap gap-2">
                   {view.slug && (
                     <a
                       href={`/organizers/${view.slug}`}
@@ -1992,6 +1993,13 @@ export function AdminOrganizers() {
                       Open public page →
                     </a>
                   )}
+                  <Link
+                    to={`/admin/organizer-detail/${view.id}`}
+                    onClick={() => setView(null)}
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--bg-card)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] ring-1 ring-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)]"
+                  >
+                    Full admin page →
+                  </Link>
                   <Button
                     variant="danger"
                     onClick={() => deleteOrganizer(view.id)}

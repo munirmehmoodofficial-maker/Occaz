@@ -36,6 +36,7 @@ import {
   X,
   Crown,
   ShieldCheck,
+  ServerCog,
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -96,11 +97,13 @@ const groups = [
     items: [
       { to: "/admin/payouts", label: "Payouts", Icon: CreditCard },
       { to: "/admin/revenue", label: "Revenue", Icon: BarChart3 },
+      { to: "/admin/subscriptions", label: "Subscriptions", Icon: Crown },
     ],
   },
   {
     title: "System",
     items: [
+      { to: "/admin/system-monitor", label: "System Monitor", Icon: ServerCog },
       { to: "/admin/integrations", label: "Integrations", Icon: Plug },
       { to: "/admin/domains", label: "Domains & SEO", Icon: Globe },
       { to: "/admin/cities", label: "Cities & Locations", Icon: MapPin },
