@@ -1,18 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Edit3, Trash2, Search, Eye, EyeOff } from "lucide-react";
 import clsx from "clsx";
-import { opportunityCategories } from "../../data/mock";
+import { opportunityCategories as mockOppCats } from "../../data/mock";
 import { useDataStore } from "../../data/store";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { ImageUploader, type ImageItem } from "../../components/admin/ImageUploader";
 import { resolveBlobUrl } from "../../lib/blobResolver";
+import { useCategories } from "../../hooks/useCategories";
 
 export function AdminOpportunities() {
   const { opportunities, addOpportunity, updateOpportunity, removeOpportunity } = useDataStore();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
   const [editing, setEditing] = useState<any | null>(null);
+
+  // Live categories from the admin-managed `categories` table, with a
+  // mock-data fallback so the dropdown is never empty.
+  const dbCats = useCategories("opportunity");
+  const opportunityCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockOppCats) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbCats]);
   const [showNew, setShowNew] = useState(false);
   const [dbg, setDbg] = useState<string[]>([]);
 

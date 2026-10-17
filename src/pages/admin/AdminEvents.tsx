@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Edit3, Trash2, Eye, EyeOff, Search, Crown, Sparkles } from "lucide-react";
-import { categories } from "../../data/mock";
+import { categories as mockCategories } from "../../data/mock";
 import { useDataStore } from "../../data/store";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { ImageUploader, type ImageItem } from "../../components/admin/ImageUploader";
 import { useSubscription } from "../../hooks/useSubscription";
 import { useAuth } from "../../lib/auth";
+import { useCategories } from "../../hooks/useCategories";
 
 export function AdminEvents() {
   const { events, addEvent, updateEvent, removeEvent } = useDataStore();
@@ -16,6 +17,17 @@ export function AdminEvents() {
   const [status, setStatus] = useState<"all" | "published" | "draft">("all");
   const [editing, setEditing] = useState<typeof events[0] | null>(null);
   const [showNew, setShowNew] = useState(false);
+
+  // Live categories from the admin-managed `categories` table, with a
+  // mock-data fallback so the dropdown is never empty.
+  const dbCats = useCategories("event");
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockCategories) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbCats]);
 
   const filtered = useMemo(() => {
     return events.filter((e) => {
