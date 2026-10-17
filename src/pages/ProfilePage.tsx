@@ -114,24 +114,30 @@ export function ProfilePage() {
   return (
     <div className="page">
       <div className="container w-full max-w-3xl">
-        {/* Compact profile card */}
+        {/* Profile card */}
         <div className="overflow-hidden rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
-          <div className="flex items-start gap-3 p-4 md:gap-4 md:p-5">
-            {/* Avatar */}
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={displayName}
-                className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-[var(--bg-card)] md:h-16 md:w-16"
-              />
-            ) : (
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-gradient-to-br from-accent-500 to-pink-500 text-xl font-bold text-white ring-2 ring-[var(--bg-card)] md:h-16 md:w-16">
-                {initial}
-              </div>
-            )}
+          {/* Cover image + logo overlay */}
+          <div className="relative h-24 bg-gradient-to-br from-pink-500/40 via-accent-500/30 to-violet-500/40 md:h-28">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
+            {/* Logo on cover */}
+            <div className="absolute -bottom-7 left-4 md:-bottom-8 md:left-5">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={displayName}
+                  className="h-14 w-14 rounded-2xl object-cover ring-4 ring-[var(--bg-card)] md:h-16 md:w-16"
+                />
+              ) : (
+                <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-accent-500 to-pink-500 text-xl font-bold text-white ring-4 ring-[var(--bg-card)] md:h-16 md:w-16">
+                  {initial}
+                </div>
+              )}
+            </div>
+          </div>
 
-            {/* Name + meta + actions */}
-            <div className="min-w-0 flex-1">
+          {/* Main content row */}
+          <div className="flex items-start gap-3 px-4 pb-4 pt-9 md:gap-4 md:px-5 md:pb-5 md:pt-10">
+            <div className="flex-1 min-w-0">
               {editing ? (
                 <input
                   value={name}
