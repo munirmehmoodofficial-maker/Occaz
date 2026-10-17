@@ -1,26 +1,28 @@
 -- ============================================================
 -- Grant admin full access to organizer dashboard
 -- ============================================================
--- 1) Set is_organizer=true for the admin so the /organizer route
---    and the "Organizer dashboard" link in the header show up.
--- 2) The admin will see "All features unlocked" badges in the
---    dashboard, and can switch plans freely to test the UI.
+-- Note: 'plan' lives on organizer_profiles, not profiles.
+-- The 'is_organizer' flag on profiles is what gates the
+-- /organizer route + header link.
 -- ============================================================
 
+-- 1) Allow the admin to see the Organizer dashboard link + bypass
+--    the "become an organizer" gate.
 update public.profiles
    set is_organizer = true
  where email = 'm.munirmehmood@gmail.com'
    and coalesce(is_organizer, false) = false;
 
--- Also create a placeholder organizer_profiles row for the admin
--- (the dashboard's Section 8 reads from this table; without a row,
--- the form starts empty — this is fine, but the row makes the
--- "Save" action work without first having to do anything else).
-insert into public.organizer_profiles (id, display_name, slug, is_organizer, verified)
+-- 2) Create the organizer_profiles row for the admin (idempotent).
+--    This is the row Section 8 (Profile) reads/writes.
+insert into public.organizer_profiles (id, display_name, slug, is_organizer, verified, plan, verification_status, is_published)
 select p.id,
        coalesce(p.full_name, 'Occaz Admin'),
        'occaz-admin',
        true,
+       true,
+       'business',
+       'approved',
        true
   from public.profiles p
  where p.email = 'm.munirmehmood@gmail.com'
@@ -29,10 +31,20 @@ select p.id,
        where o.id = p.id
    );
 
--- Also make sure the admin's profile.plan is set so the dashboard
--- doesn't show "No plan" (purely cosmetic).
-update public.profiles
-   set plan = 'business'
- where email = 'm.munirmehmood@gmail.com';
+-- 3) If the row already exists but plan is null/empty, upgrade it.
+update public.organizer_profiles
+   set plan = 'business',
+       is_organizer = true,
+       verification_status = 'approved',
+       is_published = true,
+       verified = true
+ where id in (select id from public.profiles where email = 'm.munirmehmood@gmail.com');
 
-select 'Admin upgraded to organizer' as status;
+-- 4) Make sure the admin is recognized as admin (in case role was
+--    demoted by the bootstrap_admin removal in install_all.sql).
+update public.profiles
+   set role = 'admin'
+ where email = 'm.munirmehmood@gmail.com'
+   and coalesce(role, 'user') <> 'admin';
+
+select 'Admin granted full organizer access' as status;

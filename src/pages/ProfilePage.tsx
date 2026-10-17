@@ -110,10 +110,10 @@ export function ProfilePage() {
 
   return (
     <div className="page">
-      <div className="container">
+      <div className="container max-w-4xl">
         {/* Header card */}
         <div className="overflow-hidden rounded-3xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
-          <div className="relative h-40 md:h-48">
+          <div className="relative h-32 md:h-40">
             <img
               src="https://picsum.photos/seed/cover1/1800/400"
               alt=""
@@ -121,17 +121,17 @@ export function ProfilePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-bg-card to-transparent" />
           </div>
-          <div className="px-6 pb-6 md:px-8">
-            <div className="-mt-12 flex flex-col gap-5 md:-mt-16 md:flex-row md:items-end">
+          <div className="px-5 pb-5 md:px-7">
+            <div className="-mt-10 flex flex-col gap-4 md:-mt-14 md:flex-row md:items-end">
               <div className="relative">
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={displayName}
-                    className="h-24 w-24 rounded-2xl object-cover ring-4 ring-bg-card md:h-32 md:w-32"
+                    className="h-20 w-20 rounded-2xl object-cover ring-4 ring-bg-card md:h-28 md:w-28"
                   />
                 ) : (
-                  <div className="grid h-24 w-24 place-items-center rounded-2xl bg-gradient-to-br from-accent-500 to-pink-500 text-3xl font-bold text-white ring-4 ring-bg-card md:h-32 md:w-32">
+                  <div className="grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-accent-500 to-pink-500 text-2xl font-bold text-white ring-4 ring-bg-card md:h-28 md:w-28">
                     {initial}
                   </div>
                 )}
@@ -144,7 +144,7 @@ export function ProfilePage() {
                   </button>
                 )}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {editing ? (
                   <input
                     value={name}
@@ -153,9 +153,9 @@ export function ProfilePage() {
                     className="input text-2xl font-bold md:text-3xl"
                   />
                 ) : (
-                  <h1 className="text-2xl font-bold md:text-3xl">{displayName}</h1>
+                  <h1 className="truncate text-2xl font-bold md:text-3xl">{displayName}</h1>
                 )}
-                <p className="text-sm text-[var(--text-tertiary)]">
+                <p className="truncate text-sm text-[var(--text-tertiary)]">
                   {user?.email}
                 </p>
                 {editing ? (
@@ -167,11 +167,11 @@ export function ProfilePage() {
                     className="input mt-3 w-full max-w-xl"
                   />
                 ) : (
-                  <p className="mt-3 max-w-xl text-sm text-[var(--text-secondary)]">
+                  <p className="mt-2 max-w-xl text-sm text-[var(--text-secondary)]">
                     {bio || "No bio yet — click Edit to tell people about yourself."}
                   </p>
                 )}
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--text-tertiary)]">
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--text-tertiary)]">
                   {editing ? (
                     <input
                       value={city}
@@ -186,10 +186,6 @@ export function ProfilePage() {
                         {city || "—"}
                       </span>
                       <span className="inline-flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5" />
-                        {user?.email}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5" />
                         Joined {joined}
                       </span>
@@ -201,12 +197,14 @@ export function ProfilePage() {
                 {editing ? (
                   <>
                     <Button
+                      size="sm"
                       onClick={saveProfile}
                       disabled={savingProfile}
                     >
                       <Save className="h-4 w-4" /> {savingProfile ? "Saving…" : "Save"}
                     </Button>
                     <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => setEditing(false)}
                     >
@@ -216,12 +214,14 @@ export function ProfilePage() {
                 ) : (
                   <>
                     <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => setEditing(true)}
                     >
-                      <Edit3 className="h-4 w-4" /> Edit profile
+                      <Edit3 className="h-4 w-4" /> Edit
                     </Button>
                     <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => signOut()}
                     >
@@ -233,14 +233,14 @@ export function ProfilePage() {
             </div>
 
             {!profile?.is_organizer && (
-              <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-accent-500/40 bg-gradient-to-br from-accent-500/15 via-pink-500/10 to-transparent p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-accent-500/20 ring-1 ring-accent-500/30">
+              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-accent-500/40 bg-gradient-to-br from-accent-500/15 via-pink-500/10 to-transparent p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-500/20 ring-1 ring-accent-500/30">
                     <Building2 className="h-4 w-4 text-accent-400" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm font-medium">Run events on Occaz?</div>
-                    <div className="text-xs text-[var(--text-tertiary)]">
+                    <div className="truncate text-xs text-[var(--text-tertiary)]">
                       Get a public organizer page, ticketing, and a dashboard.
                     </div>
                   </div>
@@ -248,8 +248,6 @@ export function ProfilePage() {
                 <Button
                   size="sm"
                   onClick={() => {
-                    // Go to the dedicated multi-step organizer onboarding flow.
-                    // The user fills in brand, plan, payment there.
                     navigate("/become-organizer");
                   }}
                   disabled={becomingOrg}
@@ -261,14 +259,14 @@ export function ProfilePage() {
             )}
 
             {profile?.is_organizer && (
-              <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-accent-500/5 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-violet-500/20 ring-1 ring-violet-500/30">
+              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-accent-500/5 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-violet-500/20 ring-1 ring-violet-500/30">
                     <Building2 className="h-4 w-4 text-violet-400" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm font-medium">You're an organizer</div>
-                    <div className="text-xs text-[var(--text-tertiary)]">
+                    <div className="truncate text-xs text-[var(--text-tertiary)]">
                       Manage your events, profile, and billing.
                     </div>
                   </div>
@@ -281,25 +279,19 @@ export function ProfilePage() {
                   >
                     Dashboard
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate("/become-organizer")}
-                    rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
-                  >
-                    Re-do setup
-                  </Button>
                 </div>
               </div>
             )}
 
-            <div className="mt-6 flex flex-wrap gap-2">
-              {(cats.length ? cats : ["Concerts", "Workshops"]).map((i) => (
-                <Badge key={i} tone="accent">
-                  {i}
-                </Badge>
-              ))}
-            </div>
+            {cats.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {cats.map((i) => (
+                  <Badge key={i} tone="accent">
+                    {i}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
