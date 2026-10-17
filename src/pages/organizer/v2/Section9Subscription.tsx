@@ -1,4 +1,4 @@
-import { CreditCard, Check, X, Loader2 } from "lucide-react";
+import { CreditCard, Check, X, Loader2, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../../lib/auth";
@@ -93,8 +93,21 @@ export function Section9Subscription() {
 
   const currentPlan = profile?.plan ?? null;
 
+  const isAdminUser = profile?.role === "admin";
+
   return (
     <div className="space-y-4">
+      {isAdminUser && (
+        <div className="flex items-center gap-2 rounded-2xl border border-pink-500/30 bg-pink-500/10 p-3 text-sm text-pink-100">
+          <Sparkles className="h-4 w-4 text-pink-300" />
+          <div>
+            <div className="font-semibold text-pink-200">Admin access — all plans unlocked</div>
+            <div className="text-xs text-pink-100/80">
+              As the admin, you have full access to every feature regardless of plan. Use the controls below to test plan-switching from the admin perspective.
+            </div>
+          </div>
+        </div>
+      )}
       <div>
         <h2 className="text-lg font-bold text-white">Subscription & plan</h2>
         <p className="text-xs text-zinc-500">
@@ -102,7 +115,9 @@ export function Section9Subscription() {
           <span className="font-semibold text-white">
             {currentPlan
               ? PLANS.find((p) => p.id === currentPlan)?.name ?? currentPlan
-              : "No plan"}
+              : isAdminUser
+                ? "Admin (all unlocked)"
+                : "No plan"}
           </span>
         </p>
       </div>

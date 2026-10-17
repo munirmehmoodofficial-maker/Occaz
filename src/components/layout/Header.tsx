@@ -226,7 +226,7 @@ export function Header({
                     >
                       <UserIcon className="h-4 w-4" /> Profile
                     </Link>
-                    {profile?.is_organizer && (
+                    {(profile?.is_organizer || profile?.role === "admin") && (
                       <>
                         <Link
                           to="/organizer"

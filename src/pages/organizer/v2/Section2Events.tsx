@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Calendar, Plus, Search, Edit3, Trash2, Eye, EyeOff, Star, Copy, Send } from "lucide-react";
+import { Calendar, Plus, Search, Edit3, Trash2, Eye, EyeOff, Star, Copy, Send, Sparkles } from "lucide-react";
 import { useAuth } from "../../../lib/auth";
 import { supabase } from "../../../lib/supabase";
 import { useToast } from "../../../lib/toast";
@@ -10,7 +10,7 @@ import { EventEditorModal } from "./EventEditorModal";
  * Full CRUD: create / edit / publish / unpublish / delete
  */
 export function Section2Events() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { push } = useToast();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +19,7 @@ export function Section2Events() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const isAdminUser = profile?.role === "admin";
 
   useEffect(() => {
     if (!user) return;
@@ -133,6 +134,17 @@ export function Section2Events() {
 
   return (
     <div className="space-y-4">
+      {isAdminUser && (
+        <div className="flex items-center gap-2 rounded-2xl border border-pink-500/30 bg-pink-500/10 p-3 text-sm text-pink-100">
+          <Sparkles className="h-4 w-4 text-pink-300" />
+          <div>
+            <div className="font-semibold text-pink-200">Admin mode — unlimited events, all features</div>
+            <div className="text-xs text-pink-100/80">
+              You're viewing this organizer dashboard as the admin. There's no event limit, no plan gate, and no plan switch needed.
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-white">My events</h2>
