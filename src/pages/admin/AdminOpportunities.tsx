@@ -192,6 +192,17 @@ function OppForm({
   onClose: () => void;
   onSave: (data: any) => void;
 }) {
+  // Live categories from the admin-managed `categories` table, with a
+  // mock-data fallback so the dropdown is never empty.
+  const dbCats = useCategories("opportunity");
+  const opportunityCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockOppCats) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbCats]);
+
   const [form, setForm] = useState({
     title: initial?.title || "",
     description: initial?.description || "",
