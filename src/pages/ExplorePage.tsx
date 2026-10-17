@@ -19,10 +19,11 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import {
-  categories,
-  opportunityCategories,
+  categories as mockCats,
+  opportunityCategories as mockOppCats,
 } from "../data/mock";
 import { useEvents, useOpportunities } from "../hooks/useListings";
+import { useCategories } from "../hooks/useCategories";
 import { EventCard } from "../components/cards/EventCard";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { CardGrid } from "../components/ui/CardGrid";
@@ -63,6 +64,23 @@ export function ExplorePage() {
   const { isEventSaved, isOpportunitySaved, toggleEvent, toggleOpportunity } = useSaved();
   const events = useEvents();
   const opportunities = useOpportunities();
+  const dbEventCats = useCategories("event");
+  const dbOppCats = useCategories("opportunity");
+
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbEventCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockCats) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbEventCats]);
+  const opportunityCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbOppCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockOppCats) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbOppCats]);
 
   const list = tab === "events" ? categories : opportunityCategories;
 

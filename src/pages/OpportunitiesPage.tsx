@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { opportunityCategories } from "../data/mock";
+import { opportunityCategories as mockOppCats } from "../data/mock";
 import { useOpportunities } from "../hooks/useListings";
+import { useCategories } from "../hooks/useCategories";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { CardGrid } from "../components/ui/CardGrid";
 import { useSaved } from "../hooks/useSaved";
@@ -9,6 +10,14 @@ import { Filter, X } from "lucide-react";
 export function OpportunitiesPage() {
   const { isOpportunitySaved, toggleOpportunity } = useSaved();
   const opportunities = useOpportunities();
+  const dbCats = useCategories("opportunity");
+  const opportunityCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockOppCats) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbCats]);
   const [cat, setCat] = useState("All");
   const [mode, setMode] = useState<"any" | "online" | "physical">("any");
   const [sort, setSort] = useState<"deadline" | "newest">("deadline");

@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, Filter, X, ArrowDownUp } from "lucide-react";
-import { categories, opportunityCategories, cities } from "../data/mock";
+import { categories as mockCats, opportunityCategories as mockOppCats, cities } from "../data/mock";
 import { useEvents, useOpportunities } from "../hooks/useListings";
+import { useCategories } from "../hooks/useCategories";
 import { CardGrid } from "../components/ui/CardGrid";
 import { EventCard } from "../components/cards/EventCard";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
@@ -13,6 +14,22 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const events = useEvents();
   const opportunities = useOpportunities();
+  const dbEventCats = useCategories("event");
+  const dbOppCats = useCategories("opportunity");
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbEventCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockCats) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbEventCats]);
+  const opportunityCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbOppCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockOppCats) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbOppCats]);
   const initialQ = params.get("q") || "";
   const [q, setQ] = useState(initialQ);
   const [type, setType] = useState<"all" | "events" | "opportunities">("all");

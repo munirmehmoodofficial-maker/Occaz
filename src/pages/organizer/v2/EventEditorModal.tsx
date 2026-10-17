@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Save, Image as ImageIcon, Trash2, Plus, Ticket as TicketIcon } from "lucide-react";
 import { useAuth } from "../../../lib/auth";
 import { useToast } from "../../../lib/toast";
 import { supabase } from "../../../lib/supabase";
-import { categories } from "../../../data/mock";
+import { categories as mockCategories } from "../../../data/mock";
+import { useCategories } from "../../../hooks/useCategories";
 import { SingleImageDrop } from "../../../components/admin/SingleImageDrop";
 
 type TicketType = {
@@ -39,7 +40,7 @@ type EventForm = {
 const DEFAULT_FORM: EventForm = {
   title: "",
   description: "",
-  category: categories[0],
+  category: mockCategories[0],
   city: "Karachi",
   location: "",
   date: "",
@@ -68,6 +69,37 @@ export function EventEditorModal({
   const { push } = useToast();
   const [form, setForm] = useState<EventForm>(initial ?? DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
+
+  // Live categories from the admin-managed `categories` table.
+  // Falls back to the hardcoded mock list on first paint, so the form
+  // is never empty while the network request is in flight.
+  const dbCategories = useCategories("event");
+  const categoryOptions = useMemo(() => {
+    const names = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbCategories) {
+      if (!names.has(c.name)) {
+        names.add(c.name);
+        out.push(c.name);
+      }
+    }
+    for (const c of mockCategories) {
+      if (!names.has(c)) {
+        names.add(c);
+        out.push(c);
+      }
+    }
+    return out;
+  }, [dbCategories]);
+
+  // If the loaded event's category is no longer in the list, keep it
+  // visible by injecting it at the top.
+  const categoryList = useMemo(() => {
+    if (form.category && !categoryOptions.includes(form.category)) {
+      return [form.category, ...categoryOptions];
+    }
+    return categoryOptions;
+  }, [categoryOptions, form.category]);
 
   function update<K extends keyof EventForm>(key: K, value: EventForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -226,7 +258,7 @@ export function EventEditorModal({
                   onChange={(e) => update("category", e.target.value)}
                   className="input"
                 >
-                  {categories.map((c) => (
+                  {categoryList.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>

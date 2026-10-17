@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { categories, cities } from "../data/mock";
+import { categories as mockCategories, cities } from "../data/mock";
 import { useEvents } from "../hooks/useListings";
+import { useCategories } from "../hooks/useCategories";
 import { EventCard } from "../components/cards/EventCard";
 import { CardGrid } from "../components/ui/CardGrid";
 import { useSaved } from "../hooks/useSaved";
@@ -9,6 +10,14 @@ import { Filter, X } from "lucide-react";
 export function EventsPage() {
   const { isEventSaved, toggleEvent } = useSaved();
   const events = useEvents();
+  const dbCats = useCategories("event");
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of dbCats) if (!seen.has(c.name)) { seen.add(c.name); out.push(c.name); }
+    for (const c of mockCategories) if (!seen.has(c)) { seen.add(c); out.push(c); }
+    return out;
+  }, [dbCats]);
   const [cat, setCat] = useState("All");
   const [city, setCity] = useState("All Cities");
   const [price, setPrice] = useState<"any" | "free" | "paid">("any");
