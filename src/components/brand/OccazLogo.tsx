@@ -34,8 +34,7 @@ export function OccazLogo({
       <img
         src={brand.logo_url}
         alt="Occaz"
-        width={size}
-        height={(size * 140) / 200}
+        style={{ height: size, width: "auto", maxWidth: size * 4 }}
         className={className}
         draggable={false}
       />
@@ -51,6 +50,7 @@ export function OccazLogo({
       viewBox="0 0 200 140"
       width={width}
       height={height}
+      style={{ display: "block" }}
       className={className}
       aria-label="Occaz"
       role="img"
