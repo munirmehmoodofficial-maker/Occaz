@@ -108,7 +108,7 @@ export function OnboardingPage() {
         {/* Top bar */}
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <OccazLogo size={36} />
+            <OccazLogo size={44} />
             <span className="text-base font-bold tracking-tight">Occaz</span>
           </div>
           <div className="flex items-center gap-1.5">

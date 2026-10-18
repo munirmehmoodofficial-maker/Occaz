@@ -25,12 +25,15 @@ export function OccazLogo({
   withMotion?: boolean;
 }) {
   const gradId = "occaz-logo-grad";
+  // The logo's natural aspect ratio is 200:140 (about 1.43:1)
+  const width = size;
+  const height = Math.round((size * 140) / 200);
   const inner = (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 200 140"
-      width={size}
-      height={(size * 140) / 200}
+      width={width}
+      height={height}
       className={className}
       aria-label="Occaz"
       role="img"
@@ -44,10 +47,10 @@ export function OccazLogo({
           y2="120"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0" stopColor="#5b21b6" />
-          <stop offset="0.35" stopColor="#8b1dba" />
-          <stop offset="0.7" stopColor="#c026d3" />
-          <stop offset="1" stopColor="#ec1e79" />
+          <stop offset="0" stopColor="#7c3aed" />
+          <stop offset="0.35" stopColor="#a21caf" />
+          <stop offset="0.7" stopColor="#d946ef" />
+          <stop offset="1" stopColor="#f43f5e" />
         </linearGradient>
       </defs>
 

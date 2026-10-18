@@ -136,7 +136,7 @@ export function AdminLayout() {
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
           className="shrink-0"
         >
-          <OccazLogo size={32} />
+          <OccazLogo size={36} />
         </motion.div>
         <div className="flex-1">
           <div className="text-sm font-bold text-[var(--text-primary)]">Occaz Admin</div>

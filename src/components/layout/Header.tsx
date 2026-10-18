@@ -85,7 +85,7 @@ export function Header({
 
         {/* Brand (mobile only — desktop uses sidebar brand) */}
         <Link to="/" className="lg:hidden flex items-center gap-2">
-          <OccazLogo size={32} />
+          <OccazLogo size={36} />
           <span className="text-base font-bold tracking-tight">Occaz</span>
         </Link>
 

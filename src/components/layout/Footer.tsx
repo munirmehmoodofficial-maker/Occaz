@@ -9,7 +9,7 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2.5">
-              <OccazLogo size={32} />
+              <OccazLogo size={36} />
               <span className="text-lg font-bold tracking-tight">Occaz</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm text-[var(--text-tertiary)]">

@@ -68,7 +68,7 @@ export function Sidebar({
       {/* Brand */}
       <div className="flex h-[var(--header-h)] items-center justify-between border-b border-[var(--border-default)] px-4">
         <NavLink to="/" className="flex items-center gap-2.5 overflow-hidden">
-          <OccazLogo size={32} className="shrink-0" />
+          <OccazLogo size={36} className="shrink-0" />
           <AnimatePresence>
             {!collapsed && (
               <motion.span

@@ -48,7 +48,7 @@ export function LandingPage() {
       <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Link to="/welcome" className="flex items-center gap-2">
-            <OccazLogo size={36} />
+            <OccazLogo size={44} />
             <span className="text-lg font-bold tracking-tight">Occaz</span>
           </Link>
 
@@ -486,7 +486,7 @@ export function LandingPage() {
       <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-card)]/40 py-10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
-            <OccazLogo size={28} />
+            <OccazLogo size={36} />
             <span className="text-sm font-semibold">Occaz</span>
             <span className="text-xs text-[var(--text-tertiary)]">· Made in Pakistan</span>
           </div>
