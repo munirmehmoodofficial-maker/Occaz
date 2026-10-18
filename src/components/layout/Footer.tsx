@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { Twitter, Instagram, Linkedin, Github } from "lucide-react";
 import { OccazLogo } from "../brand/OccazLogo";
+import { useBranding } from "../../hooks/useBranding";
 
 export function Footer() {
+  const brand = useBranding();
   return (
     <footer className="mt-auto border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)]/40">
       <div className="container py-12">
@@ -10,7 +12,7 @@ export function Footer() {
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2.5">
               <OccazLogo size={36} />
-              <span className="text-lg font-bold tracking-tight">Occaz</span>
+              <span className="text-lg font-bold tracking-tight">{brand.wordmark}</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm text-[var(--text-tertiary)]">
               Discover events, tickets and life-changing opportunities — all in

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { OccazLogo } from "../components/brand/OccazLogo";
+import { useBranding } from "../hooks/useBranding";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/ui/Button";
 import { setGuest } from "../lib/guest";
@@ -65,6 +66,7 @@ export function OnboardingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile, loading, signIn, signUp, refreshProfile } = useAuth();
+  const brand = useBranding();
 
   const initial: Step =
     (location.state as any)?.step === "interests" && user
@@ -109,7 +111,7 @@ export function OnboardingPage() {
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <OccazLogo size={44} />
-            <span className="text-base font-bold tracking-tight">Occaz</span>
+            <span className="text-base font-bold tracking-tight">{brand.wordmark}</span>
           </div>
           <div className="flex items-center gap-1.5">
             {(["welcome", "auth", "interests", "done"] as const).map((s, i) => (

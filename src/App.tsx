@@ -1,5 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
 import { Layout } from "./components/layout/Layout";
+import { useBranding } from "./hooks/useBranding";
 import { HomePage } from "./pages/HomePage";
 import { ExplorePage } from "./pages/ExplorePage";
 import { EventsPage } from "./pages/EventsPage";
@@ -67,6 +69,7 @@ import { AdminSubscriptions } from "./pages/admin/AdminSubscriptions";
 import { AdminSystemMonitor } from "./pages/admin/AdminSystemMonitor";
 import { AdminOrganizerDetail } from "./pages/admin/AdminOrganizerDetail";
 import { AdminAuditLog as AdminAuditLogReal } from "./pages/admin/AdminAuditLog";
+import { AdminBranding } from "./pages/admin/AdminBranding";
 import {
   AdminAnalytics,
   AdminRegistrations,
@@ -92,10 +95,37 @@ import { RequireUser, RequireAdmin, RequireOrganizer } from "./lib/guards";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { StatusPage } from "./pages/StatusPage";
 
+function FaviconSync() {
+  const brand = useBranding();
+  useEffect(() => {
+    const href = brand.favicon_url;
+    if (!href) return;
+    let link = document.querySelector(
+      "link[rel~='icon']",
+    ) as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.type = "image/png";
+    link.href = href;
+  }, [brand.favicon_url]);
+
+  // Keep <title> in sync with the wordmark
+  useEffect(() => {
+    const t = `${brand.wordmark} — Events, Tickets & Opportunities`;
+    if (document.title !== t) document.title = t;
+  }, [brand.wordmark]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
+        <FaviconSync />
         <Routes>
           {/* Auth / marketing / onboarding pages — no Layout chrome */}
           <Route path="/welcome" element={<LandingPage />} />
@@ -170,6 +200,7 @@ export default function App() {
           <Route path="activity" element={<AdminAuditLogReal />} />
           <Route path="subscriptions" element={<AdminSubscriptions />} />
           <Route path="system-monitor" element={<AdminSystemMonitor />} />
+          <Route path="branding" element={<AdminBranding />} />
           <Route path="support" element={<AdminSupport />} />
           <Route path="payouts" element={<AdminPayouts />} />
           <Route path="revenue" element={<AdminRevenue />} />

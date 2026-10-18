@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/useTheme";
 import { useAuth } from "../../lib/auth";
+import { useBranding } from "../../hooks/useBranding";
 import { OccazLogo } from "../brand/OccazLogo";
 
 const navItems = [
@@ -40,6 +41,7 @@ export function Header({
   const [city] = useState("");
   const { theme, toggle } = useTheme();
   const { user, profile, signOut } = useAuth();
+  const brand = useBranding();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -86,7 +88,7 @@ export function Header({
         {/* Brand (mobile only — desktop uses sidebar brand) */}
         <Link to="/" className="lg:hidden flex items-center gap-2">
           <OccazLogo size={36} />
-          <span className="text-base font-bold tracking-tight">Occaz</span>
+          <span className="text-base font-bold tracking-tight">{brand.wordmark}</span>
         </Link>
 
         {/* Location pill */}

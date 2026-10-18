@@ -37,12 +37,14 @@ import {
   Crown,
   ShieldCheck,
   ServerCog,
+  Brush,
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useTheme } from "../../hooks/useTheme";
 import { useAuth } from "../../lib/auth";
+import { useBranding } from "../../hooks/useBranding";
 import { OccazLogo } from "../../components/brand/OccazLogo";
 import "./admin.css";
 
@@ -62,6 +64,7 @@ const groups = [
       { to: "/admin/categories", label: "Categories", Icon: Tag },
       { to: "/admin/featured", label: "Featured", Icon: Star },
       { to: "/admin/homepage", label: "Homepage", Icon: Palette },
+      { to: "/admin/branding", label: "Branding", Icon: Brush },
     ],
   },
   {
@@ -120,6 +123,7 @@ const groups = [
 export function AdminLayout() {
   const { theme, toggle } = useTheme();
   const { profile, user, signOut } = useAuth();
+  const brand = useBranding();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -139,7 +143,7 @@ export function AdminLayout() {
           <OccazLogo size={36} />
         </motion.div>
         <div className="flex-1">
-          <div className="text-sm font-bold text-[var(--text-primary)]">Occaz Admin</div>
+          <div className="text-sm font-bold text-[var(--text-primary)]">{brand.wordmark} Admin</div>
           <div className="text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">
             Console
           </div>

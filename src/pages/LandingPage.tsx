@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { OccazLogo } from "../components/brand/OccazLogo";
+import { useBranding } from "../hooks/useBranding";
 import {
   Sparkles,
   ArrowRight,
@@ -33,6 +34,7 @@ export function LandingPage() {
   const { user } = useAuth();
   const events = useEvents();
   const opportunities = useOpportunities();
+  const brand = useBranding();
   const [activePreview, setActivePreview] = useState<"events" | "opps" | "tickets">("events");
 
   // if user is signed in, the welcome page is unnecessary — auto-redirect home
@@ -49,7 +51,7 @@ export function LandingPage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Link to="/welcome" className="flex items-center gap-2">
             <OccazLogo size={44} />
-            <span className="text-lg font-bold tracking-tight">Occaz</span>
+            <span className="text-lg font-bold tracking-tight">{brand.wordmark}</span>
           </Link>
 
           <nav className="ml-6 hidden items-center gap-1 md:flex">
@@ -487,7 +489,7 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <OccazLogo size={36} />
-            <span className="text-sm font-semibold">Occaz</span>
+            <span className="text-sm font-semibold">{brand.wordmark}</span>
             <span className="text-xs text-[var(--text-tertiary)]">· Made in Pakistan</span>
           </div>
           <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)]">

@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
+import { useBranding } from "../../hooks/useBranding";
 import { getPlan } from "../../lib/plans";
 import { OccazLogo } from "../brand/OccazLogo";
 import { ArrowRight } from "lucide-react";
@@ -52,6 +53,7 @@ export function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const brand = useBranding();
   const isOrganizer = Boolean(profile?.is_organizer);
   const isAdmin = profile?.role === "admin";
   const planLabel = isOrganizer
@@ -78,7 +80,7 @@ export function Sidebar({
                 transition={{ duration: 0.2 }}
                 className="text-base font-bold tracking-tight whitespace-nowrap"
               >
-                Occaz
+                {brand.wordmark}
               </motion.span>
             )}
           </AnimatePresence>

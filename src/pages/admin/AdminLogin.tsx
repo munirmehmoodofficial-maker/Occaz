@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { useAuth } from "../../lib/auth";
+import { useBranding } from "../../hooks/useBranding";
 import { Button } from "../../components/ui/Button";
 import { OccazLogo } from "../../components/brand/OccazLogo";
 import { motion } from "framer-motion";
@@ -10,6 +11,7 @@ export function AdminLogin() {
   const navigate = useNavigate();
   const location = useLocation() as { state?: { from?: string } };
   const { signIn, profile, loading } = useAuth();
+  const brand = useBranding();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +51,7 @@ export function AdminLogin() {
             <OccazLogo size={48} />
           </div>
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-            Admin sign in
+            {brand.wordmark} Admin sign in
           </h1>
           <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             Restricted area — admin role required.
