@@ -316,19 +316,19 @@ export function AdminBranding() {
         <div className="grid gap-3 sm:grid-cols-2">
           <PreviewRow label="Top nav (mobile)">
             <div className="flex items-center gap-2 px-3 py-2">
-              <OccazLogo size={32} />
+              <BrandMarkPreview size={32} />
               <span className="text-sm font-bold tracking-tight">{wordmark}</span>
             </div>
           </PreviewRow>
           <PreviewRow label="Sidebar (desktop)">
             <div className="flex items-center gap-2 px-3 py-2">
-              <OccazLogo size={32} />
+              <BrandMarkPreview size={32} />
               <span className="text-sm font-bold tracking-tight">{wordmark}</span>
             </div>
           </PreviewRow>
           <PreviewRow label="Footer">
             <div className="flex items-center gap-2 px-3 py-2">
-              <OccazLogo size={28} />
+              <BrandMarkPreview size={28} />
               <span className="text-sm font-semibold">{wordmark}</span>
             </div>
           </PreviewRow>
@@ -341,7 +341,7 @@ export function AdminBranding() {
                   className="h-4 w-4 rounded-sm object-cover"
                 />
               ) : (
-                <OccazLogo size={16} />
+                <BrandMarkPreview size={16} />
               )}
               {wordmark} — {tagline || "Events, tickets & opportunities"}
             </div>
@@ -381,5 +381,53 @@ function PreviewRow({ label, children }: { label: string; children: React.ReactN
         {children}
       </motion.div>
     </div>
+  );
+}
+
+/**
+ * Self-contained brand mark for the live-preview tiles.
+ * Uses a data-URL SVG for the default monogram (no hook, no
+ * module-level cache, no React state — just renders), and an
+ * <img> for any user-uploaded logo. This avoids the cross-component
+ * useBranding race that caused the preview to show only text.
+ */
+function BrandMarkPreview({ size }: { size: number }) {
+  const brand = useBranding();
+  const h = Math.round((size * 140) / 200);
+  if (brand.logo_url) {
+    return (
+      <img
+        src={brand.logo_url}
+        alt="Logo"
+        style={{ height: h, width: "auto", display: "block" }}
+        draggable={false}
+      />
+    );
+  }
+  // Default monogram — inline data URL so it ALWAYS renders, even
+  // before the Supabase fetch completes.
+  const svg = encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 140'>` +
+      `<defs><linearGradient id='g' x1='20' y1='20' x2='180' y2='120' gradientUnits='userSpaceOnUse'>` +
+      `<stop offset='0' stop-color='%237c3aed'/>` +
+      `<stop offset='0.35' stop-color='%23a21caf'/>` +
+      `<stop offset='0.7' stop-color='%23d946ef'/>` +
+      `<stop offset='1' stop-color='%23f43f5e'/>` +
+      `</linearGradient></defs>` +
+      `<g fill='url(%23g)'>` +
+      `<path fill-rule='evenodd' d='M 110 60 A 50 50 0 1 0 10 60 A 50 50 0 1 0 110 60 Z M 92 60 A 32 32 0 1 1 28 60 A 32 32 0 1 1 92 60 Z'/>` +
+      `<path fill-rule='evenodd' d='M 153 55 A 38 38 0 1 0 77 55 A 38 38 0 1 0 153 55 Z M 137 55 A 22 22 0 1 1 93 55 A 22 22 0 1 1 137 55 Z'/>` +
+      `<path d='M 130 78 L 168 78 A 10 10 0 0 1 168 98 L 130 98 Z'/>` +
+      `</g></svg>`
+  );
+  return (
+    <img
+      src={`data:image/svg+xml;utf8,${svg}`}
+      alt="Occaz"
+      width={size}
+      height={h}
+      style={{ display: "block" }}
+      draggable={false}
+    />
   );
 }
