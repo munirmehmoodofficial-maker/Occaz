@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { OccazLogo } from "../components/brand/OccazLogo";
 import {
   Sparkles,
   ArrowRight,
@@ -47,9 +48,7 @@ export function LandingPage() {
       <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Link to="/welcome" className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent-500 to-pink-500">
-              <span className="text-base font-bold text-white">O</span>
-            </div>
+            <OccazLogo size={36} />
             <span className="text-lg font-bold tracking-tight">Occaz</span>
           </Link>
 
@@ -487,9 +486,7 @@ export function LandingPage() {
       <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-card)]/40 py-10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
-            <div className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-accent-500 to-pink-500">
-              <span className="text-xs font-bold text-white">O</span>
-            </div>
+            <OccazLogo size={28} />
             <span className="text-sm font-semibold">Occaz</span>
             <span className="text-xs text-[var(--text-tertiary)]">· Made in Pakistan</span>
           </div>

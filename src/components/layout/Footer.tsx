@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Twitter, Instagram, Linkedin, Github } from "lucide-react";
+import { OccazLogo } from "../brand/OccazLogo";
 
 export function Footer() {
   return (
@@ -8,9 +9,7 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2.5">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-accent-500 to-pink-500">
-                <span className="text-sm font-bold text-[var(--text-primary)]">O</span>
-              </div>
+              <OccazLogo size={32} />
               <span className="text-lg font-bold tracking-tight">Occaz</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm text-[var(--text-tertiary)]">

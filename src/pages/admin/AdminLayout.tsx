@@ -43,6 +43,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useTheme } from "../../hooks/useTheme";
 import { useAuth } from "../../lib/auth";
+import { OccazLogo } from "../../components/brand/OccazLogo";
 import "./admin.css";
 
 const groups = [
@@ -131,11 +132,11 @@ export function AdminLayout() {
     <div className="flex h-full flex-col bg-[var(--bg-elevated)]">
       <div className="flex h-[var(--header-h)] items-center gap-2.5 px-6 border-b border-[var(--border-subtle)]">
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-accent-500 to-pink-500"
+          initial={{ scale: 0.8, opacity: 0, rotate: -8 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          className="shrink-0"
         >
-          <span className="text-sm font-bold text-[var(--text-primary)]">O</span>
+          <OccazLogo size={32} />
         </motion.div>
         <div className="flex-1">
           <div className="text-sm font-bold text-[var(--text-primary)]">Occaz Admin</div>

@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/useTheme";
 import { useAuth } from "../../lib/auth";
+import { OccazLogo } from "../brand/OccazLogo";
 
 const navItems = [
   { to: "/", label: "Home" },
@@ -84,9 +85,7 @@ export function Header({
 
         {/* Brand (mobile only — desktop uses sidebar brand) */}
         <Link to="/" className="lg:hidden flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-accent-500 to-pink-500">
-            <span className="text-sm font-bold text-white">O</span>
-          </div>
+          <OccazLogo size={32} />
           <span className="text-base font-bold tracking-tight">Occaz</span>
         </Link>
 

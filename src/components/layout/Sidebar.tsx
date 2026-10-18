@@ -1,6 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { getPlan } from "../../lib/plans";
+import { OccazLogo } from "../brand/OccazLogo";
 import { ArrowRight } from "lucide-react";
 import {
   Home,
@@ -67,9 +68,7 @@ export function Sidebar({
       {/* Brand */}
       <div className="flex h-[var(--header-h)] items-center justify-between border-b border-[var(--border-default)] px-4">
         <NavLink to="/" className="flex items-center gap-2.5 overflow-hidden">
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-accent-500 to-pink-500">
-            <span className="text-sm font-bold text-white">O</span>
-          </div>
+          <OccazLogo size={32} className="shrink-0" />
           <AnimatePresence>
             {!collapsed && (
               <motion.span

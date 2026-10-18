@@ -31,6 +31,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { OccazLogo } from "../components/brand/OccazLogo";
 import { supabase } from "../lib/supabase";
 import { Button } from "../components/ui/Button";
 import { setGuest } from "../lib/guest";
@@ -107,9 +108,7 @@ export function OnboardingPage() {
         {/* Top bar */}
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent-500 to-pink-500">
-              <span className="text-sm font-bold text-white">O</span>
-            </div>
+            <OccazLogo size={36} />
             <span className="text-base font-bold tracking-tight">Occaz</span>
           </div>
           <div className="flex items-center gap-1.5">
