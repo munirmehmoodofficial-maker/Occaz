@@ -1,11 +1,14 @@
 import { motion } from "framer-motion";
 
 /**
- * Occaz brand logo — the swirl mark (no text).
+ * Occaz brand logo — the "ocz" monogram (no text).
  *
- * Three filled teardrop shapes in a purple → magenta → pink gradient,
- * layered around a stylized "Z" at the center. The teardrops have
- * proper round bodies and tapered tails (not simple ring arcs).
+ * Composed of:
+ *   1. A large rounded "o" (left)
+ *   2. A smaller rounded "o" (right, overlapping the first)
+ *   3. A horizontal bar with a curved right end — the "z" tail
+ *
+ * All three elements share a single purple → magenta → pink gradient.
  *
  * Props
  *   size       pixel size (square)
@@ -25,9 +28,9 @@ export function OccazLogo({
   const inner = (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 100 100"
+      viewBox="0 0 200 140"
       width={size}
-      height={size}
+      height={(size * 140) / 200}
       className={className}
       aria-label="Occaz"
       role="img"
@@ -36,56 +39,52 @@ export function OccazLogo({
         <linearGradient
           id={gradId}
           x1="20"
-          y1="5"
-          x2="85"
-          y2="95"
+          y1="20"
+          x2="180"
+          y2="120"
           gradientUnits="userSpaceOnUse"
         >
           <stop offset="0" stopColor="#5b21b6" />
           <stop offset="0.35" stopColor="#8b1dba" />
-          <stop offset="0.65" stopColor="#c026d3" />
+          <stop offset="0.7" stopColor="#c026d3" />
           <stop offset="1" stopColor="#ec1e79" />
         </linearGradient>
       </defs>
 
       <g fill={`url(#${gradId})`}>
         {/*
-          OUTER teardrop — body at upper-left, tail sweeps down-right
-            body center (38, 38), radius 26, tip (90, 90)
-            tangent points (calculated): T1=(48.4, 61.9), T2=(61.9, 48.4)
-            arc goes around the back (upper-left) using large-arc + sweep
+          Large "o" (left)
+            Center (60, 60), outer radius 50, inner radius 32
+            Annulus drawn as two full circles with even-odd fill rule
         */}
-        <path d="M 90 90 L 48.4 61.9 A 26 26 0 1 0 61.9 48.4 L 90 90 Z" />
+        <path
+          fillRule="evenodd"
+          d="M 110 60 A 50 50 0 1 0 10 60 A 50 50 0 1 0 110 60 Z
+             M 92 60 A 32 32 0 1 1 28 60 A 32 32 0 1 1 92 60 Z"
+        />
 
         {/*
-          MIDDLE teardrop — smaller, layered in the upper portion,
-            tail pointing up-right
-            body center (50, 25), radius 14, tip (78, 18)
+          Smaller "o" (right, overlapping the first)
+            Center (115, 55), outer radius 38, inner radius 22
         */}
-        <path d="M 78 18 L 63.5 28.6 A 14 14 0 1 0 60.25 15.47 L 78 18 Z" />
+        <path
+          fillRule="evenodd"
+          d="M 153 55 A 38 38 0 1 0 77 55 A 38 38 0 1 0 153 55 Z
+             M 137 55 A 22 22 0 1 1 93 55 A 22 22 0 1 1 137 55 Z"
+        />
 
         {/*
-          BOTTOM-LEFT teardrop — thin, tail at lower-left
-            body center (22, 70), radius 10, tip (8, 86)
+          Horizontal bar with curved right end — the "z" tail/underline
+            Top of bar at y=78, bottom at y=98
+            Right end is rounded with a half-circle
         */}
-        <path d="M 8 86 L 12.6 73.4 A 10 10 0 1 0 19.7 79.7 L 8 86 Z" />
-
-        {/*
-          INNER Z — three rounded strokes (top bar, diagonal,
-            bottom bar), tilted -14°.  Stroke-linecap round gives
-            soft corners where the diagonal meets the bars.
-        */}
-        <g
-          stroke={`url(#${gradId})`}
-          strokeWidth="7"
-          strokeLinecap="round"
-          fill="none"
-          transform="rotate(-14 50 50)"
-        >
-          <line x1="32" y1="32" x2="64" y2="32" />
-          <line x1="64" y1="32" x2="32" y2="64" />
-          <line x1="32" y1="64" x2="64" y2="64" />
-        </g>
+        <path
+          d="M 130 78
+             L 168 78
+             A 10 10 0 0 1 168 98
+             L 130 98
+             Z"
+        />
       </g>
     </svg>
   );
