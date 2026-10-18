@@ -1,20 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <linearGradient id="g" x1="10" y1="0" x2="95" y2="95" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="20" y1="5" x2="85" y2="95" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#5b21b6"/>
-      <stop offset="0.35" stop-color="#9333ea"/>
-      <stop offset="0.7" stop-color="#c026d3"/>
+      <stop offset="0.35" stop-color="#8b1dba"/>
+      <stop offset="0.65" stop-color="#c026d3"/>
       <stop offset="1" stop-color="#ec1e79"/>
     </linearGradient>
   </defs>
   <g fill="url(#g)">
-    <path d="M 86 32 A 40 40 0 1 0 60 86 L 60 74 A 28 28 0 1 1 74 32 Z"/>
-    <path d="M 76 24 A 28 28 0 0 0 30 28 L 36 36 A 18 18 0 0 1 64 32 Z"/>
-    <path d="M 14 76 A 22 22 0 0 0 30 92 L 30 84 A 14 14 0 0 1 22 76 Z"/>
-    <g transform="rotate(-14 50 50)">
-      <rect x="30" y="30" width="40" height="6" rx="3"/>
-      <path d="M 36 36 L 64 36 L 60 62 L 32 62 L 60 36 Z"/>
-      <rect x="30" y="58" width="40" height="6" rx="3"/>
+    <path d="M 90 90 L 48.4 61.9 A 26 26 0 1 0 61.9 48.4 L 90 90 Z"/>
+    <path d="M 78 18 L 63.5 28.6 A 14 14 0 1 0 60.25 15.47 L 78 18 Z"/>
+    <path d="M 8 86 L 12.6 73.4 A 10 10 0 1 0 19.7 79.7 L 8 86 Z"/>
+    <g stroke="url(#g)" stroke-width="7" stroke-linecap="round" fill="none" transform="rotate(-14 50 50)">
+      <line x1="32" y1="32" x2="64" y2="32"/>
+      <line x1="64" y1="32" x2="32" y2="64"/>
+      <line x1="32" y1="64" x2="64" y2="64"/>
     </g>
   </g>
 </svg>
