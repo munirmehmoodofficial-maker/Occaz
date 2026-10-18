@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRight, AlertCircle, Shield } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { useAuth } from "../../lib/auth";
 import { Button } from "../../components/ui/Button";
+import { OccazLogo } from "../../components/brand/OccazLogo";
 import { motion } from "framer-motion";
 
 export function AdminLogin() {
@@ -44,8 +45,8 @@ export function AdminLogin() {
         className="w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-8 shadow-2xl"
       >
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 ring-1 ring-violet-500/40">
-            <Shield className="h-6 w-6 text-violet-400" />
+          <div className="mb-3 inline-flex">
+            <OccazLogo size={48} />
           </div>
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
             Admin sign in
