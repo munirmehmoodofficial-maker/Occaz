@@ -42,13 +42,43 @@ export function PublicOrganizerPage() {
     if (!slug) return;
     let alive = true;
     (async () => {
-      const { data } = await supabase
+      // First try organizer_profiles (the live source of truth for
+      // all organizer records created through the admin / onboarding
+      // flow). Fall back to the legacy `organizations` table so any
+      // older data still resolves.
+      const { data: primary } = await supabase
+        .from("organizer_profiles")
+        .select("id, display_name, slug, logo, bio, website, instagram, facebook, tiktok, plan, verified, is_published")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (!alive) return;
+      if (primary) {
+        const mapped: OrgProfile = {
+          id: (primary as any).id,
+          name: (primary as any).display_name,
+          slug: (primary as any).slug,
+          logo_url: (primary as any).logo,
+          description: (primary as any).bio,
+          website: (primary as any).website,
+          social_links: {
+            instagram: (primary as any).instagram,
+            twitter: (primary as any).facebook,
+            linkedin: (primary as any).tiktok,
+          },
+          verification_status: (primary as any).verified ? "approved" : "pending",
+          plan: (primary as any).plan,
+        };
+        setProfile(mapped);
+        return;
+      }
+      // legacy fallback
+      const { data: legacy } = await supabase
         .from("organizations")
         .select("*")
         .eq("slug", slug)
         .maybeSingle();
       if (!alive) return;
-      setProfile((data as OrgProfile) ?? "notfound");
+      setProfile((legacy as OrgProfile) ?? "notfound");
     })();
     return () => {
       alive = false;

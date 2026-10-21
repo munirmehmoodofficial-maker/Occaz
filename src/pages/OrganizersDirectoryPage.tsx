@@ -45,14 +45,31 @@ export function OrganizersDirectoryPage() {
     let alive = true;
     (async () => {
       setLoading(true);
+      // Use the live `organizer_profiles` table (the source of truth
+      // for all organizer records). Map its columns to the Org shape
+      // expected by this page.
       const { data, error } = await supabase
-        .from("organizations")
-        .select("id, name, slug, logo_url, description, category, plan, verification_status, is_published, created_at")
-        .eq("verification_status", "approved")
+        .from("organizer_profiles")
+        .select("id, display_name, slug, logo, bio, plan, verified, is_published, created_at, organizer_type, city")
         .eq("is_published", true)
         .order("created_at", { ascending: false });
       if (!alive) return;
-      if (!error && data) setOrgs(data as Org[]);
+      if (!error && data) {
+        const mapped = (data as any[]).map((o) => ({
+          id: o.id,
+          name: o.display_name,
+          slug: o.slug,
+          logo_url: o.logo,
+          description: o.bio,
+          category: o.organizer_type,
+          plan: o.plan,
+          verification_status: o.verified ? "approved" : "pending",
+          is_published: o.is_published,
+          city: o.city,
+          created_at: o.created_at,
+        })) as Org[];
+        setOrgs(mapped);
+      }
       setLoading(false);
     })();
     return () => {

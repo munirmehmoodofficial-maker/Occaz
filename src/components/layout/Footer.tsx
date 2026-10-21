@@ -10,9 +10,9 @@ export function Footer() {
       <div className="container py-12">
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
-            <Link to="/" className="flex items-center gap-2.5">
-              <OccazLogo size={36} />
-              <span className="text-lg font-bold tracking-tight">{brand.wordmark}</span>
+            <Link to="/" className="flex items-center gap-3">
+              <OccazLogo size={44} />
+              <span className="text-xl font-bold tracking-tight">{brand.wordmark}</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm text-[var(--text-tertiary)]">
               Discover events, tickets and life-changing opportunities — all in
