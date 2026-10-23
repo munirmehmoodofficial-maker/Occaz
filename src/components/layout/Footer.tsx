@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { Twitter, Instagram, Linkedin, Github } from "lucide-react";
 import { OccazLogo } from "../brand/OccazLogo";
+import { BrandSocialLinks } from "../brand/BrandSocialLinks";
 import { useBranding } from "../../hooks/useBranding";
 
 export function Footer() {
@@ -15,25 +15,30 @@ export function Footer() {
               <span className="text-xl font-bold tracking-tight">{brand.wordmark}</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm text-[var(--text-tertiary)]">
-              Discover events, tickets and life-changing opportunities — all in
-              one beautiful place.
+              {brand.tagline
+                ? brand.tagline
+                : "Discover events, tickets and life-changing opportunities — all in one beautiful place."}
             </p>
-            <div className="mt-5 flex items-center gap-3">
-              {[
-                { Icon: Twitter, href: "#" },
-                { Icon: Instagram, href: "#" },
-                { Icon: Linkedin, href: "#" },
-                { Icon: Github, href: "#" },
-              ].map(({ Icon, href }, i) => (
-                <a
-                  key={i}
-                  href={href}
-                  className="grid h-9 w-9 place-items-center rounded-full bg-[var(--bg-card-hover)] text-[var(--text-secondary)] ring-1 ring-[var(--border-default)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
-                >
-                  <Icon className="h-4 w-4" />
-                </a>
-              ))}
-            </div>
+            <BrandSocialLinks className="mt-5" />
+            {(brand.contact_email || brand.contact_phone || brand.address) && (
+              <div className="mt-5 space-y-1 text-xs text-[var(--text-tertiary)]">
+                {brand.contact_email && (
+                  <div>
+                    <a href={`mailto:${brand.contact_email}`} className="hover:text-[var(--text-primary)]">
+                      {brand.contact_email}
+                    </a>
+                  </div>
+                )}
+                {brand.contact_phone && (
+                  <div>
+                    <a href={`tel:${brand.contact_phone}`} className="hover:text-[var(--text-primary)]">
+                      {brand.contact_phone}
+                    </a>
+                  </div>
+                )}
+                {brand.address && <div>{brand.address}</div>}
+              </div>
+            )}
           </div>
           {[
             {
@@ -81,7 +86,7 @@ export function Footer() {
           ))}
         </div>
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-[var(--border-subtle)] pt-6 text-xs text-[var(--text-tertiary)] md:flex-row md:items-center">
-          <p>© 2026 Occaz. All rights reserved.</p>
+          <p>© 2026 {brand.wordmark}. All rights reserved.</p>
           <div className="flex items-center gap-5">
             <a href="#" className="hover:text-[var(--text-primary)]">Privacy</a>
             <a href="#" className="hover:text-[var(--text-primary)]">Terms</a>

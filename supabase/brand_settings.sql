@@ -15,9 +15,23 @@ create table if not exists public.brand_settings (
   favicon_url text,
   wordmark text default 'Occaz',
   tagline text,
+  social_links jsonb not null default '{}'::jsonb,
+  contact_email text,
+  contact_phone text,
+  address text,
   updated_at timestamptz not null default now(),
   updated_by uuid references public.profiles(id) on delete set null
 );
+
+-- social_links shape: { twitter, instagram, linkedin, facebook, tiktok, youtube, github, whatsapp, telegram, threads, discord }
+alter table public.brand_settings
+  add column if not exists social_links jsonb not null default '{}'::jsonb;
+alter table public.brand_settings
+  add column if not exists contact_email text;
+alter table public.brand_settings
+  add column if not exists contact_phone text;
+alter table public.brand_settings
+  add column if not exists address text;
 
 -- Make sure the singleton row exists
 insert into public.brand_settings (id, wordmark)

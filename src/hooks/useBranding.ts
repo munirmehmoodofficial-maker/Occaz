@@ -1,18 +1,40 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 
+export interface SocialLinks {
+  twitter?: string;
+  instagram?: string;
+  linkedin?: string;
+  facebook?: string;
+  tiktok?: string;
+  youtube?: string;
+  github?: string;
+  whatsapp?: string;
+  telegram?: string;
+  threads?: string;
+  discord?: string;
+}
+
 export interface Brand {
   logo_url: string | null;
   favicon_url: string | null;
   wordmark: string;
   tagline: string | null;
+  social_links: SocialLinks;
+  contact_email: string | null;
+  contact_phone: string | null;
+  address: string | null;
 }
 
-const DEFAULT_BRAND: Brand = {
+export const DEFAULT_BRAND: Brand = {
   logo_url: null,
   favicon_url: null,
   wordmark: "Occaz",
   tagline: "Events, tickets & opportunities",
+  social_links: {},
+  contact_email: null,
+  contact_phone: null,
+  address: null,
 };
 
 let cached: Brand | null = null;
@@ -22,6 +44,22 @@ function emit(b: Brand) {
   cached = b;
   for (const l of listeners) l(b);
 }
+
+function normalize(raw: any): Brand {
+  return {
+    logo_url: raw?.logo_url ?? null,
+    favicon_url: raw?.favicon_url ?? null,
+    wordmark: raw?.wordmark ?? "Occaz",
+    tagline: raw?.tagline ?? null,
+    social_links: (raw?.social_links as SocialLinks) ?? {},
+    contact_email: raw?.contact_email ?? null,
+    contact_phone: raw?.contact_phone ?? null,
+    address: raw?.address ?? null,
+  };
+}
+
+const SELECT_COLS =
+  "logo_url, favicon_url, wordmark, tagline, social_links, contact_email, contact_phone, address";
 
 /**
  * Live, reactive brand settings. The first call fetches from
@@ -41,17 +79,12 @@ export function useBranding(): Brand {
     (async () => {
       const { data } = await supabase
         .from("brand_settings")
-        .select("logo_url, favicon_url, wordmark, tagline")
+        .select(SELECT_COLS)
         .eq("id", 1)
         .maybeSingle();
       if (cancelled) return;
       if (data) {
-        const b: Brand = {
-          logo_url: (data as any).logo_url ?? null,
-          favicon_url: (data as any).favicon_url ?? null,
-          wordmark: (data as any).wordmark ?? "Occaz",
-          tagline: (data as any).tagline ?? null,
-        };
+        const b = normalize(data);
         emit(b);
         setBrand(b);
       } else {
@@ -81,18 +114,10 @@ export async function updateBrand(patch: Partial<Brand>): Promise<void> {
   const { data, error } = await supabase
     .from("brand_settings")
     .upsert(payload)
-    .select("logo_url, favicon_url, wordmark, tagline")
+    .select(SELECT_COLS)
     .single();
   if (error) throw error;
-  if (data) {
-    const b: Brand = {
-      logo_url: (data as any).logo_url ?? null,
-      favicon_url: (data as any).favicon_url ?? null,
-      wordmark: (data as any).wordmark ?? "Occaz",
-      tagline: (data as any).tagline ?? null,
-    };
-    emit(b);
-  }
+  if (data) emit(normalize(data));
 }
 
 /**

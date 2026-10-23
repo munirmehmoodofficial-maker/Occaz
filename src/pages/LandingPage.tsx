@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { OccazLogo } from "../components/brand/OccazLogo";
+import { BrandSocialLinks } from "../components/brand/BrandSocialLinks";
 import { useBranding } from "../hooks/useBranding";
 import {
   Sparkles,
@@ -486,11 +487,14 @@ export function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-card)]/40 py-10">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <OccazLogo size={36} />
-            <span className="text-sm font-semibold">{brand.wordmark}</span>
-            <span className="text-xs text-[var(--text-tertiary)]">· Made in Pakistan</span>
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center gap-3 sm:items-start">
+            <div className="flex items-center gap-2">
+              <OccazLogo size={36} />
+              <span className="text-sm font-semibold">{brand.wordmark}</span>
+              <span className="text-xs text-[var(--text-tertiary)]">· Made in Pakistan</span>
+            </div>
+            <BrandSocialLinks size="sm" />
           </div>
           <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)]">
             <Link to="/organizers" className="hover:text-white">Organizers</Link>

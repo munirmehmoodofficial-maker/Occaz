@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Upload, Trash2, Image as ImageIcon, Save, RefreshCw, Eye, Sparkles } from "lucide-react";
+import { Upload, Trash2, Image as ImageIcon, Save, RefreshCw, Eye, Sparkles, Link2, X } from "lucide-react";
 import { useToast } from "../../lib/toast";
 import { Button } from "../../components/ui/Button";
 import { OccazLogo } from "../../components/brand/OccazLogo";
-import { useBranding, updateBrand, resetBrandCache } from "../../hooks/useBranding";
+import { SOCIAL_PLATFORMS } from "../../components/brand/BrandSocialLinks";
+import { useBranding, updateBrand, resetBrandCache, type SocialLinks } from "../../hooks/useBranding";
 import { supabase } from "../../lib/supabase";
 import { writeAuditLog } from "../../lib/adminAudit";
 import clsx from "clsx";
@@ -33,6 +34,10 @@ export function AdminBranding() {
   const [favPreview, setFavPreview] = useState<string | null>(null);
   const [wordmark, setWordmark] = useState("Occaz");
   const [tagline, setTagline] = useState("");
+  const [socials, setSocials] = useState<Record<string, string>>({});
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const favInputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +46,11 @@ export function AdminBranding() {
   useEffect(() => {
     setWordmark(brand.wordmark);
     setTagline(brand.tagline ?? "");
-  }, [brand.wordmark, brand.tagline]);
+    setSocials({ ...(brand.social_links || {}) });
+    setContactEmail(brand.contact_email ?? "");
+    setContactPhone(brand.contact_phone ?? "");
+    setAddress(brand.address ?? "");
+  }, [brand.wordmark, brand.tagline, brand.social_links, brand.contact_email, brand.contact_phone, brand.address]);
 
   // Object-URL previews for newly picked files
   useEffect(() => {
@@ -71,12 +80,39 @@ export function AdminBranding() {
     favInputRef.current?.click();
   }
 
+  // Compare the form against the saved brand so the Save button only
+  // enables when something actually changed.
+  const hasChanges = (() => {
+    if (logoFile || favFile) return true;
+    if (wordmark !== brand.wordmark) return true;
+    if (tagline !== (brand.tagline ?? "")) return true;
+    if (contactEmail !== (brand.contact_email ?? "")) return true;
+    if (contactPhone !== (brand.contact_phone ?? "")) return true;
+    if (address !== (brand.address ?? "")) return true;
+    const saved = brand.social_links || {};
+    const keys = new Set([...Object.keys(saved), ...Object.keys(socials)]);
+    for (const k of keys) {
+      if ((saved[k] || "") !== (socials[k] || "")) return true;
+    }
+    return false;
+  })();
+
   async function handleSave() {
     setBusy(true);
     try {
+      // Only keep social links that have a non-empty value
+      const cleanSocials: Record<string, string> = {};
+      for (const [k, v] of Object.entries(socials)) {
+        const trimmed = (v || "").trim();
+        if (trimmed) cleanSocials[k] = trimmed;
+      }
       const patch: any = {
         wordmark: wordmark.trim() || "Occaz",
         tagline: tagline.trim() || null,
+        social_links: cleanSocials,
+        contact_email: contactEmail.trim() || null,
+        contact_phone: contactPhone.trim() || null,
+        address: address.trim() || null,
       };
       if (logoFile) {
         patch.logo_url = await uploadToStorage(logoFile, LOGO_PATH);
@@ -94,6 +130,7 @@ export function AdminBranding() {
           tagline: patch.tagline,
           logo_uploaded: !!logoFile,
           favicon_uploaded: !!favFile,
+          social_links: Object.keys(cleanSocials),
         },
       });
       push({ tone: "green", title: "Branding updated", message: "Live everywhere on the site." });
@@ -160,6 +197,10 @@ export function AdminBranding() {
             setFavFile(null);
             setWordmark(brand.wordmark);
             setTagline(brand.tagline ?? "");
+            setSocials({ ...(brand.social_links || {}) });
+            setContactEmail(brand.contact_email ?? "");
+            setContactPhone(brand.contact_phone ?? "");
+            setAddress(brand.address ?? "");
           }}
           leftIcon={<RefreshCw className="h-4 w-4" />}
         >
@@ -307,6 +348,135 @@ export function AdminBranding() {
         </div>
       </div>
 
+      {/* SOCIAL LINKS */}
+      <div className="rounded-2xl bg-[var(--bg-card)] p-5 ring-1 ring-[var(--border-subtle)]">
+        <div className="mb-1 flex items-center gap-2">
+          <Link2 className="h-4 w-4 text-accent-400" />
+          <h3 className="text-base font-semibold">Social links</h3>
+        </div>
+        <p className="mb-4 text-xs text-[var(--text-tertiary)]">
+          Shown in the site footer and landing page footer. Leave a field
+          blank to hide that icon. You can paste a full URL or just the
+          handle (e.g. <code className="text-[10px]">@occaz</code>).
+        </p>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {SOCIAL_PLATFORMS.map((p) => {
+            const value = socials[p.key] || "";
+            const has = value.trim().length > 0;
+            return (
+              <div key={p.key} className="relative">
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[var(--text-tertiary)]">
+                  <p.Icon className="h-3.5 w-3.5" />
+                  {p.label}
+                </label>
+                <div className="relative">
+                  <input
+                    value={value}
+                    onChange={(e) =>
+                      setSocials((prev) => ({ ...prev, [p.key]: e.target.value }))
+                    }
+                    placeholder={p.placeholder}
+                    className="input w-full pr-8"
+                  />
+                  {has && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSocials((prev) => ({ ...prev, [p.key]: "" }))
+                      }
+                      className="absolute right-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full text-[var(--text-tertiary)] transition hover:bg-red-500/10 hover:text-red-400"
+                      aria-label={`Clear ${p.label}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Live preview of social icons */}
+        <div className="mt-4 rounded-xl bg-[var(--bg-elevated)]/40 p-3 ring-1 ring-[var(--border-subtle)]">
+          <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+            Footer preview
+          </div>
+          {(() => {
+            const active = SOCIAL_PLATFORMS.filter(
+              (p) => (socials[p.key] || "").trim().length > 0,
+            );
+            if (active.length === 0) {
+              return (
+                <div className="text-xs text-[var(--text-tertiary)]">
+                  No social links set — icons will be hidden.
+                </div>
+              );
+            }
+            return (
+              <div className="flex flex-wrap items-center gap-3">
+                {active.map((p) => (
+                  <div
+                    key={p.key}
+                    className="grid h-9 w-9 place-items-center rounded-full bg-[var(--bg-card-hover)] text-[var(--text-secondary)] ring-1 ring-[var(--border-default)]"
+                    title={p.label}
+                  >
+                    <p.Icon className="h-4 w-4" />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* CONTACT DETAILS */}
+      <div className="rounded-2xl bg-[var(--bg-card)] p-5 ring-1 ring-[var(--border-subtle)]">
+        <div className="mb-1 text-base font-semibold">Contact details</div>
+        <p className="mb-4 text-xs text-[var(--text-tertiary)]">
+          Optional — shown in the site footer below the social icons.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[var(--text-tertiary)]">
+              Contact email
+            </label>
+            <input
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder="hello@occaz.app"
+              type="email"
+              className="input w-full"
+              maxLength={120}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[var(--text-tertiary)]">
+              Contact phone
+            </label>
+            <input
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              placeholder="+92 300 1234567"
+              className="input w-full"
+              maxLength={40}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[var(--text-tertiary)]">
+              Address
+            </label>
+            <input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Karachi, Pakistan"
+              className="input w-full"
+              maxLength={200}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* LIVE PREVIEW */}
       <div className="rounded-2xl bg-[var(--bg-card)] p-5 ring-1 ring-[var(--border-subtle)]">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
@@ -357,7 +527,7 @@ export function AdminBranding() {
         </div>
         <Button
           onClick={handleSave}
-          disabled={busy || (!logoFile && !favFile && wordmark === brand.wordmark && tagline === (brand.tagline ?? ""))}
+          disabled={busy || !hasChanges}
           leftIcon={<Save className="h-4 w-4" />}
         >
           {busy ? "Saving…" : "Save changes"}
