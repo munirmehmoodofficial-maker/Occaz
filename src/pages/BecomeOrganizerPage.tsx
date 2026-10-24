@@ -247,106 +247,167 @@ export function BecomeOrganizerPage() {
           console.warn("[become-organizer] cover upload failed", e);
         }
       }
-      // Save into organizer_profiles (id = user.id).
-      // The full payload may include columns that don't exist on older
-      // deployments. We try the full payload first, then fall back to a
-      // minimal payload that always works.
-      const fullPayload = {
-        id: user.id,
-        display_name: brandName.trim(),
-        slug: slugify(brandName),
-        logo: logo,
-        cover_image: cover,
-        bio: bio.trim(),
-        website: website.trim() || null,
-        instagram: instagram.trim() || null,
-        facebook: facebook.trim() || null,
-        tiktok: tiktok.trim() || null,
-        contact_email: contactEmail.trim(),
-        contact_phone: contactPhone.trim() || null,
-        phone: phone.trim(),
-        city: city.trim(),
-        address: address.trim() || null,
-        operating_cities: operatingCities,
-        organizer_type: organizerType,
-        plan: null,
-        verification_status: "pending",
-        updated_at: new Date().toISOString(),
+      // Submit the organizer application.
+      //
+      // We call the submit_organizer_application RPC first because it is
+      // SECURITY DEFINER and therefore immune to RLS. Previously this page
+      // inserted directly into organizer_profiles, but there was no
+      // self-INSERT policy — so RLS silently rejected the write and the
+      // organizer's approval request never reached the admin panel.
+      //
+      // If the RPC is not installed yet, fall back to a direct insert
+      // (which works if the self-insert policy has been applied).
+      const rpcArgs = {
+        p_display_name: brandName.trim(),
+        p_slug: slugify(brandName),
+        p_bio: bio.trim() || null,
+        p_website: website.trim() || null,
+        p_instagram: instagram.trim() || null,
+        p_facebook: facebook.trim() || null,
+        p_tiktok: tiktok.trim() || null,
+        p_contact_email: contactEmail.trim() || null,
+        p_contact_phone: contactPhone.trim() || null,
+        p_phone: phone.trim() || null,
+        p_city: city.trim() || null,
+        p_address: address.trim() || null,
+        p_operating_cities: operatingCities,
+        p_organizer_type: organizerType,
+        p_logo: logo,
+        p_cover_image: cover,
       };
-      let profErr: any = null;
+
+      let submitted = false;
+
       try {
-        const { error } = await supabase
-          .from("organizer_profiles")
-          .upsert(fullPayload, { onConflict: "id" });
-        profErr = error;
-      } catch (e: any) {
-        profErr = e;
+        const { data: rpcData, error: rpcErr } = await supabase.rpc(
+          "submit_organizer_application",
+          rpcArgs,
+        );
+        if (!rpcErr && rpcData && (rpcData as any)?.ok) {
+          submitted = true;
+        } else if (rpcErr) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[become-organizer] submit_organizer_application failed:",
+            rpcErr.message,
+          );
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[become-organizer] rpc threw", e);
       }
-      if (profErr) {
-        // Fall back to a minimal payload that only sets guaranteed columns
+
+      if (!submitted) {
+        // Fallback: direct insert (needs the "org profile self insert" policy)
         try {
-          const minimalPayload = {
+          const fullPayload = {
             id: user.id,
             display_name: brandName.trim(),
             slug: slugify(brandName),
             logo: logo,
+            cover_image: cover,
             bio: bio.trim(),
+            website: website.trim() || null,
+            instagram: instagram.trim() || null,
+            facebook: facebook.trim() || null,
+            tiktok: tiktok.trim() || null,
+            contact_email: contactEmail.trim(),
+            contact_phone: contactPhone.trim() || null,
+            phone: phone.trim(),
+            city: city.trim(),
+            address: address.trim() || null,
+            operating_cities: operatingCities,
+            organizer_type: organizerType,
+            plan: null,
+            verification_status: "pending",
+            is_published: false,
+            verified: false,
+            is_organizer: true,
             updated_at: new Date().toISOString(),
           };
-          const { error: e2 } = await supabase
+          const { error: e1 } = await supabase
             .from("organizer_profiles")
-            .upsert(minimalPayload, { onConflict: "id" });
-          if (e2) {
-            // eslint-disable-next-line no-console
-            console.warn("[become-organizer] organizer_profiles upsert failed (minimal):", e2.message);
+            .upsert(fullPayload, { onConflict: "id" });
+          if (e1) {
+            // Minimal payload — only guaranteed columns
+            const minimalPayload = {
+              id: user.id,
+              display_name: brandName.trim(),
+              slug: slugify(brandName),
+              logo: logo,
+              bio: bio.trim(),
+              verification_status: "pending",
+              is_published: false,
+              is_organizer: true,
+              updated_at: new Date().toISOString(),
+            };
+            const { error: e2 } = await supabase
+              .from("organizer_profiles")
+              .upsert(minimalPayload, { onConflict: "id" });
+            if (e2) {
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[become-organizer] organizer_profiles upsert failed (minimal):",
+                e2.message,
+              );
+              showError(
+                "We couldn't submit your organizer application. Please try again.",
+              );
+              return;
+            }
           }
-        } catch {}
-      }
-      // also upsert into organizations table (best-effort)
-      try {
-        const orgPayload = {
-          owner_id: user.id,
-          created_by: user.id,
-          name: brandName.trim(),
-          slug: slugify(brandName),
-          logo_url: logo,
-          cover_image: cover,
-          cover_url: cover,
-          description: bio.trim(),
-          website: website.trim() || null,
-          instagram: instagram.trim() || null,
-          facebook: facebook.trim() || null,
-          tiktok: tiktok.trim() || null,
-          email: contactEmail.trim(),
-          contact_email: contactEmail.trim(),
-          contact_phone: contactPhone.trim() || null,
-          phone: phone.trim(),
-          city: city.trim(),
-          address: address.trim() || null,
-          operating_cities: operatingCities,
-          organizer_type: organizerType,
-          plan: null,
-          verification_status: "pending",
-          is_published: false,
-          updated_at: new Date().toISOString(),
-        };
-        const { error: orgErr } = await supabase
-          .from("organizations")
-          .upsert(orgPayload, { onConflict: "owner_id" });
-        if (orgErr) {
-          // Try minimal org payload
-          try {
-            const minimalOrg = {
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn("[become-organizer] organizer_profiles upsert threw", e);
+          showError(
+            "We couldn't submit your organizer application. Please try again.",
+          );
+          return;
+        }
+
+        // Also mirror into the legacy organizations table (best-effort)
+        try {
+          await supabase.from("organizations").upsert(
+            {
               owner_id: user.id,
               created_by: user.id,
               name: brandName.trim(),
               slug: slugify(brandName),
+              logo_url: logo,
+              cover_image: cover,
+              cover_url: cover,
               description: bio.trim(),
-            };
-            await supabase.from("organizations").upsert(minimalOrg, { onConflict: "owner_id" });
-          } catch {}
-        }
+              website: website.trim() || null,
+              instagram: instagram.trim() || null,
+              facebook: facebook.trim() || null,
+              tiktok: tiktok.trim() || null,
+              email: contactEmail.trim(),
+              contact_email: contactEmail.trim(),
+              contact_phone: contactPhone.trim() || null,
+              phone: phone.trim(),
+              city: city.trim(),
+              address: address.trim() || null,
+              operating_cities: operatingCities,
+              organizer_type: organizerType,
+              plan: null,
+              verification_status: "pending",
+              is_published: false,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "owner_id" },
+          );
+        } catch {}
+      }
+
+      // Flag the user as an organizer so the "Organizer dashboard" link
+      // appears in the header and the /organizer route unlocks.
+      try {
+        await supabase
+          .from("profiles")
+          .update({ is_organizer: true })
+          .eq("id", user.id);
       } catch {}
+
     } finally {
       setBusy(false);
     }

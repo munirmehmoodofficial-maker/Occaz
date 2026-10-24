@@ -84,16 +84,45 @@ export function AdminOrganizerVerifications() {
 
   async function load() {
     setLoading(true);
+    // Read from organizer_profiles — this is the live source of truth
+    // for every organizer created through /become-organizer, the admin
+    // panel, or the onboarding flow. The legacy `organizations` table
+    // is only a mirror and is often empty.
     const { data, error } = await supabase
-      .from("organizations")
+      .from("organizer_profiles")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) {
-      push("err", error.message);
+      // Fall back to the legacy table so nothing is lost
+      const { data: legacy } = await supabase
+        .from("organizations")
+        .select("*")
+        .order("created_at", { ascending: false });
+      setList((legacy as OrgRow[]) ?? []);
       setLoading(false);
       return;
     }
-    setList((data as OrgRow[]) ?? []);
+    // Map organizer_profiles columns -> the OrgRow shape this page uses
+    const mapped = (data as any[]).map((o) => ({
+      ...o,
+      owner_id: o.id,
+      created_by: o.id,
+      name: o.display_name,
+      logo_url: o.logo,
+      cover_url: o.cover_image,
+      description: o.bio,
+      email: o.contact_email,
+      verified_at: o.verified ? o.updated_at : null,
+      rejection_reason: o.rejection_reason ?? null,
+      social_links: {
+        twitter: o.twitter ?? null,
+        instagram: o.instagram ?? null,
+        linkedin: o.linkedin ?? null,
+        facebook: o.facebook ?? null,
+        tiktok: o.tiktok ?? null,
+      },
+    })) as OrgRow[];
+    setList(mapped);
     setLoading(false);
   }
 
@@ -101,6 +130,11 @@ export function AdminOrganizerVerifications() {
     load();
     const ch = supabase
       .channel("admin-organizers-verifs")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "organizer_profiles" },
+        () => load(),
+      )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "organizations" },
@@ -116,24 +150,30 @@ export function AdminOrganizerVerifications() {
   async function approve(o: OrgRow) {
     setBusy(o.id);
     try {
-      // Update both tables
-      const { error: orgErr } = await supabase
-        .from("organizations")
-        .update({
-          verification_status: "approved",
-          verified_at: new Date().toISOString(),
-          is_published: true,
-        })
-        .eq("id", o.id);
-      if (orgErr) throw orgErr;
-      // mirror on organizer_profiles
-      await supabase
+      // Update organizer_profiles FIRST — it's the live source of truth.
+      // The legacy `organizations` table is only a mirror, so a failure
+      // there must not abort the approval.
+      const { error: profErr } = await supabase
         .from("organizer_profiles")
         .update({
           verified: true,
           verification_status: "approved",
+          is_published: true,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", o.owner_id ?? o.id);
+      if (profErr) throw profErr;
+      // mirror on the legacy table (best effort)
+      try {
+        await supabase
+          .from("organizations")
+          .update({
+            verification_status: "approved",
+            verified_at: new Date().toISOString(),
+            is_published: true,
+          })
+          .eq("owner_id", o.owner_id ?? o.id);
+      } catch {}
       push("ok", `${o.name} approved & verified`);
       setView(null);
       load();
@@ -152,23 +192,28 @@ export function AdminOrganizerVerifications() {
     }
     setBusy(rejectFor.id);
     try {
-      const { error: orgErr } = await supabase
-        .from("organizations")
-        .update({
-          verification_status: "rejected",
-          rejection_reason: rejectReason,
-          verified_at: new Date().toISOString(),
-          is_published: false,
-        })
-        .eq("id", rejectFor.id);
-      if (orgErr) throw orgErr;
-      await supabase
+      // organizer_profiles first (source of truth), legacy table second
+      const { error: profErr } = await supabase
         .from("organizer_profiles")
         .update({
           verified: false,
           verification_status: "rejected",
+          is_published: false,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", rejectFor.owner_id ?? rejectFor.id);
+      if (profErr) throw profErr;
+      try {
+        await supabase
+          .from("organizations")
+          .update({
+            verification_status: "rejected",
+            rejection_reason: rejectReason,
+            verified_at: new Date().toISOString(),
+            is_published: false,
+          })
+          .eq("owner_id", rejectFor.owner_id ?? rejectFor.id);
+      } catch {}
       push("ok", `${rejectFor.name} rejected`);
       setRejectFor(null);
       setRejectReason("");
