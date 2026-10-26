@@ -50,10 +50,22 @@ export function isOpportunityFree(
   opp: {
     feeType?: string | null;
     price?: number | null;
+    feeTiers?: { price?: number | null; feeType?: string | null }[] | null;
   } | null
   | undefined,
 ): boolean {
   if (!opp) return true;
+
+  // When pricing tiers exist, the applicant can always pick the cheapest
+  // one — so the listing is only "free" if EVERY tier is free.
+  const tiers = opp.feeTiers ?? [];
+  if (tiers.length > 0) {
+    return tiers.every(
+      (t) => (t.feeType ?? opp.feeType ?? "free") === "free" ||
+        Number(t.price ?? 0) === 0,
+    );
+  }
+
   if (opp.feeType && opp.feeType !== "free") {
     // A paid fee type with a 0 amount is still free in practice.
     return Number(opp.price ?? 0) === 0;

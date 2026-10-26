@@ -155,11 +155,16 @@ export function AdminOpportunities() {
               {(o.feeTiers ?? []).length > 0 && (
                 <div className="mt-2 space-y-1">
                   {(o.feeTiers ?? []).map((t: any, i: number) => (
-                    <div key={t.id ?? i} className="flex items-center justify-between text-xs">
+                    <div key={t.id ?? i} className="flex items-center justify-between gap-2 text-xs">
                       <span className="truncate text-[var(--text-secondary)]">
                         {t.name}
+                        {(t.feeType ?? o.feeType) === "recurring" && t.feePeriod && (
+                          <span className="text-[10px] text-[var(--text-tertiary)]">
+                            {" "}/ {t.feePeriod}
+                          </span>
+                        )}
                       </span>
-                      <span className="font-semibold text-[var(--text-primary)]">
+                      <span className="shrink-0 font-semibold text-[var(--text-primary)]">
                         {Number(t.price ?? 0) === 0
                           ? "Free"
                           : `₨ ${Number(t.price ?? 0).toLocaleString()}`}
@@ -297,6 +302,8 @@ function OppForm({
           id: `ft-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
           name: "Standard",
           price: p.feeType === "free" ? 0 : Number(p.price ?? 0),
+          feeType: p.feeType,
+          feePeriod: p.feeType === "recurring" ? p.feePeriod || "" : "",
           description: "",
           perks: [],
         },
@@ -575,7 +582,7 @@ function OppForm({
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3"
                 >
                   <div className="grid gap-2 sm:grid-cols-12">
-                    <div className="sm:col-span-5">
+                    <div className="sm:col-span-4">
                       <input
                         value={t.name ?? ""}
                         onChange={(e) => updateFeeTier(idx, { name: e.target.value })}
@@ -583,7 +590,7 @@ function OppForm({
                         placeholder="Tier name"
                       />
                     </div>
-                    <div className="sm:col-span-4">
+                    <div className="sm:col-span-3">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-[var(--text-tertiary)]">₨</span>
                         <input
@@ -596,7 +603,28 @@ function OppForm({
                         />
                       </div>
                     </div>
-                    <div className="flex items-center sm:col-span-3 sm:justify-end">
+                    <div className="sm:col-span-3">
+                      <select
+                        value={t.feeType ?? form.feeType}
+                        onChange={(e) =>
+                          updateFeeTier(idx, {
+                            feeType: e.target.value,
+                            // A recurring tier needs its own period.
+                            feePeriod:
+                              e.target.value === "recurring"
+                                ? t.feePeriod || form.feePeriod || ""
+                                : t.feePeriod || "",
+                          })
+                        }
+                        className="input"
+                        title="Fee cadence for this tier"
+                      >
+                        <option value="free">Free</option>
+                        <option value="one_time">One-time fee</option>
+                        <option value="recurring">Recurring</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center sm:col-span-2 sm:justify-end">
                       <button
                         type="button"
                         onClick={() => removeFeeTier(idx)}
@@ -607,6 +635,15 @@ function OppForm({
                       </button>
                     </div>
                   </div>
+
+                  {(t.feeType ?? form.feeType) === "recurring" && (
+                    <input
+                      value={t.feePeriod ?? ""}
+                      onChange={(e) => updateFeeTier(idx, { feePeriod: e.target.value })}
+                      className="input mt-2"
+                      placeholder='Recurring period, e.g. "4 months", "per semester"'
+                    />
+                  )}
 
                   <input
                     value={t.description ?? ""}
@@ -718,7 +755,11 @@ function OppForm({
                     ? []
                     : (finalForm.feeTiers ?? []).map((t: any) => ({
                         ...t,
-                        price: Number(t.price ?? 0),
+                        price:
+                          (t.feeType ?? finalForm.feeType) === "free"
+                            ? 0
+                            : Number(t.price ?? 0),
+                        feeType: t.feeType ?? finalForm.feeType,
                       })),
                 requirements: form.showRequirements
                   ? splitLines(form.requirementsText)

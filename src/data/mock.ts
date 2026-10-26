@@ -76,6 +76,10 @@ export interface OpportunityListing extends BaseListing {
     id: string;
     name: string;
     price: number;
+    /** Per-tier fee cadence. Defaults to the listing's feeType. */
+    feeType?: FeeType;
+    /** e.g. "4 months" — only meaningful when feeType is "recurring". */
+    feePeriod?: string;
     description?: string;
     perks?: string[];
   }[];

@@ -250,26 +250,45 @@ export function OpportunityDetailPage() {
                   Application options
                 </div>
                 <div className="mt-2 space-y-2">
-                  {(opp.feeTiers ?? []).map((t: any) => (
-                    <div
-                      key={t.id ?? t.name}
-                      className="rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium">{t.name}</span>
-                        <span className="text-sm font-semibold">
-                          {Number(t.price ?? 0) === 0
-                            ? "Free"
-                            : formatPrice(Number(t.price ?? 0), opp.currency ?? "PKR")}
-                        </span>
+                  {(opp.feeTiers ?? []).map((t: any) => {
+                    const tierType = t.feeType ?? opp.feeType;
+                    const tierPrice = Number(t.price ?? 0);
+                    return (
+                      <div
+                        key={t.id ?? t.name}
+                        className="rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium">{t.name}</span>
+                          <span
+                            className={
+                              tierPrice === 0
+                                ? "text-sm font-semibold text-emerald-400"
+                                : "text-sm font-semibold"
+                            }
+                          >
+                            {tierPrice === 0
+                              ? "Free"
+                              : tierType === "recurring"
+                              ? `${formatPrice(tierPrice, opp.currency ?? "PKR")}${
+                                  t.feePeriod ? ` / ${t.feePeriod}` : " / period"
+                                }`
+                              : formatPrice(tierPrice, opp.currency ?? "PKR")}
+                          </span>
+                        </div>
+                        {tierType === "recurring" && t.feePeriod && (
+                          <p className="mt-0.5 text-[10px] text-[var(--text-tertiary)]">
+                            Recurring · {t.feePeriod}
+                          </p>
+                        )}
+                        {t.description && (
+                          <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                            {t.description}
+                          </p>
+                        )}
                       </div>
-                      {t.description && (
-                        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                          {t.description}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
