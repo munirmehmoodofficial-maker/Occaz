@@ -123,6 +123,8 @@ export function OpportunityDetailPage() {
             {[
               { Icon: Calendar, label: "Application Deadline", value: formatDateLong(opp.deadline) },
               { Icon: MapPin, label: "Location", value: opp.city },
+              { Icon: Building2, label: "Mode", value: opp.mode },
+              { Icon: Clock, label: "Posted", value: opp.created_at ? formatDateLong(opp.created_at) : "—" },
             ].map(({ Icon, label, value }) => (
               <div key={label} className="flex min-w-0 items-start gap-3">
                 <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--bg-card-hover)] ring-1 ring-[var(--border-subtle)]">
@@ -135,6 +137,93 @@ export function OpportunityDetailPage() {
               </div>
             ))}
           </Stagger>
+
+          {/* Pricing — application fee + options, right after the quick facts */}
+          <FadeIn delay={0.1} className="mt-6 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-[var(--text-tertiary)]">Application fee</span>
+              <span
+                className={
+                  oppFree
+                    ? "text-2xl font-bold text-emerald-400"
+                    : "text-2xl font-bold"
+                }
+              >
+                {oppFree
+                  ? "Free"
+                  : formatPrice(
+                      cheapestTierPrice(opp) ?? opp.price ?? 0,
+                      opp.currency ?? "PKR",
+                    )}
+              </span>
+            </div>
+
+            {oppFree ? (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  This opportunity is free to apply for — no application fee.
+                </span>
+              </div>
+            ) : (
+              (opp.feeTiers ?? []).length > 0 && (
+                <div className="mt-4">
+                  <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                    Application options
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {(opp.feeTiers ?? []).map((t: any) => {
+                      const tierType = t.feeType ?? opp.feeType;
+                      const tierPrice = Number(t.price ?? 0);
+                      return (
+                        <div
+                          key={t.id ?? t.name}
+                          className="rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="truncate text-sm font-medium">{t.name}</span>
+                            <span
+                              className={
+                                tierPrice === 0
+                                  ? "shrink-0 text-sm font-semibold text-emerald-400"
+                                  : "shrink-0 text-sm font-semibold"
+                              }
+                            >
+                              {tierPrice === 0
+                                ? "Free"
+                                : tierType === "recurring"
+                                ? `${formatPrice(tierPrice, opp.currency ?? "PKR")}${
+                                    t.feePeriod ? ` / ${t.feePeriod}` : " / period"
+                                  }`
+                                : formatPrice(tierPrice, opp.currency ?? "PKR")}
+                            </span>
+                          </div>
+                          {tierType === "recurring" && t.feePeriod && (
+                            <p className="mt-0.5 text-[10px] text-[var(--text-tertiary)]">
+                              Recurring · {t.feePeriod}
+                            </p>
+                          )}
+                          {t.description && (
+                            <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                              {t.description}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )
+            )}
+
+            {/* Stipend / value */}
+            <div className="mt-4 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
+              <div className="text-xs text-[var(--text-tertiary)]">Stipend / Value</div>
+              <div className="mt-1 text-base font-semibold">
+                {opp.hasStipend && opp.stipend ? opp.stipend : "Unpaid"}
+              </div>
+            </div>
+          </FadeIn>
 
           <FadeIn delay={0.1} className="mt-10">
             <h2 className="text-xl font-semibold">About</h2>
@@ -268,83 +357,6 @@ export function OpportunityDetailPage() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
           >
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm text-[var(--text-tertiary)]">Application fee</span>
-              <span
-                className={
-                  oppFree
-                    ? "text-2xl font-bold text-emerald-400"
-                    : "text-2xl font-bold"
-                }
-              >
-                {oppFree
-                  ? "Free"
-                  : formatPrice(
-                      cheapestTierPrice(opp) ?? opp.price ?? 0,
-                      opp.currency ?? "PKR",
-                    )}
-              </span>
-            </div>
-
-            {oppFree && (
-              <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
-                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>
-                  This opportunity is free to apply for — no application fee.
-                </span>
-              </div>
-            )}
-
-            {/* Pricing tiers */}
-            {!oppFree && (opp.feeTiers ?? []).length > 0 && (
-              <div className="mt-4">
-                <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
-                  Application options
-                </div>
-                <div className="mt-2 space-y-2">
-                  {(opp.feeTiers ?? []).map((t: any) => {
-                    const tierType = t.feeType ?? opp.feeType;
-                    const tierPrice = Number(t.price ?? 0);
-                    return (
-                      <div
-                        key={t.id ?? t.name}
-                        className="rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm font-medium">{t.name}</span>
-                          <span
-                            className={
-                              tierPrice === 0
-                                ? "text-sm font-semibold text-emerald-400"
-                                : "text-sm font-semibold"
-                            }
-                          >
-                            {tierPrice === 0
-                              ? "Free"
-                              : tierType === "recurring"
-                              ? `${formatPrice(tierPrice, opp.currency ?? "PKR")}${
-                                  t.feePeriod ? ` / ${t.feePeriod}` : " / period"
-                                }`
-                              : formatPrice(tierPrice, opp.currency ?? "PKR")}
-                          </span>
-                        </div>
-                        {tierType === "recurring" && t.feePeriod && (
-                          <p className="mt-0.5 text-[10px] text-[var(--text-tertiary)]">
-                            Recurring · {t.feePeriod}
-                          </p>
-                        )}
-                        {t.description && (
-                          <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                            {t.description}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             <div className="mt-5 flex items-center gap-2 text-sm text-amber-400">
               <Calendar className="h-4 w-4" />
               <span>Deadline approaching</span>
@@ -382,23 +394,9 @@ export function OpportunityDetailPage() {
               </div>
             </div>
 
-            <div className="mt-6 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
-              <div className="text-xs text-[var(--text-tertiary)]">Stipend / Value</div>
-              <div className="mt-1 text-base font-semibold">
-                {opp.hasStipend && opp.stipend ? opp.stipend : "Unpaid"}
-              </div>
-            </div>
-
-            <div className="mt-3 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
-              <div className="text-xs text-[var(--text-tertiary)]">Application fee</div>
-              <div className="mt-1 text-base font-semibold">
-                {oppFree
-                  ? "Free to apply"
-                  : opp.feeType === "one_time"
-                  ? `One-time · ${formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}`
-                  : `Recurring · ${formatPrice(opp.price ?? 0, opp.currency ?? "PKR")} ${opp.feePeriod ? `/ ${opp.feePeriod}` : "/ period"}`}
-              </div>
-            </div>
+            {/* The application fee, stipend and application options all live
+                in the PRICING card in the main column — don't repeat them
+                here or the page contradicts itself. */}
           </motion.aside>
         </div>
       </div>

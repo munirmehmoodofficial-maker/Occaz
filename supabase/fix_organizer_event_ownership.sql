@@ -189,6 +189,48 @@ update public.opportunities op
 
 
 -- ============================================================
+-- 5c) Attribute listings that carry a PLACEHOLDER organizer name
+--     ("Occaz", "admin", "unknown", "test") and have no owner.
+--
+--     These were created in the admin panel, which previously only
+--     wrote the `organizer` text and never set `organizer_id`. If there
+--     is exactly ONE registered organizer, it is safe to attribute
+--     them to that organizer. With more than one registered organizer
+--     we leave them alone — guessing the wrong owner is worse than
+--     showing the placeholder, and the admin owner picker can fix
+--     them one by one.
+-- ============================================================
+
+do $$
+declare
+  v_single uuid;
+begin
+  select id into v_single
+    from public.organizer_profiles
+   order by created_at
+   limit 1;
+
+  if (select count(*) from public.organizer_profiles) = 1 and v_single is not null then
+    update public.events e
+       set organizer_id = v_single,
+           organizer = (select display_name from public.organizer_profiles where id = v_single)
+     where e.organizer_id is null
+       and lower(coalesce(e.organizer, '')) in ('occaz', 'admin', 'unknown', 'test', 'none');
+
+    update public.opportunities op
+       set organizer_id = v_single,
+           organizer = (select display_name from public.organizer_profiles where id = v_single)
+     where op.organizer_id is null
+       and lower(coalesce(op.organizer, '')) in ('occaz', 'admin', 'unknown', 'test', 'none');
+
+    raise notice 'Attributed placeholder listings to the single organizer %', v_single;
+  else
+    raise notice
+      'Multiple organizers registered — placeholder listings left alone. Set them via the admin owner picker.';
+  end if;
+end $$;
+
+-- ============================================================
 -- 6) upsert_event() RPC — creates/updates an event with the
 --    organizer_id and organizer brand name set correctly.
 --    SECURITY DEFINER so it works regardless of RLS state.
