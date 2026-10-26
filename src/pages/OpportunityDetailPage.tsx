@@ -48,7 +48,7 @@ export function OpportunityDetailPage() {
     .slice(0, 4);
 
   return (
-    <div className="pb-16">
+    <div className="pb-24 lg:pb-16">
       <section className="relative h-[360px] overflow-hidden md:h-[440px]">
         <motion.div
           initial={{ scale: 1.1 }}
@@ -105,7 +105,9 @@ export function OpportunityDetailPage() {
       </section>
 
       <div className="container mt-10 grid gap-10 lg:grid-cols-[1fr_360px]">
-        <div>
+        {/* min-w-0: prevents the horizontally-scrolling gallery from
+            forcing this grid column wider than the viewport. */}
+        <div className="min-w-0">
           <Stagger className="grid gap-3 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)] sm:grid-cols-2">
             {[
               { Icon: Calendar, label: "Application Deadline", value: formatDateLong(opp.deadline) },
@@ -214,7 +216,7 @@ export function OpportunityDetailPage() {
           )}
         </div>
 
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <motion.aside
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

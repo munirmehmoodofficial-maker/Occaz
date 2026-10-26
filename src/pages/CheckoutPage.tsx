@@ -161,7 +161,7 @@ export function CheckoutPage() {
         </p>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             {/* Payment method */}
             <div className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
               {isFree ? (
@@ -318,7 +318,7 @@ export function CheckoutPage() {
           </div>
 
           {/* Summary */}
-          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
               <img
                 src={draft.event.image}

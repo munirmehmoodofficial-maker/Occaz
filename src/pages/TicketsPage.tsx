@@ -112,7 +112,7 @@ export function TicketsPage() {
                   <div className="grid sm:grid-cols-[1fr_auto]">
                     <Link
                       to={`/events/${event.id}`}
-                      className="relative aspect-[16/9] sm:aspect-auto"
+                      className="relative min-w-0 aspect-[16/9] sm:aspect-auto"
                     >
                       <img
                         src={event.image}

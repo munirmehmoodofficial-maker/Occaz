@@ -37,6 +37,11 @@ body {
   min-height: 100vh;
   background-image: var(--hero-gradient);
   background-attachment: fixed;
+  /* Safety net: a single over-wide descendant (e.g. a grid item holding a
+     horizontal scroller without min-w-0) must never make the WHOLE page
+     scroll sideways on mobile. Individual components can still scroll
+     horizontally inside their own overflow-x-auto containers. */
+  overflow-x: hidden;
 }
 
 #root {

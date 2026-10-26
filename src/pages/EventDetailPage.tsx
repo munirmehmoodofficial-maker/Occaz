@@ -70,7 +70,9 @@ export function EventDetailPage() {
     : 0;
 
   return (
-    <div className="pb-16">
+    // pb-24 on mobile so the last card (the Organizer card) clears the
+    // fixed bottom navigation bar.
+    <div className="pb-24 lg:pb-16">
       {/* Hero */}
       <section className="relative h-[420px] overflow-hidden md:h-[520px]">
         <motion.div
@@ -114,7 +116,7 @@ export function EventDetailPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.35 }}
-              className="mt-3 text-base text-[var(--text-secondary)] md:text-lg"
+              className="mt-3 break-words text-base text-[var(--text-secondary)] md:text-lg"
             >
               {formatDateLong(event.date)} · {event.time} · {event.venue}
             </motion.p>
@@ -123,7 +125,10 @@ export function EventDetailPage() {
       </section>
 
       <div className="container mt-10 grid gap-10 lg:grid-cols-[1fr_360px]">
-        <div>
+        {/* min-w-0: grid items default to min-width:auto, so without this the
+            horizontally-scrolling gallery below forces this column wider than
+            the viewport and the whole page scrolls sideways on mobile. */}
+        <div className="min-w-0">
           {/* Quick facts row */}
           <Stagger className="grid gap-3 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)] sm:grid-cols-2 md:grid-cols-4">
             {[
@@ -136,13 +141,13 @@ export function EventDetailPage() {
                 value: `${event.attendees.toLocaleString()} / ${event.capacity.toLocaleString()}`,
               },
             ].map(({ Icon, label, value }) => (
-              <div key={label} className="flex items-start gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--bg-card-hover)] ring-1 ring-[var(--border-subtle)]">
+              <div key={label} className="flex min-w-0 items-start gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--bg-card-hover)] ring-1 ring-[var(--border-subtle)]">
                   <Icon className="h-4 w-4 text-accent-400" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs text-[var(--text-tertiary)]">{label}</div>
-                  <div className="mt-0.5 text-sm font-medium">{value}</div>
+                  <div className="mt-0.5 truncate text-sm font-medium">{value}</div>
                 </div>
               </div>
             ))}
@@ -220,14 +225,14 @@ export function EventDetailPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3 rounded-xl bg-[var(--bg-card)]/90 p-4 ring-1 ring-[var(--border-default)] backdrop-blur">
-                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-accent-500/20 ring-1 ring-accent-500/30">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-accent-500/20 ring-1 ring-accent-500/30">
                     <MapPin className="h-5 w-5 text-accent-400" />
                   </div>
-                  <div>
-                    <div className="font-medium">{event.venue}</div>
-                    <div className="text-sm text-[var(--text-secondary)]">{event.city}</div>
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{event.venue}</div>
+                    <div className="truncate text-sm text-[var(--text-secondary)]">{event.city}</div>
                   </div>
-                  <button className="ml-auto rounded-full bg-[var(--bg-card-hover)] px-3 py-1.5 text-xs ring-1 ring-[var(--border-subtle)] hover:bg-[var(--bg-card)]">
+                  <button className="ml-auto shrink-0 rounded-full bg-[var(--bg-card-hover)] px-3 py-1.5 text-xs ring-1 ring-[var(--border-subtle)] hover:bg-[var(--bg-card)]">
                     Open in maps
                   </button>
                 </div>
@@ -271,7 +276,10 @@ export function EventDetailPage() {
         </div>
 
         {/* Desktop sticky ticket panel */}
-        <FadeIn delay={0.3} className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
+        <FadeIn
+          delay={0.3}
+          className="hidden min-w-0 lg:block lg:sticky lg:top-24 lg:self-start"
+        >
           <TicketPanel
             event={event}
             selectedTicket={selectedTicket}
@@ -395,10 +403,10 @@ function TicketPanel({
                 onChange={() => setSelectedTicket(t.id)}
                 className="mt-1 accent-accent-500"
               />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{t.name}</span>
-                  <span className="font-semibold">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate font-medium">{t.name}</span>
+                  <span className="shrink-0 font-semibold">
                     {formatPrice(t.price, event.currency)}
                   </span>
                 </div>
