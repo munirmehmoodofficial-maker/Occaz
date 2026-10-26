@@ -146,6 +146,7 @@ function rowToOpp(r: OppRow): OpportunityListing {
     category: (r.category as any) ?? "Scholarships",
     organizer: r.organizer ?? "",
     organizerId: (r as any).organizer_id ?? undefined,
+    createdAt: r.created_at ?? undefined,
     city: r.city ?? "",
     location: r.city ?? "",
     mode: (r.mode as any) ?? "Online",

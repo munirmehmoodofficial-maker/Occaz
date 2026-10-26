@@ -68,6 +68,8 @@ export interface OpportunityListing extends BaseListing {
   price?: number; // 0 = free
   currency?: string;
   feeType: FeeType;
+  /** ISO timestamp the listing was created. */
+  createdAt?: string;
   /**
    * Optional multiple application-fee options. When non-empty these are
    * shown as pricing tiers instead of the single feeType/price pair.

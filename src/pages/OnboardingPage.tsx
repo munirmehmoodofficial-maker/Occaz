@@ -466,6 +466,10 @@ function InterestsStep({
 }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [city, setCity] = useState("");
+  // InterestsStep is a separate component from OnboardingPage, so it needs
+  // its own auth handle. Without this, `refreshProfile` is an undefined
+  // identifier and the commit step throws a ReferenceError.
+  const { refreshProfile } = useAuth();
 
   function toggle(id: string) {
     setPicked((p) =>

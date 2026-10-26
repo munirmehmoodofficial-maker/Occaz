@@ -65,7 +65,7 @@ const PAKISTAN_CITIES = [
 
 export function BecomeOrganizerPage() {
   const navigate = useNavigate();
-  const { user, signUp, signIn, refresh } = useAuth();
+  const { user, signUp, signIn, refreshProfile } = useAuth();
   const { push } = useToast();
 
   const [step, setStep] = useState<Step>(1);
@@ -177,7 +177,7 @@ export function BecomeOrganizerPage() {
           return;
         }
       }
-      await refresh();
+      await refreshProfile();
       setStep(2);
     } finally {
       setBusy(false);

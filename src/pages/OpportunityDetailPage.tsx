@@ -3,6 +3,7 @@ import {
   Bookmark,
   Share2,
   Calendar,
+  Clock,
   MapPin,
   Building2,
   CheckCircle2,
@@ -124,7 +125,7 @@ export function OpportunityDetailPage() {
               { Icon: Calendar, label: "Application Deadline", value: formatDateLong(opp.deadline) },
               { Icon: MapPin, label: "Location", value: opp.city },
               { Icon: Building2, label: "Mode", value: opp.mode },
-              { Icon: Clock, label: "Posted", value: opp.created_at ? formatDateLong(opp.created_at) : "—" },
+              { Icon: Clock, label: "Posted", value: opp.createdAt ? formatDateLong(opp.createdAt) : "—" },
             ].map(({ Icon, label, value }) => (
               <div key={label} className="flex min-w-0 items-start gap-3">
                 <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--bg-card-hover)] ring-1 ring-[var(--border-subtle)]">
