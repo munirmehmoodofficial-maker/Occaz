@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
 import {
   Bookmark,
   Share2,
@@ -14,6 +15,7 @@ import {
 import { motion } from "framer-motion";
 import { formatDateLong, formatPrice } from "../data/mock";
 import { useOpportunities, useOpportunity, useListingsLoading } from "../hooks/useListings";
+import { useToast } from "../lib/toast";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { OpportunityCardGrid } from "../components/ui/CardGrid";
@@ -21,7 +23,7 @@ import { ImageGallery } from "../components/ui/ImageGallery";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { SafeImage } from "../components/ui/SafeImage";
 import { useSaved } from "../hooks/useSaved";
-import { isOpportunityFree, cheapestTierPrice } from "../lib/freePricing";
+import { cheapestTierPrice } from "../lib/freePricing";
 import { FadeIn, Stagger } from "../components/motion/Motion";
 
 export function OpportunityDetailPage() {
@@ -30,9 +32,8 @@ export function OpportunityDetailPage() {
   const opp = useOpportunity(id || "");
   const opportunities = useOpportunities();
   const { isOpportunitySaved, toggleOpportunity } = useSaved();
+  const { push } = useToast();
   const listingsLoading = useListingsLoading();
-  // Free opportunities never ask the applicant for money.
-  const oppFree = isOpportunityFree(opp);
 
   if (!opp) {
     // Wait for the store's first fetch before declaring it missing —
@@ -58,6 +59,31 @@ export function OpportunityDetailPage() {
   const related = opportunities
     .filter((o) => o.id !== opp.id && o.category === opp.category)
     .slice(0, 4);
+
+  // Which pricing tier the applicant picked. Defaults to the first tier
+  // so the "Apply" button always has a target.
+  const feeTiers = opp.feeTiers ?? [];
+  const [selectedTierId, setSelectedTierId] = useState<string | undefined>(
+    feeTiers[0]?.id,
+  );
+  const selectedTier =
+    feeTiers.find((t: any) => t.id === selectedTierId) ?? feeTiers[0] ?? null;
+  // The tier's own form if it has one, otherwise the listing-level URL.
+  const applyUrl = (selectedTier as any)?.applyUrl || opp.applyUrl || "";
+
+  // The price actually being charged: the picked tier, else the cheapest.
+  const activePrice = selectedTier
+    ? Number((selectedTier as any).price ?? 0)
+    : (cheapestTierPrice(opp) ?? opp.price ?? 0);
+  const activeTierType = selectedTier
+    ? ((selectedTier as any).feeType ?? opp.feeType)
+    : opp.feeType;
+  const activeTierPeriod = selectedTier
+    ? (selectedTier as any).feePeriod
+    : opp.feePeriod;
+  const activeIsFree = activePrice === 0;
+  // The whole pricing block can be hidden by the admin.
+  const showPricing = opp.showFee !== false;
 
   return (
     <div className="pb-24 lg:pb-16">
@@ -139,50 +165,68 @@ export function OpportunityDetailPage() {
             ))}
           </Stagger>
 
-          {/* Pricing — application fee + options, right after the quick facts */}
-          <FadeIn delay={0.1} className="mt-6 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm text-[var(--text-tertiary)]">Application fee</span>
-              <span
-                className={
-                  oppFree
-                    ? "text-2xl font-bold text-emerald-400"
-                    : "text-2xl font-bold"
-                }
-              >
-                {oppFree
-                  ? "Free"
-                  : formatPrice(
-                      cheapestTierPrice(opp) ?? opp.price ?? 0,
-                      opp.currency ?? "PKR",
-                    )}
-              </span>
-            </div>
-
-            {oppFree ? (
-              <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
-                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>
-                  This opportunity is free to apply for — no application fee.
+          {/* Pricing — application fee, selectable tiers and the Apply button */}
+          {showPricing && (
+            <FadeIn delay={0.1} className="mt-6 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm text-[var(--text-tertiary)]">Application fee</span>
+                <span
+                  className={
+                    activeIsFree
+                      ? "text-2xl font-bold text-emerald-400"
+                      : "text-2xl font-bold"
+                  }
+                >
+                  {activeIsFree
+                    ? "Free"
+                    : formatPrice(activePrice, opp.currency ?? "PKR")}
+                  {!activeIsFree && activeTierType === "recurring" && (
+                    <span className="text-sm font-medium text-[var(--text-secondary)]">
+                      {" "}
+                      / {activeTierPeriod || "period"}
+                    </span>
+                  )}
                 </span>
               </div>
-            ) : (
-              (opp.feeTiers ?? []).length > 0 && (
+
+              {feeTiers.length > 0 ? (
                 <div className="mt-4">
                   <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
                     Application options
                   </div>
                   <div className="mt-2 space-y-2">
-                    {(opp.feeTiers ?? []).map((t: any) => {
+                    {feeTiers.map((t: any) => {
                       const tierType = t.feeType ?? opp.feeType;
                       const tierPrice = Number(t.price ?? 0);
+                      const active = (selectedTier?.id ?? null) === t.id;
                       return (
-                        <div
+                        <button
                           key={t.id ?? t.name}
-                          className="rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]"
+                          type="button"
+                          onClick={() => setSelectedTierId(t.id)}
+                          className={
+                            "w-full rounded-xl p-3 text-left ring-1 transition " +
+                            (active
+                              ? "bg-accent-500/15 ring-accent-500/40"
+                              : "bg-[var(--bg-elevated)] ring-[var(--border-subtle)] hover:ring-[var(--border-default)]")
+                          }
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <span className="truncate text-sm font-medium">{t.name}</span>
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span
+                                className={
+                                  "grid h-4 w-4 shrink-0 place-items-center rounded-full ring-1 " +
+                                  (active
+                                    ? "bg-accent-500 ring-accent-500"
+                                    : "ring-[var(--border-default)]")
+                                }
+                              >
+                                {active && (
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                                )}
+                              </span>
+                              <span className="truncate text-sm font-medium">{t.name}</span>
+                            </span>
                             <span
                               className={
                                 tierPrice === 0
@@ -199,32 +243,121 @@ export function OpportunityDetailPage() {
                                 : formatPrice(tierPrice, opp.currency ?? "PKR")}
                             </span>
                           </div>
-                          {tierType === "recurring" && t.feePeriod && (
-                            <p className="mt-0.5 text-[10px] text-[var(--text-tertiary)]">
-                              Recurring · {t.feePeriod}
-                            </p>
-                          )}
                           {t.description && (
-                            <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                            <p className="mt-1 pl-6 text-xs text-[var(--text-tertiary)]">
                               {t.description}
                             </p>
                           )}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
                 </div>
-              )
-            )}
+              ) : (
+                activeIsFree && (
+                  <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>
+                      This opportunity is free to apply for — no application fee.
+                    </span>
+                  </div>
+                )
+              )}
 
-            {/* Stipend / value */}
-            <div className="mt-4 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
-              <div className="text-xs text-[var(--text-tertiary)]">Stipend / Value</div>
-              <div className="mt-1 text-base font-semibold">
-                {opp.hasStipend && opp.stipend ? opp.stipend : "Unpaid"}
+              {/* Stipend / value — hidden when the admin turned it off */}
+              {opp.showStipend !== false && (
+                <div className="mt-4 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
+                  <div className="text-xs text-[var(--text-tertiary)]">Stipend / Value</div>
+                  <div className="mt-1 text-base font-semibold">
+                    {opp.hasStipend && opp.stipend ? opp.stipend : "Unpaid"}
+                  </div>
+                </div>
+              )}
+
+              {/* Apply / Save / Share live with the pricing, not at the bottom */}
+              <div className="mt-5 space-y-2">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  disabled={!opp.registrationsOpen}
+                  leftIcon={<ArrowUpRight className="h-4 w-4" />}
+                  onClick={() => {
+                    if (applyUrl) window.open(applyUrl, "_blank");
+                    else
+                      push({
+                        tone: "red",
+                        title: "No application link",
+                        message: "This opportunity has no application URL yet.",
+                      });
+                  }}
+                >
+                  {!opp.registrationsOpen
+                    ? "Applications closed"
+                    : activeIsFree
+                    ? "Apply for free"
+                    : "Apply now"}
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    fullWidth
+                    leftIcon={<Bookmark className="h-4 w-4" />}
+                    onClick={() => toggleOpportunity(opp.id)}
+                  >
+                    {saved ? "Saved" : "Save"}
+                  </Button>
+                  <Button variant="outline" size="md" leftIcon={<Share2 className="h-4 w-4" />}>
+                    Share
+                  </Button>
+                </div>
               </div>
-            </div>
-          </FadeIn>
+            </FadeIn>
+          )}
+
+          {/* When the pricing block is hidden, the apply actions still need
+              to live somewhere — put them in their own card. */}
+          {!showPricing && (
+            <FadeIn delay={0.1} className="mt-6 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
+              <div className="space-y-2">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  disabled={!opp.registrationsOpen}
+                  leftIcon={<ArrowUpRight className="h-4 w-4" />}
+                  onClick={() => {
+                    if (applyUrl) window.open(applyUrl, "_blank");
+                    else
+                      push({
+                        tone: "red",
+                        title: "No application link",
+                        message: "This opportunity has no application URL yet.",
+                      });
+                  }}
+                >
+                  {!opp.registrationsOpen
+                    ? "Applications closed"
+                    : "Apply now"}
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    fullWidth
+                    leftIcon={<Bookmark className="h-4 w-4" />}
+                    onClick={() => toggleOpportunity(opp.id)}
+                  >
+                    {saved ? "Saved" : "Save"}
+                  </Button>
+                  <Button variant="outline" size="md" leftIcon={<Share2 className="h-4 w-4" />}>
+                    Share
+                  </Button>
+                </div>
+              </div>
+            </FadeIn>
+          )}
 
           <FadeIn delay={0.1} className="mt-10">
             <h2 className="text-xl font-semibold">About</h2>
@@ -351,6 +484,9 @@ export function OpportunityDetailPage() {
           )}
         </div>
 
+        {/* Sidebar — deadline reminder only. The fee, tiers, stipend and the
+            Apply/Save/Share actions all live in the PRICING card in the
+            main column now. */}
         <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <motion.aside
             initial={{ opacity: 0, y: 16 }}
@@ -358,46 +494,14 @@ export function OpportunityDetailPage() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]"
           >
-            <div className="mt-5 flex items-center gap-2 text-sm text-amber-400">
+            <div className="flex items-center gap-2 text-sm text-amber-400">
               <Calendar className="h-4 w-4" />
               <span>Deadline approaching</span>
             </div>
             <div className="mt-2 text-xl font-semibold">{formatDateLong(opp.deadline)}</div>
-
-            <div className="mt-6 space-y-2">
-              <Button
-                variant="secondary"
-                size="lg"
-                fullWidth
-                disabled={!opp.registrationsOpen}
-                leftIcon={<ArrowUpRight className="h-4 w-4" />}
-                onClick={() => window.open(opp.applyUrl, "_blank")}
-              >
-                {!opp.registrationsOpen
-                  ? "Applications closed"
-                  : oppFree
-                  ? "Apply for free"
-                  : "Apply now"}
-              </Button>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="md"
-                  fullWidth
-                  leftIcon={<Bookmark className="h-4 w-4" />}
-                  onClick={() => toggleOpportunity(opp.id)}
-                >
-                  {saved ? "Saved" : "Save"}
-                </Button>
-                <Button variant="outline" size="md" leftIcon={<Share2 className="h-4 w-4" />}>
-                  Share
-                </Button>
-              </div>
-            </div>
-
-            {/* The application fee, stipend and application options all live
-                in the PRICING card in the main column — don't repeat them
-                here or the page contradicts itself. */}
+            <p className="mt-2 text-sm text-[var(--text-tertiary)]">
+              Applications close on {formatDateLong(opp.deadline)}.
+            </p>
           </motion.aside>
         </div>
       </div>

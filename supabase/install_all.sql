@@ -472,5 +472,22 @@ create trigger trg_sync_is_organizer
   for each row
   execute function public.sync_is_organizer_flag();
 
+-- ============================================================
+-- 12) OPPORTUNITY VISIBILITY FLAGS
+-- Most opportunities have no stipend, and not all show an application
+-- fee. These flags let the admin hide those blocks entirely instead
+-- of showing a misleading "Unpaid" / "Rs 0".
+-- ============================================================
+
+do $$
+begin
+  alter table public.opportunities
+    add column if not exists show_stipend boolean not null default true;
+  alter table public.opportunities
+    add column if not exists show_fee boolean not null default true;
+exception when others then
+  raise notice 'opportunities visibility flags skipped: %', SQLERRM;
+end $$;
+
 -- Done! All set.
 select 'Occaz setup complete' as status;

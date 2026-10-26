@@ -135,7 +135,7 @@ export function OpportunityCard({
             </div>
           </div>
 
-          {opp.stipend && (
+          {opp.showStipend !== false && opp.stipend && (
             <div className="mt-1 inline-flex w-fit max-w-full items-center gap-2 truncate rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/25">
               {opp.stipend}
             </div>
@@ -143,28 +143,31 @@ export function OpportunityCard({
 
           <div className="mt-auto flex items-center justify-between gap-2 pt-3">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              {/* Price — plain bold text, matching the event card */}
-              <span
-                className={clsx(
-                  "text-sm font-semibold",
-                  isOpportunityFree(opp)
-                    ? "text-emerald-400"
-                    : "text-[var(--text-primary)]",
-                )}
-              >
-                {isOpportunityFree(opp)
-                  ? "Free"
-                  : formatPrice(
-                      cheapestTierPrice(opp) ?? opp.price ?? 0,
-                      opp.currency ?? "PKR",
-                    )}
-                {opp.feeType === "recurring" && !isOpportunityFree(opp) && (
-                  <span className="text-[10px] font-normal opacity-75">
-                    /{opp.feePeriod || "period"}
-                  </span>
-                )}
-              </span>
-              {opp.hasStipend && opp.stipend && (
+              {/* Price — plain bold text, matching the event card.
+                  Hidden entirely when the admin turned the fee off. */}
+              {opp.showFee !== false && (
+                <span
+                  className={clsx(
+                    "text-sm font-semibold",
+                    isOpportunityFree(opp)
+                      ? "text-emerald-400"
+                      : "text-[var(--text-primary)]",
+                  )}
+                >
+                  {isOpportunityFree(opp)
+                    ? "Free"
+                    : formatPrice(
+                        cheapestTierPrice(opp) ?? opp.price ?? 0,
+                        opp.currency ?? "PKR",
+                      )}
+                  {opp.feeType === "recurring" && !isOpportunityFree(opp) && (
+                    <span className="text-[10px] font-normal opacity-75">
+                      /{opp.feePeriod || "period"}
+                    </span>
+                  )}
+                </span>
+              )}
+              {opp.showStipend !== false && opp.hasStipend && opp.stipend && (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-500/25">
                   + Stipend
                 </span>

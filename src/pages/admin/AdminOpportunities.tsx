@@ -310,6 +310,8 @@ function OppForm({
     applyUrl: initial?.applyUrl || "",
     stipend: initial?.stipend || "",
     hasStipend: initial?.hasStipend ?? !!initial?.stipend,
+    showStipend: initial?.showStipend !== false,
+    showFee: initial?.showFee !== false,
     price: initial?.price ?? 0,
     currency: initial?.currency || "PKR",
     feeType: initial?.feeType || "free",
@@ -342,6 +344,7 @@ function OppForm({
           feePeriod: p.feeType === "recurring" ? p.feePeriod || "" : "",
           description: "",
           perks: [],
+          applyUrl: "",
         },
       ],
     }));
@@ -554,7 +557,7 @@ function OppForm({
             )}
           </Field>
 
-          {/* Stipend toggle + amount */}
+          {/* Stipend toggle + amount + visibility */}
           <Field label="Stipend / value">
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm">
@@ -580,6 +583,27 @@ function OppForm({
                   className="input"
                 />
               )}
+
+              {/* Visibility — most opportunities have no stipend at all, so
+                  the block can be hidden entirely instead of showing
+                  a misleading "Unpaid". */}
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.showStipend}
+                  onChange={(e) =>
+                    setForm({ ...form, showStipend: e.target.checked })
+                  }
+                  className="mt-0.5 h-4 w-4 accent-accent-500"
+                />
+                <span>
+                  Show the stipend / value block on the listing
+                  <span className="mt-0.5 block text-xs text-[var(--text-tertiary)]">
+                    Turn off to hide it completely — the card won&apos;t appear
+                    at all.
+                  </span>
+                </span>
+              </label>
             </div>
           </Field>
 
@@ -632,6 +656,23 @@ function OppForm({
                   className="input"
                 />
               )}
+
+              {/* Visibility — hide the whole pricing block when the fee
+                  isn't relevant to the listing. */}
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.showFee}
+                  onChange={(e) => setForm({ ...form, showFee: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 accent-accent-500"
+                />
+                <span>
+                  Show the application fee on the listing
+                  <span className="mt-0.5 block text-xs text-[var(--text-tertiary)]">
+                    Turn off to hide the fee and pricing options entirely.
+                  </span>
+                </span>
+              </label>
             </div>
           </Field>
 
@@ -718,6 +759,12 @@ function OppForm({
                     onChange={(e) => updateFeeTier(idx, { description: e.target.value })}
                     className="input mt-2"
                     placeholder="What's included in this tier (optional)"
+                  />
+                  <input
+                    value={t.applyUrl ?? ""}
+                    onChange={(e) => updateFeeTier(idx, { applyUrl: e.target.value })}
+                    className="input mt-2"
+                    placeholder="Application link for this tier (optional — falls back to the main application URL)"
                   />
                 </div>
               ))}
@@ -828,7 +875,12 @@ function OppForm({
                             ? 0
                             : Number(t.price ?? 0),
                         feeType: t.feeType ?? finalForm.feeType,
+                        applyUrl: (t.applyUrl ?? "").trim(),
                       })),
+                // Visibility flags — hide the stipend / fee blocks entirely
+                // when the admin has turned them off.
+                showStipend: finalForm.showStipend !== false,
+                showFee: finalForm.showFee !== false,
                 requirements: form.showRequirements
                   ? splitLines(form.requirementsText)
                   : [],

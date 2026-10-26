@@ -73,6 +73,8 @@ type OppRow = {
   currency: string | null;
   fee_type: string | null;
   fee_tiers: any[] | null;
+  show_stipend: boolean | null;
+  show_fee: boolean | null;
   fee_period: string | null;
   requirements: string[] | null;
   eligibility: string[] | null;
@@ -158,6 +160,8 @@ function rowToOpp(r: OppRow): OpportunityListing {
     hasStipend: r.has_stipend ?? !!r.stipend,
     feeType: ((r.fee_type as any) || "free") as "free" | "one_time" | "recurring",
     feeTiers: Array.isArray(r.fee_tiers) ? r.fee_tiers : [],
+    showStipend: r.show_stipend !== false,
+    showFee: r.show_fee !== false,
     feePeriod: r.fee_period ?? "",
     registrationsOpen: r.registrations_open ?? true,
     price: Number(r.price ?? 0),
@@ -216,6 +220,8 @@ function oppToRow(o: Partial<OpportunityListing>): any {
   if (o.currency !== undefined) r.currency = o.currency;
   if (o.feeType !== undefined) r.fee_type = o.feeType;
   if (o.feeTiers !== undefined) r.fee_tiers = o.feeTiers;
+  if (o.showStipend !== undefined) r.show_stipend = o.showStipend;
+  if (o.showFee !== undefined) r.show_fee = o.showFee;
   if (o.feePeriod !== undefined) r.fee_period = o.feePeriod;
   // Always set registrations_open — boolean (default true if not provided)
   r.registrations_open = o.registrationsOpen !== undefined ? !!o.registrationsOpen : true;

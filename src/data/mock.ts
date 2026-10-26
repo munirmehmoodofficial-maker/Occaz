@@ -84,7 +84,13 @@ export interface OpportunityListing extends BaseListing {
     feePeriod?: string;
     description?: string;
     perks?: string[];
+    /** Where this tier's application form lives. Falls back to applyUrl. */
+    applyUrl?: string;
   }[];
+  /** Show the stipend / value block. Not every opportunity has one. */
+  showStipend?: boolean;
+  /** Show the application fee / pricing block. */
+  showFee?: boolean;
   /** Free-text period for recurring fees (e.g. "4 months", "per semester") */
   feePeriod?: string;
   gallery?: string[];
