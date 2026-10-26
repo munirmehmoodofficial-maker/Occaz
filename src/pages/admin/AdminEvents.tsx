@@ -9,6 +9,7 @@ import { ImageUploader, type ImageItem } from "../../components/admin/ImageUploa
 import { useSubscription } from "../../hooks/useSubscription";
 import { useAuth } from "../../lib/auth";
 import { useCategories } from "../../hooks/useCategories";
+import { supabase } from "../../lib/supabase";
 
 export function AdminEvents() {
   const { events, addEvent, updateEvent, removeEvent } = useDataStore();
@@ -311,6 +312,34 @@ function EventForm({
   onClose: () => void;
   onSave: (data: any) => void;
 }) {
+  // Registered organizers — so an admin-created event can be linked to a
+  // real owner and show up in that organizer's dashboard.
+  const [organizerOptions, setOrganizerOptions] = useState<
+    { id: string; name: string }[]
+  >([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("organizer_profiles")
+          .select("id, display_name")
+          .order("display_name", { ascending: true });
+        if (!alive) return;
+        setOrganizerOptions(
+          (data ?? [])
+            .map((o: any) => ({ id: o.id, name: o.display_name }))
+            .filter((o: { id: string; name: string }) => !!o.id && !!o.name),
+        );
+      } catch {
+        // Non-fatal — the free-text organizer field still works.
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // Live categories from the admin-managed `categories` table, with a
   // mock-data fallback so the dropdown is never empty.
   const dbCats = useCategories("event");
@@ -331,6 +360,7 @@ function EventForm({
     venue: initial?.venue || "",
     city: initial?.city || "",
     organizer: initial?.organizer || "",
+    organizerId: initial?.organizerId ?? undefined,
     image: initial?.image || "https://picsum.photos/seed/new/1200/800",
     price: initial?.price ?? 0,
     isFree: Number(initial?.price ?? 0) === 0,
@@ -528,7 +558,36 @@ function EventForm({
               value={form.organizer}
               onChange={(e) => update("organizer", e.target.value)}
               className="input"
+              placeholder="Type or pick a registered organizer"
             />
+            {organizerOptions.length > 0 && (
+              <select
+                value={form.organizerId ?? ""}
+                onChange={(e) => {
+                  const id = e.target.value || undefined;
+                  const opt = organizerOptions.find((o) => o.id === id);
+                  setForm((p) => ({
+                    ...p,
+                    organizerId: id,
+                    // Keep the display name in sync with the owner.
+                    organizer: opt ? opt.name : p.organizer,
+                  }));
+                }}
+                className="input mt-2"
+              >
+                <option value="">— Not linked to an organizer —</option>
+                {organizerOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {form.organizerId && (
+              <p className="mt-1.5 text-xs text-emerald-400">
+                Linked — this event will appear in that organizer's dashboard.
+              </p>
+            )}
           </Field>
           <Field label="Price (PKR)">
             <input

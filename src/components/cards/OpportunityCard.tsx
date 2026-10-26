@@ -6,7 +6,7 @@ import type { OpportunityListing } from "../../data/mock";
 import { formatDate, formatPrice } from "../../data/mock";
 import { Badge } from "../ui/Badge";
 import { SafeImage } from "../ui/SafeImage";
-import { isOpportunityFree } from "../../lib/freePricing";
+import { isOpportunityFree, cheapestTierPrice } from "../../lib/freePricing";
 
 const toneFor = (cat: string) => {
   const map: Record<
@@ -146,7 +146,10 @@ export function OpportunityCard({
                 </span>
               ) : (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300 ring-1 ring-accent-500/25">
-                  {formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}
+                  {formatPrice(
+                    cheapestTierPrice(opp) ?? opp.price ?? 0,
+                    opp.currency ?? "PKR",
+                  )}
                   {opp.feeType === "recurring" && (
                     <span className="text-[10px] font-normal opacity-75">
                       /{opp.feePeriod || "period"}

@@ -15,3 +15,12 @@ export function useEvent(id: string | undefined) {
 export function useOpportunity(id: string | undefined) {
   return useDataStore().opportunities.find((o) => o.id === id);
 }
+
+/**
+ * True while the listings store is still doing its first fetch.
+ * Detail pages must wait for this before showing a "not found" state,
+ * otherwise they flash the error before the data arrives.
+ */
+export function useListingsLoading() {
+  return useDataStore().loading;
+}

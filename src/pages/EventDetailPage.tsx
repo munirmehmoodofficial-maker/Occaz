@@ -12,11 +12,12 @@ import {
   Building2,
   Star,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { formatDateLong, formatPrice } from "../data/mock";
-import { useEvents, useEvent } from "../hooks/useListings";
+import { useEvents, useEvent, useListingsLoading } from "../hooks/useListings";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { CardGrid } from "../components/ui/CardGrid";
@@ -33,6 +34,7 @@ export function EventDetailPage() {
   const navigate = useNavigate();
   const eventRaw = useEvent(id || "");
   const events = useEvents();
+  const listingsLoading = useListingsLoading();
   const { isEventSaved, toggleEvent } = useSaved();
   // Normalize ticket types: support camelCase (store) and snake_case
   // (raw Supabase) shapes. Older events may not have it set.
@@ -51,6 +53,15 @@ export function EventDetailPage() {
   const eventFree = isEventFree(event);
 
   if (!event) {
+    // Wait for the store's first fetch before declaring it missing —
+    // otherwise a slow load flashes "Event not found" first.
+    if (listingsLoading) {
+      return (
+        <div className="page container flex min-h-[50vh] items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--text-tertiary)]" />
+        </div>
+      );
+    }
     return (
       <div className="page container text-center">
         <h1 className="text-2xl font-semibold">Event not found</h1>

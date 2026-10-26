@@ -74,6 +74,24 @@ export function isOpportunityFree(
 }
 
 /**
+ * The cheapest tier price, or null when the listing has no tiers.
+ *
+ * The detail page uses this for the headline "Application fee" so it
+ * never contradicts the tier list shown right underneath it.
+ */
+export function cheapestTierPrice(
+  opp: {
+    feeTiers?: { price?: number | null }[] | null;
+  } | null
+  | undefined,
+): number | null {
+  const tiers = opp?.feeTiers ?? [];
+  if (tiers.length === 0) return null;
+  const prices = tiers.map((t) => Number(t.price ?? 0));
+  return Math.min(...prices);
+}
+
+/**
  * Service fee in PKR. Free listings never get a service fee.
  */
 export function serviceFeeFor(subtotal: number, isFree: boolean): number {

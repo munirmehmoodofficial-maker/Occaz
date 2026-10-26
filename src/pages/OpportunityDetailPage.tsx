@@ -8,10 +8,11 @@ import {
   CheckCircle2,
   ArrowUpRight,
   ListChecks,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatDateLong, formatPrice } from "../data/mock";
-import { useOpportunities, useOpportunity } from "../hooks/useListings";
+import { useOpportunities, useOpportunity, useListingsLoading } from "../hooks/useListings";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { OpportunityCardGrid } from "../components/ui/CardGrid";
@@ -19,7 +20,7 @@ import { ImageGallery } from "../components/ui/ImageGallery";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { SafeImage } from "../components/ui/SafeImage";
 import { useSaved } from "../hooks/useSaved";
-import { isOpportunityFree } from "../lib/freePricing";
+import { isOpportunityFree, cheapestTierPrice } from "../lib/freePricing";
 import { FadeIn, Stagger } from "../components/motion/Motion";
 
 export function OpportunityDetailPage() {
@@ -28,10 +29,20 @@ export function OpportunityDetailPage() {
   const opp = useOpportunity(id || "");
   const opportunities = useOpportunities();
   const { isOpportunitySaved, toggleOpportunity } = useSaved();
+  const listingsLoading = useListingsLoading();
   // Free opportunities never ask the applicant for money.
   const oppFree = isOpportunityFree(opp);
 
   if (!opp) {
+    // Wait for the store's first fetch before declaring it missing —
+    // otherwise a slow load flashes "Opportunity not found" first.
+    if (listingsLoading) {
+      return (
+        <div className="page container flex min-h-[50vh] items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--text-tertiary)]" />
+        </div>
+      );
+    }
     return (
       <div className="page container text-center">
         <h1 className="text-2xl font-semibold">Opportunity not found</h1>
@@ -98,7 +109,7 @@ export function OpportunityDetailPage() {
               transition={{ delay: 0.35 }}
               className="mt-3 text-base text-[var(--text-secondary)] md:text-lg"
             >
-              By {opp.organizer}
+              By {opp.organizer || "Occaz Organizer"}
             </motion.p>
           </div>
         </div>
@@ -187,16 +198,50 @@ export function OpportunityDetailPage() {
             </div>
           </FadeIn>
 
-          <FadeIn delay={0.25} className="mt-10 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
+          {/* Location */}
+          {opp.city && (
+            <FadeIn delay={0.25} className="mt-10">
+              <h2 className="text-xl font-semibold">Location</h2>
+              <div className="mt-3 overflow-hidden rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
+                <div className="relative aspect-[16/9] overflow-hidden">
+                  <img
+                    src={`https://picsum.photos/seed/${opp.id}-map/1200/600`}
+                    alt="Map"
+                    className="h-full w-full object-cover opacity-60"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3 rounded-xl bg-[var(--bg-card)]/90 p-4 ring-1 ring-[var(--border-default)] backdrop-blur">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-accent-500/20 ring-1 ring-accent-500/30">
+                      <MapPin className="h-5 w-5 text-accent-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{opp.city}</div>
+                      <div className="truncate text-sm text-[var(--text-secondary)]">
+                        {opp.mode}
+                      </div>
+                    </div>
+                    <button className="ml-auto shrink-0 rounded-full bg-[var(--bg-card-hover)] px-3 py-1.5 text-xs ring-1 ring-[var(--border-subtle)] hover:bg-[var(--bg-card)]">
+                      Open in maps
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          )}
+
+          {/* Organizer — sits at the very bottom of the listing */}
+          <FadeIn delay={0.28} className="mt-10 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
             <div className="flex items-center gap-4">
-              <div className="grid h-14 w-14 place-items-center rounded-xl bg-gradient-to-br from-accent-500 to-pink-500 ring-1 ring-[var(--border-default)]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-accent-500 to-pink-500 ring-1 ring-[var(--border-default)]">
                 <Building2 className="h-6 w-6 text-white" />
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <div className="text-xs text-[var(--text-tertiary)]">Hosted by</div>
-                <div className="mt-0.5 text-base font-semibold">{opp.organizer}</div>
+                <div className="mt-0.5 truncate text-base font-semibold">
+                  {opp.organizer || "Occaz Organizer"}
+                </div>
               </div>
-              <button className="rounded-full bg-[var(--bg-card-hover)] px-4 py-2 text-sm ring-1 ring-[var(--border-subtle)] transition hover:bg-[var(--bg-card)]">
+              <button className="shrink-0 rounded-full bg-[var(--bg-card-hover)] px-4 py-2 text-sm ring-1 ring-[var(--border-subtle)] transition hover:bg-[var(--bg-card)]">
                 Follow
               </button>
             </div>
@@ -232,7 +277,12 @@ export function OpportunityDetailPage() {
                     : "text-2xl font-bold"
                 }
               >
-                {oppFree ? "Free" : formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}
+                {oppFree
+                  ? "Free"
+                  : formatPrice(
+                      cheapestTierPrice(opp) ?? opp.price ?? 0,
+                      opp.currency ?? "PKR",
+                    )}
               </span>
             </div>
 
