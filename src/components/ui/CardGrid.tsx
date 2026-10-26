@@ -50,3 +50,36 @@ export function GridItem({
     </motion.div>
   );
 }
+
+/**
+ * Grid for opportunity cards.
+ *
+ * Opportunity cards carry more rows than event cards (title, organizer,
+ * deadline, location, stipend, fee), so a 4-column layout squeezes them
+ * and makes the row heights ragged. This caps at 3 columns and lets the
+ * cards breathe.
+ */
+export function OpportunityCardGrid({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={{
+        hidden: {},
+        show: { transition: { staggerChildren: 0.05 } },
+      }}
+      className={clsx(
+        "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3",
+        className,
+      )}
+    >
+      {children}
+    </motion.div>
+  );
+}

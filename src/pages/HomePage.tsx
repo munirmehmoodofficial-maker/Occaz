@@ -9,7 +9,7 @@ import { useEvents, useOpportunities } from "../hooks/useListings";
 import { supabase } from "../lib/supabase";
 import { EventCard } from "../components/cards/EventCard";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
-import { CardGrid } from "../components/ui/CardGrid";
+import { CardGrid, OpportunityCardGrid } from "../components/ui/CardGrid";
 import { Section } from "../components/ui/Section";
 import { FadeIn, Stagger } from "../components/motion/Motion";
 import { useSaved } from "../hooks/useSaved";
@@ -389,7 +389,7 @@ export function HomePage() {
             actionTo="/opportunities"
             style={sectionOrder ? { order: sectionOrder.indexOf("Latest Opportunities") } : undefined}
           >
-            <CardGrid>
+            <OpportunityCardGrid>
               {latestOpps.map((o) => (
                 <OpportunityCard
                   key={o.id}
@@ -398,7 +398,7 @@ export function HomePage() {
                   onToggleSave={toggleOpportunity}
                 />
               ))}
-            </CardGrid>
+            </OpportunityCardGrid>
           </Section>
 
           <Section

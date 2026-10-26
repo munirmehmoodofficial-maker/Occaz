@@ -14,7 +14,7 @@ import { formatDateLong, formatPrice } from "../data/mock";
 import { useOpportunities, useOpportunity } from "../hooks/useListings";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { CardGrid } from "../components/ui/CardGrid";
+import { OpportunityCardGrid } from "../components/ui/CardGrid";
 import { ImageGallery } from "../components/ui/ImageGallery";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { SafeImage } from "../components/ui/SafeImage";
@@ -113,13 +113,13 @@ export function OpportunityDetailPage() {
               { Icon: Calendar, label: "Application Deadline", value: formatDateLong(opp.deadline) },
               { Icon: MapPin, label: "Location", value: opp.city },
             ].map(({ Icon, label, value }) => (
-              <div key={label} className="flex items-start gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--bg-card-hover)] ring-1 ring-[var(--border-subtle)]">
+              <div key={label} className="flex min-w-0 items-start gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--bg-card-hover)] ring-1 ring-[var(--border-subtle)]">
                   <Icon className="h-4 w-4 text-accent-400" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs text-[var(--text-tertiary)]">{label}</div>
-                  <div className="mt-0.5 text-sm font-medium">{value}</div>
+                  <div className="mt-0.5 truncate text-sm font-medium">{value}</div>
                 </div>
               </div>
             ))}
@@ -143,7 +143,7 @@ export function OpportunityDetailPage() {
                     className="flex items-start gap-3 rounded-xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]"
                   >
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
-                    <span className="text-sm text-[var(--text-secondary)]">{e}</span>
+                    <span className="min-w-0 break-words text-sm text-[var(--text-secondary)]">{e}</span>
                   </motion.li>
                 ))}
               </ul>
@@ -161,7 +161,7 @@ export function OpportunityDetailPage() {
                     className="flex items-start gap-3 rounded-xl bg-[var(--bg-card)] p-4 ring-1 ring-[var(--border-subtle)]"
                   >
                     <ListChecks className="mt-0.5 h-5 w-5 shrink-0 text-accent-400" />
-                    <span className="text-sm text-[var(--text-secondary)]">{r}</span>
+                    <span className="min-w-0 break-words text-sm text-[var(--text-secondary)]">{r}</span>
                   </motion.li>
                 ))}
               </ul>
@@ -206,11 +206,11 @@ export function OpportunityDetailPage() {
             <div className="mt-14">
               <h2 className="text-xl font-semibold">Related opportunities</h2>
               <div className="mt-6">
-                <CardGrid>
+                <OpportunityCardGrid>
                   {related.map((o) => (
                     <OpportunityCard key={o.id} opp={o} />
                   ))}
-                </CardGrid>
+                </OpportunityCardGrid>
               </div>
             </div>
           )}

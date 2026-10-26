@@ -41,12 +41,16 @@ export function Badge({
   return (
     <span
       className={clsx(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur",
         tones[tone],
         className,
       )}
     >
-      {children}
+      {typeof children === "string" ? (
+        <span className="truncate">{children}</span>
+      ) : (
+        children
+      )}
     </span>
   );
 }

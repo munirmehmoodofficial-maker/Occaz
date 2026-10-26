@@ -4,7 +4,7 @@ import { Search, Filter, X, ArrowDownUp } from "lucide-react";
 import { categories as mockCats, opportunityCategories as mockOppCats, cities } from "../data/mock";
 import { useEvents, useOpportunities } from "../hooks/useListings";
 import { useCategories } from "../hooks/useCategories";
-import { CardGrid } from "../components/ui/CardGrid";
+import { CardGrid, OpportunityCardGrid } from "../components/ui/CardGrid";
 import { EventCard } from "../components/cards/EventCard";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { useSaved } from "../hooks/useSaved";
@@ -215,7 +215,7 @@ export function SearchPage() {
         {showOpps && filteredOpps.length > 0 && (
           <section>
             <h2 className="mb-4 text-lg font-semibold">Opportunities</h2>
-            <CardGrid>
+            <OpportunityCardGrid>
               {filteredOpps.map((o) => (
                 <OpportunityCard
                   key={o.id}
@@ -224,7 +224,7 @@ export function SearchPage() {
                   onToggleSave={toggleOpportunity}
                 />
               ))}
-            </CardGrid>
+            </OpportunityCardGrid>
           </section>
         )}
 

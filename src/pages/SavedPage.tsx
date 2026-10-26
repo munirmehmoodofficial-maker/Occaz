@@ -1,6 +1,6 @@
 import { Bookmark } from "lucide-react";
 import { useEvents, useOpportunities } from "../hooks/useListings";
-import { CardGrid } from "../components/ui/CardGrid";
+import { CardGrid, OpportunityCardGrid } from "../components/ui/CardGrid";
 import { EventCard } from "../components/cards/EventCard";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { useState } from "react";
@@ -80,7 +80,7 @@ export function SavedPage() {
         ) : savedOpps.length === 0 ? (
           <EmptyState label="No saved opportunities yet. Tap the bookmark icon to save scholarships, internships and more." />
         ) : (
-          <CardGrid>
+          <OpportunityCardGrid>
             {savedOpps.map((o) => (
               <OpportunityCard
                 key={o.id}
@@ -89,7 +89,7 @@ export function SavedPage() {
                 onToggleSave={toggleOpportunity}
               />
             ))}
-          </CardGrid>
+          </OpportunityCardGrid>
         )}
       </div>
     </div>

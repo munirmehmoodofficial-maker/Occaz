@@ -3,7 +3,7 @@ import { opportunityCategories as mockOppCats } from "../data/mock";
 import { useOpportunities } from "../hooks/useListings";
 import { useCategories } from "../hooks/useCategories";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
-import { CardGrid } from "../components/ui/CardGrid";
+import { OpportunityCardGrid } from "../components/ui/CardGrid";
 import { useSaved } from "../hooks/useSaved";
 import { Filter, X } from "lucide-react";
 
@@ -115,7 +115,7 @@ export function OpportunitiesPage() {
           )}
         </div>
 
-        <CardGrid>
+        <OpportunityCardGrid>
           {filtered.map((o) => (
             <OpportunityCard
               key={o.id}
@@ -124,7 +124,7 @@ export function OpportunitiesPage() {
               onToggleSave={toggleOpportunity}
             />
           ))}
-        </CardGrid>
+        </OpportunityCardGrid>
       </div>
     </div>
   );

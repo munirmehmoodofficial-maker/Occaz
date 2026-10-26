@@ -147,7 +147,13 @@ export function AdminOpportunities() {
                 <span>Deadline {o.deadline || "—"}</span>
                 <span>{o.city}</span>
               </div>
-              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300 ring-1 ring-accent-500/25">
+              <div
+                className={
+                  o.price === 0 || o.price === undefined
+                    ? "mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-500/25"
+                    : "mt-2 inline-flex items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300 ring-1 ring-accent-500/25"
+                }
+              >
                 {o.price === 0 || o.price === undefined
                   ? "Free to apply"
                   : `₨ ${Number(o.price).toLocaleString()} to apply`}

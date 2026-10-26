@@ -56,7 +56,7 @@ export function OpportunityCard({
         to={`/opportunities/${opp.id}`}
         className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)] transition-shadow duration-300 hover:ring-[var(--border-default)] hover:shadow-[var(--shadow-lg)]"
       >
-        <div className="relative aspect-[16/9] overflow-hidden">
+        <div className="relative aspect-[4/3] overflow-hidden">
           <motion.div className="h-full w-full" whileHover={{ scale: 1.06 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
             <SafeImage
               src={opp.image}
@@ -66,7 +66,9 @@ export function OpportunityCard({
             />
           </motion.div>
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-[var(--bg-card)]/30 to-transparent" />
-          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          {/* pr-12 keeps the badges clear of the bookmark button on a
+              narrow card */}
+          <div className="absolute left-3 top-3 flex max-w-[calc(100%-3.5rem)] flex-wrap gap-2">
             <Badge tone={toneFor(opp.category)}>{opp.category}</Badge>
             {opp.featured && <Badge tone="amber">★ Featured</Badge>}
           </div>
@@ -97,9 +99,13 @@ export function OpportunityCard({
           </motion.button>
         </div>
         <div className="flex flex-1 flex-col gap-3 p-5">
+          <h3 className="line-clamp-2 text-base font-semibold leading-snug text-[var(--text-primary)]">
+            {opp.title}
+          </h3>
+
           {/* Organizer — who listed this opportunity */}
           {opp.organizer && (
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-gradient-to-br from-accent-500 to-pink-500 text-[10px] font-bold text-white">
                 {opp.organizer.slice(0, 1).toUpperCase()}
               </div>
@@ -108,49 +114,53 @@ export function OpportunityCard({
               </span>
             </div>
           )}
-          <h3 className="line-clamp-2 text-base font-semibold leading-snug text-[var(--text-primary)]">
-            {opp.title}
-          </h3>
+
           <div className="flex flex-col gap-1.5 text-sm text-[var(--text-secondary)]">
             <div className="flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-              <span>
+              <Clock className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" />
+              <span className="min-w-0 truncate">
                 {opp.deadline && !isNaN(new Date(opp.deadline).getTime())
                   ? `Deadline ${formatDate(opp.deadline)}`
                   : "Rolling applications"}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" />
               <span className="line-clamp-1">
                 {opp.city} · {opp.mode}
               </span>
             </div>
           </div>
+
           {opp.stipend && (
-            <div className="mt-1 inline-flex w-fit items-center gap-2 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/25">
+            <div className="mt-1 inline-flex w-fit max-w-full items-center gap-2 truncate rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/25">
               {opp.stipend}
             </div>
           )}
-          <div className="mt-auto flex items-center justify-between pt-3">
-            <div className="flex items-center gap-2">
+
+          <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               {isOpportunityFree(opp) ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-500/25">
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-500/25">
                   Free
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300 ring-1 ring-accent-500/25">
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300 ring-1 ring-accent-500/25">
                   {formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}
-                  {opp.feeType === "recurring" && <span className="text-[10px] font-normal opacity-75">/{opp.feePeriod || "period"}</span>}
+                  {opp.feeType === "recurring" && (
+                    <span className="text-[10px] font-normal opacity-75">
+                      /{opp.feePeriod || "period"}
+                    </span>
+                  )}
                 </span>
               )}
               {opp.hasStipend && opp.stipend && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-500/25">
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-500/25">
                   + Stipend
                 </span>
               )}
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-card-hover)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)] transition group-hover:bg-white group-hover:text-black">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--bg-card-hover)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)] transition group-hover:bg-white group-hover:text-black">
               Apply
               <ArrowUpRight className="h-3 w-3" />
             </span>

@@ -70,7 +70,9 @@ export function EventCard({
             />
           </motion.div>
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-transparent to-transparent" />
-          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          {/* pr-12 keeps the badges clear of the bookmark button on a
+              narrow card */}
+          <div className="absolute left-3 top-3 flex max-w-[calc(100%-3.5rem)] flex-wrap gap-2">
             <Badge tone={toneFor(event.category)}>{event.category}</Badge>
             {event.featured && <Badge tone="amber">★ Featured</Badge>}
           </div>
@@ -107,7 +109,7 @@ export function EventCard({
 
           {/* Organizer — who listed this event */}
           {event.organizer && (
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-gradient-to-br from-accent-500 to-pink-500 text-[10px] font-bold text-white">
                 {event.organizer.slice(0, 1).toUpperCase()}
               </div>
@@ -119,22 +121,22 @@ export function EventCard({
 
           <div className="flex flex-col gap-1.5 text-sm text-[var(--text-secondary)]">
             <div className="flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-              <span>
+              <Calendar className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" />
+              <span className="min-w-0 truncate">
                 {formatDate(event.date)} · {event.time}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" />
               <span className="line-clamp-1">
                 {event.venue}, {event.city}
               </span>
             </div>
           </div>
-          <div className="mt-auto flex items-center justify-between pt-3">
-            <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
-              <span className="line-clamp-1 max-w-[120px]">
-                {event.city}
+          <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+            <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--text-tertiary)]">
+              <span className="line-clamp-1">
+                {event.mode}
               </span>
             </div>
             <div className="flex items-center gap-2">

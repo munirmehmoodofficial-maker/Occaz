@@ -26,7 +26,7 @@ import { useEvents, useOpportunities } from "../hooks/useListings";
 import { useCategories } from "../hooks/useCategories";
 import { EventCard } from "../components/cards/EventCard";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
-import { CardGrid } from "../components/ui/CardGrid";
+import { CardGrid, OpportunityCardGrid } from "../components/ui/CardGrid";
 import { useSaved } from "../hooks/useSaved";
 
 const eventIcons: Record<string, any> = {
@@ -199,7 +199,7 @@ export function ExplorePage() {
                 {filteredOpps.length} listings
               </span>
             </div>
-            <CardGrid>
+            <OpportunityCardGrid>
               {filteredOpps.map((o) => (
                 <OpportunityCard
                   key={o.id}
@@ -208,7 +208,7 @@ export function ExplorePage() {
                   onToggleSave={toggleOpportunity}
                 />
               ))}
-            </CardGrid>
+            </OpportunityCardGrid>
           </>
         )}
       </div>
