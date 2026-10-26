@@ -32,6 +32,8 @@ type EventForm = {
   ticket_types: TicketType[];
   featured: boolean;
   published: boolean;
+  /** Free event — every ticket tier is priced at 0 and no payment is collected. */
+  isFree: boolean;
   registrationsOpen: boolean;
   registration_deadline?: string;
   sales_start?: string;
@@ -54,6 +56,7 @@ const DEFAULT_FORM: EventForm = {
   ],
   featured: false,
   published: true,
+  isFree: false,
   registrationsOpen: true,
 };
 
@@ -73,6 +76,19 @@ export function EventEditorModal({
   // The organizer's brand name (display_name) — cached so the event's
   // `organizer` field always holds the ORGANIZER, not the event title.
   const [organizerNameCache, setOrganizerNameCache] = useState("");
+
+  // When editing an existing event, work out whether it's free so the
+  // toggle reflects reality. A free event = every tier priced 0 (or no
+  // tiers and the event price is 0).
+  useEffect(() => {
+    if (!initial) return;
+    const tiers = initial.ticket_types ?? [];
+    const free =
+      tiers.length > 0
+        ? tiers.every((t: any) => Number(t?.price ?? 0) === 0)
+        : Number(initial.price ?? 0) === 0;
+    setForm((f) => (f.isFree === free ? f : { ...f, isFree: free }));
+  }, [initial]);
 
   // Live categories from the admin-managed `categories` table.
   // Falls back to the hardcoded mock list on first paint, so the form
@@ -149,11 +165,18 @@ export function EventEditorModal({
     setSaving(true);
     const isEdit = !!form.id;
     const id = form.id ?? `ev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+    // A free event must have every tier priced at 0 — enforce it here so
+    // no path can accidentally create a paid tier on a free event.
+    const ticketTypes = form.isFree
+      ? form.ticket_types.map((t) => ({ ...t, price: 0 }))
+      : form.ticket_types;
+
     // Derive a top-level "price" from the cheapest ticket type for legacy fields
-    const minPrice = form.ticket_types.length
-      ? Math.min(...form.ticket_types.map((t) => t.price))
+    const minPrice = ticketTypes.length
+      ? Math.min(...ticketTypes.map((t) => t.price))
       : 0;
-    const totalCapacity = form.ticket_types.reduce((s, t) => s + (t.qty ?? 0), 0);
+    const totalCapacity = ticketTypes.reduce((s, t) => s + (t.qty ?? 0), 0);
 
     // Resolve the organizer's brand name — the event's `organizer` field
     // must hold the ORGANIZER, not the event title.
@@ -191,7 +214,7 @@ export function EventEditorModal({
       location: form.location,
       price: minPrice,
       capacity: totalCapacity || form.capacity,
-      ticket_types: form.ticket_types,
+      ticket_types: ticketTypes,
       featured: form.featured,
       published: form.published,
       registrations_open: form.registrationsOpen,
@@ -409,6 +432,35 @@ export function EventEditorModal({
 
             {/* Ticket types */}
             <div>
+              {/* Free event toggle — a free event never asks attendees for money */}
+              <label className="mb-3 flex cursor-pointer items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3 transition hover:bg-white/[0.04]">
+                <input
+                  type="checkbox"
+                  checked={form.isFree}
+                  onChange={(e) => {
+                    const free = e.target.checked;
+                    setForm((f) => ({
+                      ...f,
+                      isFree: free,
+                      // Free event → every tier costs 0.
+                      ticket_types: free
+                        ? f.ticket_types.map((t) => ({ ...t, price: 0 }))
+                        : f.ticket_types,
+                    }));
+                  }}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-500"
+                />
+                <div>
+                  <div className="text-sm font-medium text-white">
+                    This event is free
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-zinc-500">
+                    Attendees register without paying. All ticket prices are set
+                    to 0 and no payment is collected.
+                  </div>
+                </div>
+              </label>
+
               <div className="mb-2 flex items-center justify-between">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                   Ticket types
@@ -438,12 +490,14 @@ export function EventEditorModal({
                     <div className="col-span-3">
                       <input
                         type="number"
-                        value={t.price}
+                        min={0}
+                        disabled={form.isFree}
+                        value={form.isFree ? 0 : t.price}
                         onChange={(e) =>
                           updateTicketType(idx, { price: Number(e.target.value) })
                         }
-                        className="input"
-                        placeholder="Price (₨)"
+                        className="input disabled:opacity-50"
+                        placeholder={form.isFree ? "Free" : "Price (₨)"}
                       />
                     </div>
                     <div className="col-span-3">

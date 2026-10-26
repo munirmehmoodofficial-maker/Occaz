@@ -218,10 +218,16 @@ export function Section3Orders() {
                         {o.ticket_code ?? "—"}
                       </td>
                       <td className="px-3 py-2 text-right font-semibold text-white">
-                        ₨ {Number(o.total ?? 0).toLocaleString()}
+                        {Number(o.total ?? 0) === 0
+                          ? "Free"
+                          : `₨ ${Number(o.total ?? 0).toLocaleString()}`}
                       </td>
                       <td className="px-3 py-2">
-                        <StatusPill status={o.payment_status ?? o.status} />
+                        {Number(o.total ?? 0) === 0 && o.payment_status === "paid" ? (
+                          <StatusPill status="free" />
+                        ) : (
+                          <StatusPill status={o.payment_status ?? o.status} />
+                        )}
                       </td>
                       <td className="px-3 py-2 text-[10px] text-zinc-500">
                         {o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}
@@ -237,7 +243,7 @@ export function Section3Orders() {
                               <Eye className="h-3.5 w-3.5" />
                             </a>
                           )}
-                          {o.payment_status === "paid" && (
+                          {o.payment_status === "paid" && Number(o.total ?? 0) > 0 && (
                             <button
                               onClick={() => refund(o)}
                               disabled={isBusy}
@@ -264,6 +270,7 @@ function StatusPill({ status }: { status: string }) {
   const tones: Record<string, string> = {
     paid: "bg-emerald-500/15 text-emerald-300",
     confirmed: "bg-emerald-500/15 text-emerald-300",
+    free: "bg-cyan-500/15 text-cyan-300",
     pending: "bg-amber-500/15 text-amber-300",
     cancelled: "bg-red-500/15 text-red-300",
     refunded: "bg-zinc-500/15 text-zinc-300",

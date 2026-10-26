@@ -16,6 +16,7 @@ import {
   Image as ImageIcon,
   Loader2,
   ArrowLeft,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useAuth } from "../../lib/auth";
@@ -23,6 +24,7 @@ import { formatPrice } from "../../data/mock";
 import type { EventListing, TicketType } from "../../data/mock";
 import { supabase } from "../../lib/supabase";
 import { uploadPublicImage } from "../../lib/storage";
+import { isEventFree, serviceFeeFor } from "../../lib/freePricing";
 import { useToast } from "../../lib/toast.tsx";
 
 export interface BookingDraft {
@@ -33,7 +35,8 @@ export interface BookingDraft {
   notifyEmail: boolean;
   notifyWhatsApp: boolean;
   total: number;
-  paymentMethod: "card" | "manual";
+  /** "free" means no payment is involved at all. */
+  paymentMethod: "card" | "manual" | "free";
 }
 
 export interface AttendeeInfo {
@@ -83,7 +86,12 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const isFree = (event.price ?? 0) === 0 && ticketTypes.length === 0;
+  // A listing is free when EVERY ticket tier is priced at 0 (or there are
+  // no tiers and the event price is 0). Free listings never ask for money.
+  const isFree = isEventFree({ price: event.price, ticketTypes });
+  // The price actually being charged for the selected tier.
+  const unitPrice = Number(ticketTypes[0]?.price ?? event.price ?? 0);
+  const allTiersFree = ticketTypes.length === 0 || ticketTypes.every((t: any) => Number(t?.price ?? 0) === 0);
 
   // hydrate from auth user/profile
   useEffect(() => {
@@ -155,8 +163,9 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
     };
   if (!ticketType) return null;
 
-  const subtotal = ticketType.price * qty;
-  const serviceFee = Math.round(subtotal * 0.05);
+  const subtotal = Number(ticketType.price ?? 0) * qty;
+  // Free listings get no service fee.
+  const serviceFee = serviceFeeFor(subtotal, isFree);
   const total = subtotal + serviceFee;
 
   function onSubmit() {
@@ -170,7 +179,8 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
       notifyEmail,
       notifyWhatsApp,
       total,
-      paymentMethod: isFree ? "card" : paymentMethod,
+      // Free events carry no payment method.
+      paymentMethod: isFree ? "free" : paymentMethod,
     });
   }
 
@@ -342,7 +352,11 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold tracking-tight">
-                  {paymentMethod === "manual" ? "Pay manually" : "Book your spot"}
+                  {isFree
+                    ? "Register for free"
+                    : paymentMethod === "manual"
+                    ? "Pay manually"
+                    : "Book your spot"}
                 </h2>
                 <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
                   {event.title}
@@ -562,17 +576,32 @@ export function BookingModal({ event, open, onClose, onContinue }: Props) {
                 </span>
                 <span>{formatPrice(subtotal, event.currency)}</span>
               </div>
-              {paymentMethod === "card" && (
+              {!isFree && paymentMethod === "card" && (
                 <div className="flex justify-between">
                   <span className="text-[var(--text-tertiary)]">Service fee (5%)</span>
                   <span>{formatPrice(serviceFee, event.currency)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-[var(--border-subtle)] pt-2 text-base font-semibold">
-                <span>Total</span>
-                <span>{formatPrice(paymentMethod === "manual" ? subtotal : total, event.currency)}</span>
+                <span>{isFree ? "Total" : "Total"}</span>
+                <span className={isFree ? "text-emerald-400" : undefined}>
+                  {isFree
+                    ? "Free"
+                    : formatPrice(paymentMethod === "manual" ? subtotal : total, event.currency)}
+                </span>
               </div>
             </div>
+
+            {/* Free event — make it explicit that no payment is needed */}
+            {isFree && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  This event is free — no payment required. Just confirm your
+                  registration below.
+                </span>
+              </div>
+            )}
 
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button variant="outline" onClick={onClose}>

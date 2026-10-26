@@ -19,6 +19,7 @@ import { ImageGallery } from "../components/ui/ImageGallery";
 import { OpportunityCard } from "../components/cards/OpportunityCard";
 import { SafeImage } from "../components/ui/SafeImage";
 import { useSaved } from "../hooks/useSaved";
+import { isOpportunityFree } from "../lib/freePricing";
 import { FadeIn, Stagger } from "../components/motion/Motion";
 
 export function OpportunityDetailPage() {
@@ -27,6 +28,8 @@ export function OpportunityDetailPage() {
   const opp = useOpportunity(id || "");
   const opportunities = useOpportunities();
   const { isOpportunitySaved, toggleOpportunity } = useSaved();
+  // Free opportunities never ask the applicant for money.
+  const oppFree = isOpportunityFree(opp);
 
   if (!opp) {
     return (
@@ -220,10 +223,25 @@ export function OpportunityDetailPage() {
           >
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-[var(--text-tertiary)]">Application fee</span>
-              <span className="text-2xl font-bold">
-                {formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}
+              <span
+                className={
+                  oppFree
+                    ? "text-2xl font-bold text-emerald-400"
+                    : "text-2xl font-bold"
+                }
+              >
+                {oppFree ? "Free" : formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}
               </span>
             </div>
+
+            {oppFree && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  This opportunity is free to apply for — no application fee.
+                </span>
+              </div>
+            )}
 
             <div className="mt-5 flex items-center gap-2 text-sm text-amber-400">
               <Calendar className="h-4 w-4" />
@@ -242,6 +260,8 @@ export function OpportunityDetailPage() {
               >
                 {!opp.registrationsOpen
                   ? "Applications closed"
+                  : oppFree
+                  ? "Apply for free"
                   : "Apply now"}
               </Button>
               <div className="flex gap-2">
@@ -270,7 +290,7 @@ export function OpportunityDetailPage() {
             <div className="mt-3 rounded-xl bg-[var(--bg-elevated)] p-4 ring-1 ring-[var(--border-subtle)]">
               <div className="text-xs text-[var(--text-tertiary)]">Application fee</div>
               <div className="mt-1 text-base font-semibold">
-                {opp.feeType === "free"
+                {oppFree
                   ? "Free to apply"
                   : opp.feeType === "one_time"
                   ? `One-time · ${formatPrice(opp.price ?? 0, opp.currency ?? "PKR")}`

@@ -6,6 +6,7 @@ import type { OpportunityListing } from "../../data/mock";
 import { formatDate, formatPrice } from "../../data/mock";
 import { Badge } from "../ui/Badge";
 import { SafeImage } from "../ui/SafeImage";
+import { isOpportunityFree } from "../../lib/freePricing";
 
 const toneFor = (cat: string) => {
   const map: Record<
@@ -133,7 +134,7 @@ export function OpportunityCard({
           )}
           <div className="mt-auto flex items-center justify-between pt-3">
             <div className="flex items-center gap-2">
-              {opp.feeType === "free" ? (
+              {isOpportunityFree(opp) ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-500/25">
                   Free
                 </span>

@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "../lib/toast";
+import { isEventFree } from "../lib/freePricing";
 import {
   Calendar,
   Clock,
@@ -10,6 +11,7 @@ import {
   Ticket,
   Building2,
   Star,
+  CheckCircle2,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -45,6 +47,8 @@ export function EventDetailPage() {
     event?.ticketTypes?.[0]?.id,
   );
   const [bookingOpen, setBookingOpen] = useState(false);
+  // Free events never ask the attendee for money.
+  const eventFree = isEventFree(event);
 
   if (!event) {
     return (
@@ -339,10 +343,23 @@ function TicketPanel({
     >
       <div className="flex items-baseline justify-between">
         <span className="text-sm text-[var(--text-tertiary)]">From</span>
-        <span className="text-2xl font-bold">
-          {formatPrice(event.price, event.currency)}
+        <span
+          className={
+            eventFree
+              ? "text-2xl font-bold text-emerald-400"
+              : "text-2xl font-bold"
+          }
+        >
+          {eventFree ? "Free" : formatPrice(event.price, event.currency)}
         </span>
       </div>
+
+      {eventFree && (
+        <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>Free entry — no payment required to register.</span>
+        </div>
+      )}
 
       <div className="mt-6">
         <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
@@ -408,6 +425,8 @@ function TicketPanel({
         >
           {!event.registrationsOpen
             ? "Registration is opening soon — we'll notify you when tickets are available."
+            : eventFree
+            ? "Register for free"
             : (event.ticketTypes && event.ticketTypes.length > 0
               ? `Register · ${formatPrice(ticket?.price ?? event.price, event.currency)}`
               : `Get ticket · ${formatPrice(event.price, event.currency)}`)}

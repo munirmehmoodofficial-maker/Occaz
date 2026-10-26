@@ -496,6 +496,11 @@ function OppForm({
                   </span>
                 </div>
               )}
+              {form.feeType === "free" && (
+                <p className="text-xs text-emerald-400">
+                  Free to apply — applicants are never asked for a fee.
+                </p>
+              )}
               {form.feeType === "recurring" && (
                 <input
                   value={form.feePeriod}

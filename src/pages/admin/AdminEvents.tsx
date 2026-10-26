@@ -302,6 +302,7 @@ function EventForm({
     organizer: initial?.organizer || "",
     image: initial?.image || "https://picsum.photos/seed/new/1200/800",
     price: initial?.price ?? 0,
+    isFree: Number(initial?.price ?? 0) === 0,
     mode: initial?.mode || "Physical",
     featured: !!initial?.featured,
     published: initial?.published ?? true,
@@ -435,10 +436,29 @@ function EventForm({
           <Field label="Price (PKR)">
             <input
               type="number"
-              value={form.price}
+              min={0}
+              disabled={form.isFree}
+              value={form.isFree ? 0 : form.price}
               onChange={(e) => update("price", Number(e.target.value))}
-              className="input"
+              className="input disabled:opacity-50"
+              placeholder={form.isFree ? "Free" : "0"}
             />
+          </Field>
+          <Field label="Free event" full>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text-secondary)]">
+              <input
+                type="checkbox"
+                checked={form.isFree}
+                onChange={(e) =>
+                  setForm({ ...form, isFree: e.target.checked, price: e.target.checked ? 0 : form.price })
+                }
+                className="h-4 w-4 accent-emerald-500"
+              />
+              <span>
+                This event is free — attendees register without paying and no
+                payment is collected.
+              </span>
+            </label>
           </Field>
           <Field label="Images" full>
             <ImageUploader
@@ -512,7 +532,12 @@ function EventForm({
               const finalForm = cover
                 ? { ...form, image: cover.url }
                 : form;
-              onSave({ ...finalForm, gallery: cur });
+              // A free event always saves with price 0.
+              onSave({
+                ...finalForm,
+                price: finalForm.isFree ? 0 : finalForm.price,
+                gallery: cur,
+              });
             }}
           >
             {gallery.some((g) => g.status === "uploading")

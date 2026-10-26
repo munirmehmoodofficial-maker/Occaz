@@ -154,6 +154,7 @@ function eventToRow(e: Partial<EventListing>): any {
   if (e.gallery !== undefined && e.gallery.length > 0) r.gallery = e.gallery;
   if (e.category !== undefined) r.category = e.category;
   if (e.organizer !== undefined) r.organizer = e.organizer;
+  if (e.organizerId !== undefined) r.organizer_id = e.organizerId;
   if (e.city !== undefined) r.city = e.city;
   if (e.location !== undefined) r.location = e.location || e.city || "";
   if (e.date !== undefined) r.date = e.date || null;
@@ -182,6 +183,7 @@ function oppToRow(o: Partial<OpportunityListing>): any {
   if (o.category !== undefined) r.category = o.category;
   if (o.city !== undefined) r.city = o.city;
   if (o.organizer !== undefined) r.organizer = o.organizer;
+  if (o.organizerId !== undefined) r.organizer_id = o.organizerId;
   if (o.mode !== undefined) r.mode = o.mode;
   if (o.deadline !== undefined) r.deadline = o.deadline || null;
   if (o.applyUrl !== undefined) r.apply_url = o.applyUrl;

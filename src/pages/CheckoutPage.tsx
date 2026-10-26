@@ -13,12 +13,14 @@ import {
   ChevronLeft,
   Loader2,
   User as UserIcon,
+  Ticket,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { formatPrice } from "../data/mock";
 import type { BookingDraft } from "../components/booking/BookingModal";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
+import { serviceFeeFor } from "../lib/freePricing";
 
 interface CheckoutState {
   draft: BookingDraft;
@@ -47,8 +49,10 @@ export function CheckoutPage() {
   }
 
   const { draft } = state;
-  const subtotal = draft.ticketType.price * draft.qty;
-  const serviceFee = Math.round(subtotal * 0.05);
+  const subtotal = Number(draft.ticketType.price ?? 0) * draft.qty;
+  // Free events never charge a service fee and never ask for card details.
+  const isFree = Number(draft.ticketType.price ?? 0) === 0;
+  const serviceFee = serviceFeeFor(subtotal, isFree);
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [card, setCard] = useState({ number: "", name: "", exp: "", cvc: "" });
   const [processing, setProcessing] = useState(false);
@@ -60,7 +64,7 @@ export function CheckoutPage() {
       setErr("Please sign in to complete your purchase.");
       return;
     }
-    if (method === "card") {
+    if (method === "card" && !isFree) {
       if (!card.number || !card.name || !card.exp || !card.cvc) {
         setErr("Fill in all card details.");
         return;
@@ -77,11 +81,12 @@ export function CheckoutPage() {
         Math.random().toString(36).slice(2, 6);
       const ticketCode = "OCC-" + id.slice(-6).toUpperCase();
       ticketIds.push(ticketCode);
-      const perTicket = Math.round((draft.total || 0) / draft.qty);
+      const perTicket = isFree ? 0 : Math.round((draft.total || 0) / draft.qty);
       const { error } = await supabase.from("registrations").insert({
         id,
         user_id: user.id,
         event_id: draft.event.id,
+        organizer_id: draft.event.organizerId ?? null,
         attendee_name: draft.attendees[0].name,
         attendee_email: draft.attendees[0].email,
         attendee_phone: draft.attendees[0].phone || null,
@@ -89,6 +94,12 @@ export function CheckoutPage() {
         total: perTicket,
         currency: draft.event.currency || "PKR",
         status: "confirmed",
+        // Free registrations are confirmed with no payment involved.
+        // `payment_status` stays "paid" (a CHECK constraint only allows
+        // paid/pending/cancelled/refunded) — the "free" flag lives on
+        // payment_method, and total is 0 so revenue maths stays correct.
+        payment_status: "paid",
+        payment_method: isFree ? "free" : method,
         ticket_code: ticketCode,
       });
       if (error) {
@@ -108,8 +119,10 @@ export function CheckoutPage() {
       void phoneErr;
     }
 
-    // Simulate payment processor latency
-    await new Promise((r) => setTimeout(r, 800));
+    // Simulate payment processor latency (free registrations skip it)
+    if (!isFree) {
+      await new Promise((r) => setTimeout(r, 800));
+    }
 
     setProcessing(false);
     setDone({
@@ -151,115 +164,131 @@ export function CheckoutPage() {
           <div className="space-y-6">
             {/* Payment method */}
             <div className="rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
-              <h2 className="text-base font-semibold">Payment method</h2>
-              <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-                All transactions are secured and encrypted.
-              </p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <PayOption
-                  active={method === "card"}
-                  onClick={() => setMethod("card")}
-                  icon={<CreditCard className="h-4 w-4" />}
-                  label="Credit / debit card"
-                  desc="Visa, Mastercard"
-                />
-                <PayOption
-                  active={method === "jazzcash"}
-                  onClick={() => setMethod("jazzcash")}
-                  icon={<Phone className="h-4 w-4" />}
-                  label="JazzCash"
-                  desc="Mobile wallet"
-                />
-                <PayOption
-                  active={method === "easypaisa"}
-                  onClick={() => setMethod("easypaisa")}
-                  icon={<Phone className="h-4 w-4" />}
-                  label="Easypaisa"
-                  desc="Mobile wallet"
-                />
-                <PayOption
-                  active={method === "bank"}
-                  onClick={() => setMethod("bank")}
-                  icon={<Shield className="h-4 w-4" />}
-                  label="Bank transfer"
-                  desc="IBAN / FT"
-                />
-              </div>
-
-              {method === "card" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-5 space-y-3"
-                >
-                  <Field label="Card number">
-                    <input
-                      value={card.number}
-                      onChange={(e) => setCard({ ...card, number: e.target.value })}
-                      placeholder="4242 4242 4242 4242"
-                      className="input"
-                      inputMode="numeric"
-                      maxLength={19}
-                    />
-                  </Field>
-                  <Field label="Cardholder name">
-                    <input
-                      value={card.name}
-                      onChange={(e) => setCard({ ...card, name: e.target.value })}
-                      placeholder="As printed on card"
-                      className="input"
-                    />
-                  </Field>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Expiry">
-                      <input
-                        value={card.exp}
-                        onChange={(e) => setCard({ ...card, exp: e.target.value })}
-                        placeholder="MM/YY"
-                        className="input"
-                        maxLength={5}
-                      />
-                    </Field>
-                    <Field label="CVC">
-                      <input
-                        value={card.cvc}
-                        onChange={(e) => setCard({ ...card, cvc: e.target.value })}
-                        placeholder="123"
-                        className="input"
-                        maxLength={4}
-                        inputMode="numeric"
-                      />
-                    </Field>
-                  </div>
-                </motion.div>
-              )}
-              {method === "jazzcash" && (
-                <JazzInstructions
-                  name="JazzCash"
-                  number="0300-1234567"
-                  accountName="Occaz Events (Pvt) Ltd"
-                />
-              )}
-              {method === "easypaisa" && (
-                <JazzInstructions
-                  name="Easypaisa"
-                  number="0300-1234567"
-                  accountName="Occaz Events (Pvt) Ltd"
-                />
-              )}
-              {method === "bank" && (
-                <div className="mt-4 rounded-xl bg-[var(--bg-elevated)] p-4 text-sm text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]">
-                  <div className="font-medium text-[var(--text-primary)]">Bank transfer</div>
-                  <div className="mt-2 space-y-1 text-xs">
-                    <div>Bank: <span className="text-white">Meezan Bank</span></div>
-                    <div>Account title: <span className="text-white">Occaz Events (Pvt) Ltd</span></div>
-                    <div>IBAN: <span className="font-mono text-white">PK00MEZN0000000000000000</span></div>
-                  </div>
-                  <p className="mt-3 text-xs text-[var(--text-tertiary)]">
-                    Use your booking reference as the transfer description. Tickets
-                    are confirmed once the transfer clears (1–2 business days).
+              {isFree ? (
+                <>
+                  <h2 className="text-base font-semibold">Free registration</h2>
+                  <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+                    This event is free — there is nothing to pay. Confirm your
+                    details and your ticket will be issued instantly.
                   </p>
-                </div>
+                  <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>No payment required. No card details needed.</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-base font-semibold">Payment method</h2>
+                  <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+                    All transactions are secured and encrypted.
+                  </p>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    <PayOption
+                      active={method === "card"}
+                      onClick={() => setMethod("card")}
+                      icon={<CreditCard className="h-4 w-4" />}
+                      label="Credit / debit card"
+                      desc="Visa, Mastercard"
+                    />
+                    <PayOption
+                      active={method === "jazzcash"}
+                      onClick={() => setMethod("jazzcash")}
+                      icon={<Phone className="h-4 w-4" />}
+                      label="JazzCash"
+                      desc="Mobile wallet"
+                    />
+                    <PayOption
+                      active={method === "easypaisa"}
+                      onClick={() => setMethod("easypaisa")}
+                      icon={<Phone className="h-4 w-4" />}
+                      label="Easypaisa"
+                      desc="Mobile wallet"
+                    />
+                    <PayOption
+                      active={method === "bank"}
+                      onClick={() => setMethod("bank")}
+                      icon={<Shield className="h-4 w-4" />}
+                      label="Bank transfer"
+                      desc="IBAN / FT"
+                    />
+                  </div>
+
+                  {method === "card" && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-5 space-y-3"
+                    >
+                      <Field label="Card number">
+                        <input
+                          value={card.number}
+                          onChange={(e) => setCard({ ...card, number: e.target.value })}
+                          placeholder="4242 4242 4242 4242"
+                          className="input"
+                          inputMode="numeric"
+                          maxLength={19}
+                        />
+                      </Field>
+                      <Field label="Cardholder name">
+                        <input
+                          value={card.name}
+                          onChange={(e) => setCard({ ...card, name: e.target.value })}
+                          placeholder="As printed on card"
+                          className="input"
+                        />
+                      </Field>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field label="Expiry">
+                          <input
+                            value={card.exp}
+                            onChange={(e) => setCard({ ...card, exp: e.target.value })}
+                            placeholder="MM/YY"
+                            className="input"
+                            maxLength={5}
+                          />
+                        </Field>
+                        <Field label="CVC">
+                          <input
+                            value={card.cvc}
+                            onChange={(e) => setCard({ ...card, cvc: e.target.value })}
+                            placeholder="123"
+                            className="input"
+                            maxLength={4}
+                            inputMode="numeric"
+                          />
+                        </Field>
+                      </div>
+                    </motion.div>
+                  )}
+                  {method === "jazzcash" && (
+                    <JazzInstructions
+                      name="JazzCash"
+                      number="0300-1234567"
+                      accountName="Occaz Events (Pvt) Ltd"
+                    />
+                  )}
+                  {method === "easypaisa" && (
+                    <JazzInstructions
+                      name="Easypaisa"
+                      number="0300-1234567"
+                      accountName="Occaz Events (Pvt) Ltd"
+                    />
+                  )}
+                  {method === "bank" && (
+                    <div className="mt-4 rounded-xl bg-[var(--bg-elevated)] p-4 text-sm text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]">
+                      <div className="font-medium text-[var(--text-primary)]">Bank transfer</div>
+                      <div className="mt-2 space-y-1 text-xs">
+                        <div>Bank: <span className="text-white">Meezan Bank</span></div>
+                        <div>Account title: <span className="text-white">Occaz Events (Pvt) Ltd</span></div>
+                        <div>IBAN: <span className="font-mono text-white">PK00MEZN0000000000000000</span></div>
+                      </div>
+                      <p className="mt-3 text-xs text-[var(--text-tertiary)]">
+                        Use your booking reference as the transfer description. Tickets
+                        are confirmed once the transfer clears (1–2 business days).
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -317,15 +346,19 @@ export function CheckoutPage() {
                   </span>
                   <span>{formatPrice(subtotal, draft.event.currency)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-tertiary)]">Service fee (5%)</span>
-                  <span>{formatPrice(serviceFee, draft.event.currency)}</span>
-                </div>
+                {!isFree && (
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-tertiary)]">Service fee (5%)</span>
+                    <span>{formatPrice(serviceFee, draft.event.currency)}</span>
+                  </div>
+                )}
               </div>
               <div className="mt-3 flex items-baseline justify-between border-t border-[var(--border-subtle)] pt-3">
-                <span className="text-sm text-[var(--text-tertiary)]">Total payable</span>
-                <span className="text-2xl font-bold">
-                  {formatPrice(draft.total, draft.event.currency)}
+                <span className="text-sm text-[var(--text-tertiary)]">
+                  {isFree ? "Total" : "Total payable"}
+                </span>
+                <span className={`text-2xl font-bold ${isFree ? "text-emerald-400" : ""}`}>
+                  {isFree ? "Free" : formatPrice(draft.total, draft.event.currency)}
                 </span>
               </div>
 
@@ -343,6 +376,8 @@ export function CheckoutPage() {
                 leftIcon={
                   processing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isFree ? (
+                    <Ticket className="h-4 w-4" />
                   ) : (
                     <Lock className="h-4 w-4" />
                   )
@@ -350,10 +385,14 @@ export function CheckoutPage() {
               >
                 {processing
                   ? "Processing…"
+                  : isFree
+                  ? "Confirm free registration"
                   : `Pay ${formatPrice(draft.total, draft.event.currency)}`}
               </Button>
               <p className="mt-3 text-center text-[10px] text-[var(--text-tertiary)]">
-                By paying you agree to Occaz's terms of service.
+                {isFree
+                  ? "No payment is required for this event."
+                  : "By paying you agree to Occaz's terms of service."}
               </p>
             </div>
           </aside>
