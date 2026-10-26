@@ -72,6 +72,7 @@ type OppRow = {
   price: number | null;
   currency: string | null;
   fee_type: string | null;
+  fee_tiers: any[] | null;
   fee_period: string | null;
   requirements: string[] | null;
   eligibility: string[] | null;
@@ -81,6 +82,26 @@ type OppRow = {
   created_at: string | null;
   updated_at: string | null;
 };
+
+/**
+ * Map of organizer_id → brand display name.
+ * Used to show WHO listed an event/opportunity on every card.
+ */
+async function loadOrganizerNames(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const { data } = await supabase
+      .from("organizer_profiles")
+      .select("id, display_name, slug");
+    for (const row of (data ?? []) as any[]) {
+      const name = (row.display_name || row.slug || "").trim();
+      if (row?.id && name) map.set(row.id, name);
+    }
+  } catch {
+    // Non-fatal — fall back to the text column.
+  }
+  return map;
+}
 
 function rowToEvent(r: EventRow): EventListing {
   const gallery = Array.isArray(r.gallery) ? r.gallery : [];
@@ -135,6 +156,7 @@ function rowToOpp(r: OppRow): OpportunityListing {
     stipend: r.stipend ?? "",
     hasStipend: r.has_stipend ?? !!r.stipend,
     feeType: ((r.fee_type as any) || "free") as "free" | "one_time" | "recurring",
+    feeTiers: Array.isArray(r.fee_tiers) ? r.fee_tiers : [],
     feePeriod: r.fee_period ?? "",
     registrationsOpen: r.registrations_open ?? true,
     price: Number(r.price ?? 0),
@@ -192,6 +214,7 @@ function oppToRow(o: Partial<OpportunityListing>): any {
   if (o.price !== undefined) r.price = o.price;
   if (o.currency !== undefined) r.currency = o.currency;
   if (o.feeType !== undefined) r.fee_type = o.feeType;
+  if (o.feeTiers !== undefined) r.fee_tiers = o.feeTiers;
   if (o.feePeriod !== undefined) r.fee_period = o.feePeriod;
   // Always set registrations_open — boolean (default true if not provided)
   r.registrations_open = o.registrationsOpen !== undefined ? !!o.registrationsOpen : true;
@@ -222,6 +245,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (eRes.error) setError(eRes.error.message);
     if (oRes.error) setError((prev) => prev ?? oRes.error!.message);
 
+    // Resolve the real organizer brand name for every listing.
+    //
+    // Some legacy rows stored the EVENT TITLE in the `organizer` text column
+    // (an old editor bug), and some rows have no `organizer` text at all.
+    // When we know the owning organizer (organizer_id), we look up their
+    // display_name and use that instead — so cards always show WHO listed
+    // the event, never the event title.
+    const orgNames = await loadOrganizerNames();
+    const resolveOrganizer = (
+      row: { organizer?: string | null; organizer_id?: string | null; title?: string | null },
+    ): string => {
+      const byId = row.organizer_id ? orgNames.get(row.organizer_id) : undefined;
+      if (byId) return byId;
+      const text = (row.organizer ?? "").trim();
+      // The text column holds the title → useless as an organizer name.
+      if (!text || text === (row.title ?? "").trim()) return "";
+      return text;
+    };
+
     // Resolve any legacy blob: URLs in the data by matching UUIDs
     // against the occaz storage bucket. Skip rows that don't have any.
     const needsResolve = (urls: string[]): boolean =>
@@ -231,10 +273,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ? await Promise.all(
           eRes.data.map(async (r) => {
             const event = rowToEvent(r as EventRow);
+            const orgName = resolveOrganizer(r as any);
             const allUrls = [event.image, ...event.gallery].filter(Boolean) as string[];
-            if (!needsResolve(allUrls)) return event;
+            if (!needsResolve(allUrls)) {
+              return orgName ? { ...event, organizer: orgName } : event;
+            }
             return {
               ...event,
+              organizer: orgName || event.organizer,
               image: (await resolveBlobUrl(event.image)) ?? event.image,
               gallery: await resolveBlobUrls(event.gallery),
             };
@@ -245,10 +291,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ? await Promise.all(
           oRes.data.map(async (r) => {
             const opp = rowToOpp(r as OppRow);
+            const orgName = resolveOrganizer(r as any);
             const allUrls = [opp.image, ...opp.gallery].filter(Boolean) as string[];
-            if (!needsResolve(allUrls)) return opp;
+            if (!needsResolve(allUrls)) {
+              return orgName ? { ...opp, organizer: orgName } : opp;
+            }
             return {
               ...opp,
+              organizer: orgName || opp.organizer,
               image: (await resolveBlobUrl(opp.image)) ?? opp.image,
               gallery: await resolveBlobUrls(opp.gallery),
             };
@@ -273,18 +323,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "*", schema: "public", table: "events" },
         (payload) => {
+          // Re-resolve the organizer name — a realtime row may carry the
+          // legacy "organizer = event title" value.
+          const applyOrganizer = async (e: EventListing): Promise<EventListing> => {
+            const row = payload.new as any;
+            if (!row?.organizer_id) return e;
+            const names = await loadOrganizerNames();
+            const name = names.get(row.organizer_id);
+            return name ? { ...e, organizer: name } : e;
+          };
           if (payload.eventType === "INSERT") {
             setEvents((prev) => {
               if (prev.some((e) => e.id === (payload.new as any).id)) return prev;
-              return [rowToEvent(payload.new as EventRow), ...prev];
+              const next = rowToEvent(payload.new as EventRow);
+              void applyOrganizer(next).then((resolved) => {
+                setEvents((p2) => p2.map((e) => (e.id === resolved.id ? resolved : e)));
+              });
+              return [next, ...prev];
             });
           } else if (payload.eventType === "UPDATE") {
             setEvents((prev) =>
-              prev.map((e) =>
-                e.id === (payload.new as any).id
-                  ? rowToEvent(payload.new as EventRow)
-                  : e,
-              ),
+              prev.map((e) => {
+                if (e.id !== (payload.new as any).id) return e;
+                const next = rowToEvent(payload.new as EventRow);
+                void applyOrganizer(next).then((resolved) => {
+                  setEvents((p2) => p2.map((x) => (x.id === resolved.id ? resolved : x)));
+                });
+                return next;
+              }),
             );
           } else if (payload.eventType === "DELETE") {
             setEvents((prev) =>
@@ -297,18 +363,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "*", schema: "public", table: "opportunities" },
         (payload) => {
+          const applyOrganizer = async (o: OpportunityListing): Promise<OpportunityListing> => {
+            const row = payload.new as any;
+            if (!row?.organizer_id) return o;
+            const names = await loadOrganizerNames();
+            const name = names.get(row.organizer_id);
+            return name ? { ...o, organizer: name } : o;
+          };
           if (payload.eventType === "INSERT") {
             setOpportunities((prev) => {
               if (prev.some((o) => o.id === (payload.new as any).id)) return prev;
-              return [rowToOpp(payload.new as OppRow), ...prev];
+              const next = rowToOpp(payload.new as OppRow);
+              void applyOrganizer(next).then((resolved) => {
+                setOpportunities((p2) =>
+                  p2.map((o) => (o.id === resolved.id ? resolved : o)),
+                );
+              });
+              return [next, ...prev];
             });
           } else if (payload.eventType === "UPDATE") {
             setOpportunities((prev) =>
-              prev.map((o) =>
-                o.id === (payload.new as any).id
-                  ? rowToOpp(payload.new as OppRow)
-                  : o,
-              ),
+              prev.map((o) => {
+                if (o.id !== (payload.new as any).id) return o;
+                const next = rowToOpp(payload.new as OppRow);
+                void applyOrganizer(next).then((resolved) => {
+                  setOpportunities((p2) =>
+                    p2.map((x) => (x.id === resolved.id ? resolved : x)),
+                  );
+                });
+                return next;
+              }),
             );
           } else if (payload.eventType === "DELETE") {
             setOpportunities((prev) =>

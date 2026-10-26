@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Edit3, Trash2, Eye, EyeOff, Search, Crown, Sparkles } from "lucide-react";
+import { Plus, Edit3, Trash2, Eye, EyeOff, Search, Crown, Sparkles, X } from "lucide-react";
 import { categories as mockCategories } from "../../data/mock";
 import { useDataStore } from "../../data/store";
 import { Button } from "../../components/ui/Button";
@@ -139,6 +139,7 @@ export function AdminEvents() {
                 <th className="px-5 py-3 font-medium">Event</th>
                 <th className="px-5 py-3 font-medium">Organizer</th>
                 <th className="px-5 py-3 font-medium">Category</th>
+                <th className="px-5 py-3 font-medium">Pricing</th>
                 <th className="px-5 py-3 font-medium">Date</th>
                 <th className="px-5 py-3 font-medium">Tickets sold</th>
                 <th className="px-5 py-3 font-medium">Revenue</th>
@@ -173,10 +174,40 @@ export function AdminEvents() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-[var(--text-secondary)]">{e.category}</td>
+                  <td className="px-5 py-3">
+                    {(e.ticketTypes ?? []).length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        {(e.ticketTypes ?? []).map((t: any, i: number) => (
+                          <div
+                            key={t.id ?? i}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span className="text-[var(--text-secondary)]">
+                              {t.name}
+                            </span>
+                            <span className="font-semibold text-[var(--text-primary)]">
+                              {Number(t.price ?? 0) === 0
+                                ? "Free"
+                                : `₨ ${Number(t.price ?? 0).toLocaleString()}`}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-tertiary)]">
+                              ×{t.qty ?? 0}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[var(--text-secondary)]">
+                        {Number(e.price ?? 0) === 0
+                          ? "Free"
+                          : `₨ ${Number(e.price ?? 0).toLocaleString()}`}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-[var(--text-secondary)]">{e.date}</td>
                   <td className="px-5 py-3 text-[var(--text-secondary)]">{e.attendees.toLocaleString()}</td>
                   <td className="px-5 py-3 text-[var(--text-secondary)]">
-                    ${(e.attendees * e.price).toLocaleString()}
+                    ₨ {(e.attendees * e.price).toLocaleString()}
                   </td>
                   <td className="px-5 py-3">
                     <Badge tone={e.published ? "emerald" : "default"}>
@@ -303,6 +334,7 @@ function EventForm({
     image: initial?.image || "https://picsum.photos/seed/new/1200/800",
     price: initial?.price ?? 0,
     isFree: Number(initial?.price ?? 0) === 0,
+    ticketTypes: (initial?.ticketTypes ?? []).map((t: any) => ({ ...t })),
     mode: initial?.mode || "Physical",
     featured: !!initial?.featured,
     published: initial?.published ?? true,
@@ -343,6 +375,71 @@ function EventForm({
   }, [gallery]);
 
   const update = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+
+  // ------------------------- pricing tier helpers -------------------------
+  const updateTier = (idx: number, patch: any) =>
+    setForm((p) => ({
+      ...p,
+      ticketTypes: (p.ticketTypes ?? []).map((t: any, i: number) =>
+        i === idx ? { ...t, ...patch } : t,
+      ),
+    }));
+
+  const addTier = () =>
+    setForm((p) => ({
+      ...p,
+      ticketTypes: [
+        ...(p.ticketTypes ?? []),
+        {
+          id: `tt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          name: "Standard",
+          price: p.isFree ? 0 : Number(p.price ?? 0),
+          qty: 100,
+          sold: 0,
+          description: "",
+          perks: [],
+        },
+      ],
+    }));
+
+  const removeTier = (idx: number) =>
+    setForm((p) => ({
+      ...p,
+      ticketTypes: (p.ticketTypes ?? []).filter((_: any, i: number) => i !== idx),
+    }));
+
+  const addPerk = (tierIdx: number) =>
+    setForm((p) => ({
+      ...p,
+      ticketTypes: (p.ticketTypes ?? []).map((t: any, i: number) =>
+        i === tierIdx ? { ...t, perks: [...(t.perks ?? []), ""] } : t,
+      ),
+    }));
+
+  const updatePerk = (tierIdx: number, perkIdx: number, value: string) =>
+    setForm((p) => ({
+      ...p,
+      ticketTypes: (p.ticketTypes ?? []).map((t: any, i: number) =>
+        i === tierIdx
+          ? {
+              ...t,
+              perks: (t.perks ?? []).map((pk: string, j: number) =>
+                j === perkIdx ? value : pk,
+              ),
+            }
+          : t,
+      ),
+    }));
+
+  const removePerk = (tierIdx: number, perkIdx: number) =>
+    setForm((p) => ({
+      ...p,
+      ticketTypes: (p.ticketTypes ?? []).map((t: any, i: number) =>
+        i === tierIdx
+          ? { ...t, perks: (t.perks ?? []).filter((_: string, j: number) => j !== perkIdx) }
+          : t,
+      ),
+    }));
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
@@ -450,7 +547,15 @@ function EventForm({
                 type="checkbox"
                 checked={form.isFree}
                 onChange={(e) =>
-                  setForm({ ...form, isFree: e.target.checked, price: e.target.checked ? 0 : form.price })
+                  setForm({
+                    ...form,
+                    isFree: e.target.checked,
+                    price: e.target.checked ? 0 : form.price,
+                    // Free event → every tier costs 0.
+                    ticketTypes: e.target.checked
+                      ? (form.ticketTypes ?? []).map((t: any) => ({ ...t, price: 0 }))
+                      : form.ticketTypes,
+                  })
                 }
                 className="h-4 w-4 accent-emerald-500"
               />
@@ -459,6 +564,122 @@ function EventForm({
                 payment is collected.
               </span>
             </label>
+          </Field>
+
+          {/* Pricing tiers */}
+          <Field label="Pricing tiers" full>
+            <div className="space-y-2">
+              <p className="text-xs text-[var(--text-tertiary)]">
+                Add multiple ticket tiers (e.g. Early Bird, Standard, VIP).
+                Each tier has its own price, quantity and perks. Leave empty
+                to use the single price above.
+              </p>
+
+              {(form.ticketTypes ?? []).map((t: any, idx: number) => (
+                <div
+                  key={t.id ?? `tier-${idx}`}
+                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3"
+                >
+                  <div className="grid gap-2 sm:grid-cols-12">
+                    <div className="sm:col-span-4">
+                      <input
+                        value={t.name ?? ""}
+                        onChange={(e) => updateTier(idx, { name: e.target.value })}
+                        className="input"
+                        placeholder="Tier name"
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <input
+                        type="number"
+                        min={0}
+                        disabled={form.isFree}
+                        value={form.isFree ? 0 : Number(t.price ?? 0)}
+                        onChange={(e) => updateTier(idx, { price: Number(e.target.value) })}
+                        className="input disabled:opacity-50"
+                        placeholder={form.isFree ? "Free" : "Price (₨)"}
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <input
+                        type="number"
+                        min={0}
+                        value={Number(t.qty ?? 0)}
+                        onChange={(e) => updateTier(idx, { qty: Number(e.target.value) })}
+                        className="input"
+                        placeholder="Quantity"
+                      />
+                    </div>
+                    <div className="flex items-center sm:col-span-2 sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => removeTier(idx)}
+                        className="grid h-8 w-8 place-items-center rounded-lg text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-400"
+                        title="Remove tier"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <input
+                    value={t.description ?? ""}
+                    onChange={(e) => updateTier(idx, { description: e.target.value })}
+                    className="input mt-2"
+                    placeholder="Short description (optional)"
+                  />
+
+                  {/* Perks */}
+                  <div className="mt-2">
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                        Perks
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => addPerk(idx)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-[var(--bg-card-hover)] px-2 py-1 text-[10px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-card)]"
+                      >
+                        <Plus className="h-3 w-3" /> Add perk
+                      </button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {(t.perks ?? []).map((p: string, pi: number) => (
+                        <div key={pi} className="flex items-center gap-2">
+                          <input
+                            value={p}
+                            onChange={(e) => updatePerk(idx, pi, e.target.value)}
+                            className="input flex-1"
+                            placeholder="e.g. Front row seating"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removePerk(idx, pi)}
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-400"
+                            title="Remove perk"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {(t.perks ?? []).length === 0 && (
+                        <p className="text-[10px] text-[var(--text-tertiary)]">
+                          No perks added.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addTier}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[var(--border-default)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:border-accent-500/50 hover:text-accent-300"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add pricing tier
+              </button>
+            </div>
           </Field>
           <Field label="Images" full>
             <ImageUploader
@@ -532,10 +753,24 @@ function EventForm({
               const finalForm = cover
                 ? { ...form, image: cover.url }
                 : form;
-              // A free event always saves with price 0.
+
+              // A free event always saves with price 0 and every tier at 0.
+              const tiers = (finalForm.ticketTypes ?? []).map((t: any) => ({
+                ...t,
+                price: finalForm.isFree ? 0 : Number(t.price ?? 0),
+                perks: (t.perks ?? []).filter((p: string) => (p ?? "").trim() !== ""),
+              }));
+
+              // The top-level price mirrors the cheapest tier so legacy
+              // surfaces (cards, filters) show the right headline price.
+              const derivedPrice = tiers.length
+                ? Math.min(...tiers.map((t: any) => Number(t.price ?? 0)))
+                : Number(finalForm.price ?? 0);
+
               onSave({
                 ...finalForm,
-                price: finalForm.isFree ? 0 : finalForm.price,
+                ticketTypes: tiers,
+                price: finalForm.isFree ? 0 : derivedPrice,
                 gallery: cur,
               });
             }}

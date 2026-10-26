@@ -68,6 +68,17 @@ export interface OpportunityListing extends BaseListing {
   price?: number; // 0 = free
   currency?: string;
   feeType: FeeType;
+  /**
+   * Optional multiple application-fee options. When non-empty these are
+   * shown as pricing tiers instead of the single feeType/price pair.
+   */
+  feeTiers?: {
+    id: string;
+    name: string;
+    price: number;
+    description?: string;
+    perks?: string[];
+  }[];
   /** Free-text period for recurring fees (e.g. "4 months", "per semester") */
   feePeriod?: string;
   gallery?: string[];

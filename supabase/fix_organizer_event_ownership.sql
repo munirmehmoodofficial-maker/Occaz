@@ -138,6 +138,57 @@ update public.opportunities op
 
 
 -- ============================================================
+-- 5b) Second-pass repair for events that STILL hold the event
+--     title in `organizer` and have no owner.
+--
+--     These are rows created by the buggy editor before
+--     `organizer_id` existed, so there is no direct owner link.
+--     We attribute them by matching the event title against the
+--     organizer's own listing count, or leave them alone if there
+--     is no candidate.
+--
+--     IMPORTANT: we only rewrite `organizer` when we can prove the
+--     owner, so we never invent a wrong organizer name.
+-- ============================================================
+
+-- Attribute title-polluted events to the organizer whose profile
+-- name appears in the event's own `description` or `location`
+-- metadata (organizers often sign their listings).
+update public.events e
+   set organizer_id = o.id
+  from public.organizer_profiles o
+ where e.organizer_id is null
+   and e.organizer = e.title
+   and (
+        lower(e.description) like '%' || lower(o.display_name) || '%'
+     or lower(e.location)  like '%' || lower(o.display_name) || '%'
+   );
+
+-- Now that the owner is known, replace the title with the brand name.
+update public.events e
+   set organizer = o.display_name
+  from public.organizer_profiles o
+ where e.organizer_id = o.id
+   and e.organizer is distinct from o.display_name
+   and e.organizer = e.title;
+
+-- Same treatment for opportunities.
+update public.opportunities op
+   set organizer_id = o.id
+  from public.organizer_profiles o
+ where op.organizer_id is null
+   and op.organizer = op.title
+   and lower(op.description) like '%' || lower(o.display_name) || '%';
+
+update public.opportunities op
+   set organizer = o.display_name
+  from public.organizer_profiles o
+ where op.organizer_id = o.id
+   and op.organizer is distinct from o.display_name
+   and op.organizer = op.title;
+
+
+-- ============================================================
 -- 6) upsert_event() RPC — creates/updates an event with the
 --    organizer_id and organizer brand name set correctly.
 --    SECURITY DEFINER so it works regardless of RLS state.
@@ -354,5 +405,21 @@ select
   (select count(*) from public.events where organizer_id is not null) as events_owned,
   (select count(*) from public.opportunities) as opps_total,
   (select count(*) from public.opportunities where organizer_id is not null) as opps_owned;
+
+-- Any row still showing the event title as the organizer? These need a
+-- manual owner assignment from the admin panel (organizer → events).
+select 'STILL_NEEDS_OWNER' as issue, e.id, e.title, e.organizer
+  from public.events e
+ where e.organizer_id is null
+    or e.organizer is null
+    or e.organizer = e.title
+ limit 50;
+
+select 'STILL_NEEDS_OWNER' as issue, op.id, op.title, op.organizer
+  from public.opportunities op
+ where op.organizer_id is null
+    or op.organizer is null
+    or op.organizer = op.title
+ limit 50;
 
 select 'Organizer event ownership fixed' as status;

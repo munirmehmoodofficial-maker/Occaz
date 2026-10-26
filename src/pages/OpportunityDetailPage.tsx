@@ -243,6 +243,37 @@ export function OpportunityDetailPage() {
               </div>
             )}
 
+            {/* Pricing tiers */}
+            {!oppFree && (opp.feeTiers ?? []).length > 0 && (
+              <div className="mt-4">
+                <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                  Application options
+                </div>
+                <div className="mt-2 space-y-2">
+                  {(opp.feeTiers ?? []).map((t: any) => (
+                    <div
+                      key={t.id ?? t.name}
+                      className="rounded-xl bg-[var(--bg-elevated)] p-3 ring-1 ring-[var(--border-subtle)]"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium">{t.name}</span>
+                        <span className="text-sm font-semibold">
+                          {Number(t.price ?? 0) === 0
+                            ? "Free"
+                            : formatPrice(Number(t.price ?? 0), opp.currency ?? "PKR")}
+                        </span>
+                      </div>
+                      {t.description && (
+                        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                          {t.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mt-5 flex items-center gap-2 text-sm text-amber-400">
               <Calendar className="h-4 w-4" />
               <span>Deadline approaching</span>

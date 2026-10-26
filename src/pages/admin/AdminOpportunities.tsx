@@ -152,6 +152,22 @@ export function AdminOpportunities() {
                   ? "Free to apply"
                   : `₨ ${Number(o.price).toLocaleString()} to apply`}
               </div>
+              {(o.feeTiers ?? []).length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {(o.feeTiers ?? []).map((t: any, i: number) => (
+                    <div key={t.id ?? i} className="flex items-center justify-between text-xs">
+                      <span className="truncate text-[var(--text-secondary)]">
+                        {t.name}
+                      </span>
+                      <span className="font-semibold text-[var(--text-primary)]">
+                        {Number(t.price ?? 0) === 0
+                          ? "Free"
+                          : `₨ ${Number(t.price ?? 0).toLocaleString()}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="mt-4 flex justify-end gap-1">
                 <button onClick={() => toggle(o.id)} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--bg-card-hover)] hover:text-white">
                   {o.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -257,10 +273,42 @@ function OppForm({
     currency: initial?.currency || "PKR",
     feeType: initial?.feeType || "free",
     feePeriod: initial?.feePeriod || "",
+    feeTiers: (initial?.feeTiers ?? []).map((t: any) => ({ ...t })),
     published: initial?.published ?? true,
     featured: !!initial?.featured,
     registrationsOpen: initial?.registrationsOpen ?? true,
   });
+
+  // ------------------------- fee tier helpers ---------------------------
+  const updateFeeTier = (idx: number, patch: any) =>
+    setForm((p) => ({
+      ...p,
+      feeTiers: (p.feeTiers ?? []).map((t: any, i: number) =>
+        i === idx ? { ...t, ...patch } : t,
+      ),
+    }));
+
+  const addFeeTier = () =>
+    setForm((p) => ({
+      ...p,
+      feeTiers: [
+        ...(p.feeTiers ?? []),
+        {
+          id: `ft-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          name: "Standard",
+          price: p.feeType === "free" ? 0 : Number(p.price ?? 0),
+          description: "",
+          perks: [],
+        },
+      ],
+    }));
+
+  const removeFeeTier = (idx: number) =>
+    setForm((p) => ({
+      ...p,
+      feeTiers: (p.feeTiers ?? []).filter((_: any, i: number) => i !== idx),
+    }));
+
   const [gallery, setGallery] = useState<ImageItem[]>(() => {
     // If we have a cover image (prefer non-blob), build a single-element
     // cover. Otherwise, fall back to the first non-blob gallery item.
@@ -511,6 +559,74 @@ function OppForm({
               )}
             </div>
           </Field>
+
+          {/* Pricing tiers — multiple application-fee options */}
+          <Field label="Pricing tiers" full>
+            <div className="space-y-2">
+              <p className="text-xs text-[var(--text-tertiary)]">
+                Offer several application options (e.g. Standard, Premium,
+                Merit-based). Applicants pick the tier that suits them. Leave
+                empty to use the single application fee above.
+              </p>
+
+              {(form.feeTiers ?? []).map((t: any, idx: number) => (
+                <div
+                  key={t.id ?? `ft-${idx}`}
+                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3"
+                >
+                  <div className="grid gap-2 sm:grid-cols-12">
+                    <div className="sm:col-span-5">
+                      <input
+                        value={t.name ?? ""}
+                        onChange={(e) => updateFeeTier(idx, { name: e.target.value })}
+                        className="input"
+                        placeholder="Tier name"
+                      />
+                    </div>
+                    <div className="sm:col-span-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-[var(--text-tertiary)]">₨</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={Number(t.price ?? 0)}
+                          onChange={(e) => updateFeeTier(idx, { price: Number(e.target.value) })}
+                          className="input flex-1"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center sm:col-span-3 sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => removeFeeTier(idx)}
+                        className="grid h-8 w-8 place-items-center rounded-lg text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-400"
+                        title="Remove tier"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <input
+                    value={t.description ?? ""}
+                    onChange={(e) => updateFeeTier(idx, { description: e.target.value })}
+                    className="input mt-2"
+                    placeholder="What's included in this tier (optional)"
+                  />
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addFeeTier}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[var(--border-default)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:border-accent-500/50 hover:text-accent-300"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add pricing tier
+              </button>
+            </div>
+          </Field>
+
           <Field label="Application URL" full>
             <input value={form.applyUrl} onChange={(e) => setForm({ ...form, applyUrl: e.target.value })} className="input" />
           </Field>
@@ -595,6 +711,15 @@ function OppForm({
               const payload = {
                 ...finalForm,
                 gallery: cur,
+                // Fee tiers: a free opportunity has no paid tiers, and the
+                // top-level price mirrors the cheapest tier.
+                feeTiers:
+                  finalForm.feeType === "free"
+                    ? []
+                    : (finalForm.feeTiers ?? []).map((t: any) => ({
+                        ...t,
+                        price: Number(t.price ?? 0),
+                      })),
                 requirements: form.showRequirements
                   ? splitLines(form.requirementsText)
                   : [],
@@ -602,6 +727,12 @@ function OppForm({
                   ? splitLines(form.eligibilityText)
                   : [],
               };
+              // Keep the headline price consistent with the cheapest tier.
+              if (payload.feeTiers.length > 0) {
+                payload.price = Math.min(
+                  ...payload.feeTiers.map((t: any) => Number(t.price ?? 0)),
+                );
+              }
               onSave(payload);
             }}
           >

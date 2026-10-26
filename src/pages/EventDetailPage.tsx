@@ -148,8 +148,20 @@ export function EventDetailPage() {
             ))}
           </Stagger>
 
+          {/* Ticket panel — shown ABOVE About/Gallery on mobile, sticky on desktop */}
+          <FadeIn delay={0.1} className="mt-6 lg:hidden">
+            <TicketPanel
+              event={event}
+              selectedTicket={selectedTicket}
+              setSelectedTicket={setSelectedTicket}
+              saved={saved}
+              onSave={() => toggleEvent(event.id)}
+              onBook={() => setBookingOpen(true)}
+            />
+          </FadeIn>
+
           {/* Capacity */}
-          <FadeIn delay={0.1} className="mt-6 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
+          <FadeIn delay={0.13} className="mt-6 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
             <div className="flex items-center justify-between text-sm">
               <span className="text-[var(--text-secondary)]">Capacity filling up</span>
               <span className="font-medium">{Math.round(filled)}%</span>
@@ -162,18 +174,10 @@ export function EventDetailPage() {
                 className="h-full bg-gradient-to-r from-accent-500 to-pink-500"
               />
             </div>
-          </FadeIn>
-
-          {/* Ticket panel — shown ABOVE About/Gallery on mobile, sticky on desktop */}
-          <FadeIn delay={0.13} className="mt-6 lg:hidden">
-            <TicketPanel
-              event={event}
-              selectedTicket={selectedTicket}
-              setSelectedTicket={setSelectedTicket}
-              saved={saved}
-              onSave={() => toggleEvent(event.id)}
-              onBook={() => setBookingOpen(true)}
-            />
+            <div className="mt-2 text-xs text-[var(--text-tertiary)]">
+              {event.attendees.toLocaleString()} of {event.capacity.toLocaleString()} spots
+              filled
+            </div>
           </FadeIn>
 
           {/* About */}
@@ -184,24 +188,8 @@ export function EventDetailPage() {
             </p>
           </FadeIn>
 
-          {/* Organizer */}
-          <FadeIn delay={0.2} className="mt-10 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
-            <div className="flex items-center gap-4">
-              <div className="grid h-14 w-14 place-items-center rounded-xl bg-gradient-to-br from-accent-500 to-pink-500 ring-1 ring-[var(--border-default)]">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xs text-[var(--text-tertiary)]">Organized by</div>
-                <div className="mt-0.5 text-base font-semibold">{event.organizer}</div>
-              </div>
-              <button className="rounded-full bg-[var(--bg-card-hover)] px-4 py-2 text-sm ring-1 ring-[var(--border-subtle)] transition hover:bg-[var(--bg-card)]">
-                Follow
-              </button>
-            </div>
-          </FadeIn>
-
           {/* Gallery */}
-          <FadeIn delay={0.25} className="mt-10">
+          <FadeIn delay={0.2} className="mt-10">
             <h2 className="text-xl font-semibold">Gallery</h2>
             <p className="mt-1 text-sm text-[var(--text-tertiary)]">
               {event.gallery?.length
@@ -221,7 +209,7 @@ export function EventDetailPage() {
           </FadeIn>
 
           {/* Venue */}
-          <FadeIn delay={0.28} className="mt-10">
+          <FadeIn delay={0.25} className="mt-10">
             <h2 className="text-xl font-semibold">Venue & Location</h2>
             <div className="mt-3 overflow-hidden rounded-2xl bg-[var(--bg-card)] ring-1 ring-[var(--border-subtle)]">
               <div className="relative aspect-[16/9] overflow-hidden">
@@ -244,6 +232,24 @@ export function EventDetailPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </FadeIn>
+
+          {/* Organizer — sits at the very bottom of the listing */}
+          <FadeIn delay={0.28} className="mt-10 rounded-2xl bg-[var(--bg-card)] p-6 ring-1 ring-[var(--border-subtle)]">
+            <div className="flex items-center gap-4">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-accent-500 to-pink-500 ring-1 ring-[var(--border-default)]">
+                <Building2 className="h-6 w-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs text-[var(--text-tertiary)]">Organized by</div>
+                <div className="mt-0.5 truncate text-base font-semibold">
+                  {event.organizer || "Occaz Organizer"}
+                </div>
+              </div>
+              <button className="shrink-0 rounded-full bg-[var(--bg-card-hover)] px-4 py-2 text-sm ring-1 ring-[var(--border-subtle)] transition hover:bg-[var(--bg-card)]">
+                Follow
+              </button>
             </div>
           </FadeIn>
 
