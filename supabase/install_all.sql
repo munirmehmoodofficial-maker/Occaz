@@ -350,5 +350,88 @@ update public.profiles
 -- If you need to manually grant admin to another user, run:
 --   update public.profiles set role = 'admin' where email = 'you@example.com';
 
+-- ============================================================
+-- 10) ORGANIZER EVENT / OPPORTUNITY OWNERSHIP
+-- events had only SELECT (public) + ALL (admin). There was NO
+-- INSERT/UPDATE policy for regular organizers, so an organizer's
+-- own event insert was rejected by RLS and the event never landed
+-- in their dashboard (even though it was visible on the public site).
+-- These policies let organizers manage ONLY the rows they own.
+-- ============================================================
+
+do $$
+begin
+  alter table public.events
+    add column if not exists organizer_id uuid references auth.users (id) on delete set null;
+  alter table public.opportunities
+    add column if not exists organizer_id uuid references auth.users (id) on delete set null;
+exception when others then
+  raise notice 'organizer_id column add skipped: %', SQLERRM;
+end $$;
+
+create index if not exists idx_events_organizer on public.events (organizer_id);
+create index if not exists idx_opps_organizer on public.opportunities (organizer_id);
+
+drop policy if exists "events organizer insert" on public.events;
+create policy "events organizer insert"
+  on public.events for insert
+  with check (auth.uid() = organizer_id);
+
+drop policy if exists "events organizer update" on public.events;
+create policy "events organizer update"
+  on public.events for update
+  using      (auth.uid() = organizer_id or public.is_admin(auth.uid()))
+  with check (auth.uid() = organizer_id or public.is_admin(auth.uid()));
+
+drop policy if exists "events organizer delete" on public.events;
+create policy "events organizer delete"
+  on public.events for delete
+  using      (auth.uid() = organizer_id or public.is_admin(auth.uid()));
+
+drop policy if exists "opps organizer insert" on public.opportunities;
+create policy "opps organizer insert"
+  on public.opportunities for insert
+  with check (auth.uid() = organizer_id);
+
+drop policy if exists "opps organizer update" on public.opportunities;
+create policy "opps organizer update"
+  on public.opportunities for update
+  using      (auth.uid() = organizer_id or public.is_admin(auth.uid()))
+  with check (auth.uid() = organizer_id or public.is_admin(auth.uid()));
+
+drop policy if exists "opps organizer delete" on public.opportunities;
+create policy "opps organizer delete"
+  on public.opportunities for delete
+  using      (auth.uid() = organizer_id or public.is_admin(auth.uid()));
+
+-- Backfill organizer_id for existing rows by matching the organizer
+-- text against known organizer brand names.
+update public.events e
+   set organizer_id = o.id
+  from public.organizer_profiles o
+ where e.organizer_id is null
+   and (lower(e.organizer) = lower(o.display_name) or lower(e.organizer) = lower(o.slug));
+
+update public.opportunities op
+   set organizer_id = o.id
+  from public.organizer_profiles o
+ where op.organizer_id is null
+   and (lower(op.organizer) = lower(o.display_name) or lower(op.organizer) = lower(o.slug));
+
+-- Fix rows where `organizer` wrongly holds the event title.
+update public.events e
+   set organizer = o.display_name
+  from public.organizer_profiles o
+ where e.organizer_id = o.id
+   and e.organizer is distinct from o.display_name
+   and e.organizer = e.title;
+
+update public.opportunities op
+   set organizer = o.display_name
+  from public.organizer_profiles o
+ where op.organizer_id = o.id
+   and op.organizer is distinct from o.display_name
+   and op.organizer = op.title;
+
 -- Done! All set.
 select 'Occaz setup complete' as status;

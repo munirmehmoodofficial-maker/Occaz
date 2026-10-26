@@ -27,6 +27,7 @@ type EventForm = {
   time: string;
   mode: "Online" | "Physical";
   image: string;
+  gallery?: string[];
   capacity: number;
   ticket_types: TicketType[];
   featured: boolean;
@@ -69,6 +70,9 @@ export function EventEditorModal({
   const { push } = useToast();
   const [form, setForm] = useState<EventForm>(initial ?? DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
+  // The organizer's brand name (display_name) — cached so the event's
+  // `organizer` field always holds the ORGANIZER, not the event title.
+  const [organizerNameCache, setOrganizerNameCache] = useState("");
 
   // Live categories from the admin-managed `categories` table.
   // Falls back to the hardcoded mock list on first paint, so the form
@@ -150,13 +154,36 @@ export function EventEditorModal({
       ? Math.min(...form.ticket_types.map((t) => t.price))
       : 0;
     const totalCapacity = form.ticket_types.reduce((s, t) => s + (t.qty ?? 0), 0);
+
+    // Resolve the organizer's brand name — the event's `organizer` field
+    // must hold the ORGANIZER, not the event title.
+    let organizerName = organizerNameCache;
+    if (!organizerName) {
+      const { data: prof } = await supabase
+        .from("organizer_profiles")
+        .select("display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      organizerName = (prof as any)?.display_name || "";
+      if (!organizerName) {
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        organizerName = (p as any)?.full_name || "Occaz Organizer";
+      }
+      setOrganizerNameCache(organizerName);
+    }
+
     const payload: any = {
       id,
       title: form.title.trim(),
       description: form.description,
       image: form.image,
+      gallery: form.gallery ?? [],
       category: form.category,
-      organizer: form.title.trim(),
+      organizer: organizerName,
       city: form.city,
       mode: form.mode,
       date: form.date,
@@ -171,17 +198,45 @@ export function EventEditorModal({
       organizer_id: user.id,
       updated_at: new Date().toISOString(),
     };
-    let error;
-    if (isEdit) {
-      const r = await supabase.from("events").update(payload).eq("id", id);
-      error = r.error;
-    } else {
-      const r = await supabase.from("events").insert(payload);
-      error = r.error;
+
+    // Prefer the SECURITY DEFINER RPC — it sets organizer_id and the
+    // organizer brand name correctly and is immune to RLS. Fall back to
+    // a direct write if the RPC isn't installed.
+    let error: any = null;
+    let saved = false;
+    try {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("upsert_event", {
+        p_event: payload,
+      });
+      if (!rpcErr && rpcData && (rpcData as any)?.ok) {
+        saved = true;
+        if ((rpcData as any)?.organizer) {
+          setOrganizerNameCache((rpcData as any).organizer);
+        }
+      } else if (rpcErr) {
+        error = rpcErr;
+      }
+    } catch (e: any) {
+      error = e;
     }
+
+    if (!saved) {
+      if (isEdit) {
+        const r = await supabase.from("events").update(payload).eq("id", id);
+        error = r.error;
+      } else {
+        const r = await supabase.from("events").insert(payload);
+        error = r.error;
+      }
+    }
+
     setSaving(false);
     if (error) {
-      push({ tone: "red", title: "Save failed", message: error.message });
+      push({
+        tone: "red",
+        title: "Save failed",
+        message: error.message ?? "Could not save the event.",
+      });
       return;
     }
     push({

@@ -27,16 +27,29 @@ export function AdminOpportunities() {
   }, [dbCats]);
   const [showNew, setShowNew] = useState(false);
   const [dbg, setDbg] = useState<string[]>([]);
+  const [organizerFilter, setOrganizerFilter] = useState("All");
 
   const filtered = useMemo(
     () =>
       opportunities.filter((o) => {
         if (q && !`${o.title} ${o.organizer}`.toLowerCase().includes(q.toLowerCase())) return false;
         if (cat !== "All" && o.category !== cat) return false;
+        if (organizerFilter !== "All" && o.organizer !== organizerFilter) return false;
         return true;
       }),
-    [opportunities, q, cat],
+    [opportunities, q, cat, organizerFilter],
   );
+
+  // Distinct organizers that have at least one opportunity.
+  const organizerNames = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const o of opportunities) {
+      const n = (o.organizer || "").trim();
+      if (n && !seen.has(n)) { seen.add(n); out.push(n); }
+    }
+    return out.sort((a, b) => a.localeCompare(b));
+  }, [opportunities]);
 
   const toggle = (id: string) => {
     const o = opportunities.find((x) => x.id === id);
@@ -89,6 +102,17 @@ export function AdminOpportunities() {
             <option key={c} className="bg-[var(--bg-card)]">{c}</option>
           ))}
         </select>
+        <select
+          value={organizerFilter}
+          onChange={(e) => setOrganizerFilter(e.target.value)}
+          className="rounded-xl bg-[var(--bg-card)] px-3 py-2.5 text-sm ring-1 ring-[var(--border-subtle)] outline-none"
+          title="Filter by organizer"
+        >
+          <option className="bg-[var(--bg-card)]">All</option>
+          {organizerNames.map((n) => (
+            <option key={n} className="bg-[var(--bg-card)]">{n}</option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -108,7 +132,17 @@ export function AdminOpportunities() {
             </div>
             <div className="p-4">
               <h3 className="line-clamp-2 font-semibold">{o.title}</h3>
-              <p className="mt-1 text-xs text-[var(--text-tertiary)]">{o.organizer}</p>
+              {/* Organizer — who listed this opportunity */}
+              {o.organizer && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="grid h-5 w-5 shrink-0 place-items-center rounded bg-gradient-to-br from-accent-500 to-pink-500 text-[9px] font-bold text-white">
+                    {o.organizer.slice(0, 1).toUpperCase()}
+                  </div>
+                  <span className="truncate text-xs font-medium text-[var(--text-secondary)]">
+                    {o.organizer}
+                  </span>
+                </div>
+              )}
               <div className="mt-3 flex items-center justify-between text-xs text-[var(--text-tertiary)]">
                 <span>Deadline {o.deadline || "—"}</span>
                 <span>{o.city}</span>

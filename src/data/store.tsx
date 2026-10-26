@@ -43,6 +43,7 @@ type EventRow = {
   location: string | null;
   mode: string | null;
   organizer: string | null;
+  organizer_id: string | null;
   price: number | null;
   capacity: number | null;
   attendees: number | null;
@@ -93,6 +94,7 @@ function rowToEvent(r: EventRow): EventListing {
     gallery,
     category: (r.category as any) ?? "Workshops",
     organizer: r.organizer ?? "",
+    organizerId: (r as any).organizer_id ?? undefined,
     city: r.city ?? r.location ?? "",
     mode: (r.mode as any) ?? "Physical",
     date: r.date ?? "",
@@ -122,6 +124,7 @@ function rowToOpp(r: OppRow): OpportunityListing {
     gallery,
     category: (r.category as any) ?? "Scholarships",
     organizer: r.organizer ?? "",
+    organizerId: (r as any).organizer_id ?? undefined,
     city: r.city ?? "",
     location: r.city ?? "",
     mode: (r.mode as any) ?? "Online",

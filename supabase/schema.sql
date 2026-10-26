@@ -118,6 +118,8 @@ create table if not exists public.events (
   ticket_types jsonb not null default '[]'::jsonb,
   featured boolean not null default false,
   published boolean not null default true,
+  organizer_id uuid references auth.users (id) on delete set null,
+  registrations_open boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -142,6 +144,8 @@ create table if not exists public.opportunities (
   currency text not null default 'PKR',
   featured boolean not null default false,
   published boolean not null default true,
+  organizer_id uuid references auth.users (id) on delete set null,
+  registrations_open boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -187,6 +191,25 @@ create policy "events admin write"
   using      (public.is_admin(auth.uid()))
   with check (public.is_admin(auth.uid()));
 
+-- Organizers can create and manage ONLY the events they own.
+-- Without these policies an organizer's own event insert was rejected
+-- by RLS, so the event never landed in their dashboard.
+drop policy if exists "events organizer insert" on public.events;
+create policy "events organizer insert"
+  on public.events for insert
+  with check (auth.uid() = organizer_id);
+
+drop policy if exists "events organizer update" on public.events;
+create policy "events organizer update"
+  on public.events for update
+  using      (auth.uid() = organizer_id or public.is_admin(auth.uid()))
+  with check (auth.uid() = organizer_id or public.is_admin(auth.uid()));
+
+drop policy if exists "events organizer delete" on public.events;
+create policy "events organizer delete"
+  on public.events for delete
+  using      (auth.uid() = organizer_id or public.is_admin(auth.uid()));
+
 -- opportunities ---------------------------------------------------------
 drop policy if exists "opps public read"  on public.opportunities;
 drop policy if exists "opps admin write"  on public.opportunities;
@@ -198,6 +221,23 @@ create policy "opps admin write"
   on public.opportunities for all
   using      (public.is_admin(auth.uid()))
   with check (public.is_admin(auth.uid()));
+
+-- Organizers can create and manage ONLY the opportunities they own.
+drop policy if exists "opps organizer insert" on public.opportunities;
+create policy "opps organizer insert"
+  on public.opportunities for insert
+  with check (auth.uid() = organizer_id);
+
+drop policy if exists "opps organizer update" on public.opportunities;
+create policy "opps organizer update"
+  on public.opportunities for update
+  using      (auth.uid() = organizer_id or public.is_admin(auth.uid()))
+  with check (auth.uid() = organizer_id or public.is_admin(auth.uid()));
+
+drop policy if exists "opps organizer delete" on public.opportunities;
+create policy "opps organizer delete"
+  on public.opportunities for delete
+  using      (auth.uid() = organizer_id or public.is_admin(auth.uid()));
 
 -- categories ------------------------------------------------------------
 drop policy if exists "cats public read"  on public.categories;

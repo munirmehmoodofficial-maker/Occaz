@@ -104,6 +104,19 @@ export function EventCard({
           <h3 className="line-clamp-2 text-base font-semibold leading-snug text-[var(--text-primary)]">
             {event.title}
           </h3>
+
+          {/* Organizer — who listed this event */}
+          {event.organizer && (
+            <div className="flex items-center gap-2">
+              <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-gradient-to-br from-accent-500 to-pink-500 text-[10px] font-bold text-white">
+                {event.organizer.slice(0, 1).toUpperCase()}
+              </div>
+              <span className="truncate text-xs font-medium text-[var(--text-secondary)]">
+                {event.organizer}
+              </span>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1.5 text-sm text-[var(--text-secondary)]">
             <div className="flex items-center gap-2">
               <Calendar className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
@@ -121,7 +134,7 @@ export function EventCard({
           <div className="mt-auto flex items-center justify-between pt-3">
             <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
               <span className="line-clamp-1 max-w-[120px]">
-                {event.organizer}
+                {event.city}
               </span>
             </div>
             <div className="flex items-center gap-2">

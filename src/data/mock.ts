@@ -32,6 +32,7 @@ export interface BaseListing {
   category: string;
   organizer: string;
   organizerLogo?: string;
+  organizerId?: string;
   description: string;
   location: string;
   city: string;

@@ -25,11 +25,19 @@ export function Section2Events() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("events")
-        .select("id, title, date, time, city, category, image, price, published, featured, capacity, attendees, ticket_types")
+        .select("id, title, date, time, city, category, image, price, published, featured, capacity, attendees, ticket_types, organizer, organizer_id")
         .eq("organizer_id", user.id)
         .order("date", { ascending: false });
+      if (error) {
+        console.error("[Section2Events] load failed:", error.message);
+        push({
+          tone: "red",
+          title: "Could not load your events",
+          message: error.message,
+        });
+      }
       setEvents(data ?? []);
       setLoading(false);
     })();
@@ -254,6 +262,15 @@ export function Section2Events() {
                   </div>
                   <div className="mt-0.5 text-[10px] text-zinc-500">
                     {e.date ? new Date(e.date).toLocaleDateString() : "—"} · {e.city ?? "—"}
+                  </div>
+                  {/* Organizer — whose listing this is */}
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <div className="grid h-4 w-4 shrink-0 place-items-center rounded bg-gradient-to-br from-accent-500 to-pink-500 text-[8px] font-bold text-white">
+                      {(e.organizer || "O").slice(0, 1).toUpperCase()}
+                    </div>
+                    <span className="truncate text-[10px] font-medium text-zinc-400">
+                      {e.organizer || "—"}
+                    </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-400">
                     <span>{e.attendees ?? 0} registered</span>

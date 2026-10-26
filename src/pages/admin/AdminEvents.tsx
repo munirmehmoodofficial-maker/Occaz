@@ -14,6 +14,7 @@ export function AdminEvents() {
   const { events, addEvent, updateEvent, removeEvent } = useDataStore();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
+  const [organizerFilter, setOrganizerFilter] = useState("All");
   const [status, setStatus] = useState<"all" | "published" | "draft">("all");
   const [editing, setEditing] = useState<typeof events[0] | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -33,11 +34,23 @@ export function AdminEvents() {
     return events.filter((e) => {
       if (q && !`${e.title} ${e.organizer}`.toLowerCase().includes(q.toLowerCase())) return false;
       if (cat !== "All" && e.category !== cat) return false;
+      if (organizerFilter !== "All" && e.organizer !== organizerFilter) return false;
       if (status === "published" && !e.published) return false;
       if (status === "draft" && e.published) return false;
       return true;
     });
-  }, [events, q, cat, status]);
+  }, [events, q, cat, status, organizerFilter]);
+
+  // Distinct organizers that have at least one event, for the filter.
+  const organizerNames = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const e of events) {
+      const n = (e.organizer || "").trim();
+      if (n && !seen.has(n)) { seen.add(n); out.push(n); }
+    }
+    return out.sort((a, b) => a.localeCompare(b));
+  }, [events]);
 
   const togglePublish = (id: string) => {
     const e = events.find((x) => x.id === id);
@@ -90,6 +103,17 @@ export function AdminEvents() {
               <option key={c} className="bg-[var(--bg-card)]">{c}</option>
             ))}
           </select>
+          <select
+            value={organizerFilter}
+            onChange={(e) => setOrganizerFilter(e.target.value)}
+            className="rounded-xl bg-[var(--bg-card)] px-3 py-2.5 text-sm ring-1 ring-[var(--border-subtle)] outline-none"
+            title="Filter by organizer"
+          >
+            <option className="bg-[var(--bg-card)]">All</option>
+            {organizerNames.map((n) => (
+              <option key={n} className="bg-[var(--bg-card)]">{n}</option>
+            ))}
+          </select>
           <div className="flex gap-1 rounded-xl bg-[var(--bg-card)] p-1 ring-1 ring-[var(--border-subtle)]">
             {(["all", "published", "draft"] as const).map((s) => (
               <button
@@ -113,6 +137,7 @@ export function AdminEvents() {
             <thead className="border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/40 text-left text-xs uppercase tracking-wider text-[var(--text-tertiary)]">
               <tr>
                 <th className="px-5 py-3 font-medium">Event</th>
+                <th className="px-5 py-3 font-medium">Organizer</th>
                 <th className="px-5 py-3 font-medium">Category</th>
                 <th className="px-5 py-3 font-medium">Date</th>
                 <th className="px-5 py-3 font-medium">Tickets sold</th>
@@ -129,9 +154,23 @@ export function AdminEvents() {
                       <img src={e.image} className="h-10 w-10 rounded-lg object-cover" />
                       <div>
                         <div className="font-medium">{e.title}</div>
-                        <div className="text-xs text-[var(--text-tertiary)]">{e.organizer}</div>
+                        <div className="text-xs text-[var(--text-tertiary)]">{e.city}</div>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    {e.organizer ? (
+                      <div className="flex items-center gap-2">
+                        <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-gradient-to-br from-accent-500 to-pink-500 text-[10px] font-bold text-white">
+                          {e.organizer.slice(0, 1).toUpperCase()}
+                        </div>
+                        <span className="max-w-[140px] truncate text-[var(--text-secondary)]">
+                          {e.organizer}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[var(--text-tertiary)]">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-[var(--text-secondary)]">{e.category}</td>
                   <td className="px-5 py-3 text-[var(--text-secondary)]">{e.date}</td>

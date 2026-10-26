@@ -96,11 +96,17 @@ export function OpportunityCard({
           </motion.button>
         </div>
         <div className="flex flex-1 flex-col gap-3 p-5">
-          <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
-            <span className="line-clamp-1 max-w-[160px] font-medium">
-              {opp.organizer}
-            </span>
-          </div>
+          {/* Organizer — who listed this opportunity */}
+          {opp.organizer && (
+            <div className="flex items-center gap-2">
+              <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-gradient-to-br from-accent-500 to-pink-500 text-[10px] font-bold text-white">
+                {opp.organizer.slice(0, 1).toUpperCase()}
+              </div>
+              <span className="truncate text-xs font-medium text-[var(--text-secondary)]">
+                {opp.organizer}
+              </span>
+            </div>
+          )}
           <h3 className="line-clamp-2 text-base font-semibold leading-snug text-[var(--text-primary)]">
             {opp.title}
           </h3>
