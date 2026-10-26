@@ -125,6 +125,10 @@ export function Sidebar({
         </NavLink>
       </div>
 
+      {/* Scrollable menu area — the full nav can be taller than a short
+          viewport, and without this the bottom items get clipped with no
+          way to reach them. */}
+      <div className="min-h-0 flex-1 overflow-y-auto pb-4">
       {/* Primary */}
       <div className="px-3 pt-4">
         {!collapsed && (
@@ -218,7 +222,7 @@ export function Sidebar({
         </nav>
       </div>
 
-      <div className="flex-1" />
+      </div>
 
       {/* Upgrade card — only for non-organizers */}
       {!collapsed && !isOrganizer && (
@@ -286,14 +290,14 @@ export function Sidebar({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onClose}
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-[65] bg-black/60 backdrop-blur-sm lg:hidden"
             />
             <motion.aside
               initial={{ x: -300 }}
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: "spring", stiffness: 320, damping: 30 }}
-              className="fixed inset-y-0 left-0 z-50 w-[280px] lg:hidden"
+              className="fixed inset-y-0 left-0 z-[70] w-[280px] lg:hidden"
             >
               {content}
             </motion.aside>

@@ -90,7 +90,9 @@ export function OrganizerShell() {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          // z-[65]: above the app BottomNav (z-[60]) so the drawer and its
+          // backdrop are not cut off by the bottom navigation bar.
+          className="fixed inset-0 z-[65] bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -98,7 +100,10 @@ export function OrganizerShell() {
       {/* Sidebar */}
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/5 bg-[#0b0b14] text-zinc-200 transition-all duration-200 lg:sticky lg:top-0 lg:h-screen",
+          // z-[70] (not z-50): the app BottomNav is z-[60] and is fixed to the
+          // bottom of the viewport, so a lower-z drawer gets its last items
+          // ("Settings", the profile chip) covered on mobile.
+          "fixed inset-y-0 left-0 z-[70] flex flex-col border-r border-white/5 bg-[#0b0b14] text-zinc-200 transition-all duration-200 lg:sticky lg:top-0 lg:h-screen lg:z-auto",
           collapsed ? "w-[72px]" : "w-64",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
@@ -134,8 +139,10 @@ export function OrganizerShell() {
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3">
+        {/* Nav — min-h-0 lets this actually shrink so overflow-y-auto works
+            (flex items default to min-height:auto and would push the footer
+            out of the drawer instead of scrolling). */}
+        <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 pb-20 lg:pb-3">
           <ul className="space-y-0.5">
             {NAV.map((item) => {
               const isActive =
@@ -216,7 +223,11 @@ export function OrganizerShell() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 lg:ml-0">
+      {/* min-w-0: without it this flex item keeps its intrinsic width, so a
+          wide table (e.g. Tickets & Orders) pushes the whole organizer area
+          into a sideways scroll instead of scrolling inside its own
+          overflow-x-auto container. */}
+      <main className="min-w-0 flex-1 lg:ml-0">
         {/* Topbar */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-white/5 bg-[#0b0b14]/80 px-4 backdrop-blur lg:px-8">
           <button

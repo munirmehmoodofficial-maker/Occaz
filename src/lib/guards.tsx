@@ -1,7 +1,7 @@
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuth } from "./auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { Loader2, Building2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -54,12 +54,46 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
 export function RequireOrganizer({ children }: { children: ReactNode }) {
   const { user, profile, isAdmin, loading } = useAuth();
   const location = useLocation();
+  // Belt-and-braces: even if `profiles.is_organizer` is out of sync, the
+  // existence of an `organizer_profiles` row means this user IS an
+  // organizer. Without this, a real organizer gets locked out of their own
+  // dashboard behind the "Become an organizer" prompt.
+  const [hasOrgProfile, setHasOrgProfile] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setHasOrgProfile(null);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("organizer_profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (alive) setHasOrgProfile(!!data);
+      } catch {
+        if (alive) setHasOrgProfile(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [user]);
+
   if (loading) return <FullScreenLoader label="Loading…" />;
   if (!user) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
   if (isAdmin) return <>{children}</>;
-  if (!profile?.is_organizer) {
+  if (!profile?.is_organizer && !hasOrgProfile) {
+    // Still resolving the organizer profile — show a loader rather than
+    // flashing the "Become an organizer" gate.
+    if (hasOrgProfile === null && user) {
+      return <FullScreenLoader label="Loading…" />;
+    }
     return <BecomeOrganizerGate />;
   }
   return <>{children}</>;

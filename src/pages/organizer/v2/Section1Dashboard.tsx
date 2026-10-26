@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../../lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { useToast } from "../../../lib/toast";
 
 /**
  * Section 1 — Dashboard / Overview
@@ -16,6 +17,7 @@ import { supabase } from "../../../lib/supabase";
  */
 export function Section1Dashboard() {
   const { user, profile } = useAuth();
+  const { push } = useToast();
   const [stats, setStats] = useState({
     totalEvents: 0,
     published: 0,
@@ -35,12 +37,23 @@ export function Section1Dashboard() {
     (async () => {
       setLoading(true);
       try {
-        // Events by status
-        const { data: events } = await supabase
+        // Events by status.
+        // NOTE: the `events` table has NO `status` column — only `published`.
+        // Selecting a non-existent column makes PostgREST error out, which
+        // silently returned null data and showed "0 events".
+        const { data: events, error: eventsErr } = await supabase
           .from("events")
-          .select("id, title, date, published, status")
+          .select("id, title, date, published")
           .eq("organizer_id", user.id)
           .order("date", { ascending: true });
+        if (eventsErr) {
+          console.error("[Dashboard] events query failed:", eventsErr.message);
+          push({
+            tone: "red",
+            title: "Couldn't load your events",
+            message: eventsErr.message,
+          });
+        }
         const today = new Date().toISOString().slice(0, 10);
         const evs = events ?? [];
         const upcoming = evs.filter(
@@ -49,11 +62,14 @@ export function Section1Dashboard() {
         const past = evs.filter((e: any) => e.date < today);
 
         // Registrations (orders)
-        const { data: regs } = await supabase
+        const { data: regs, error: regsErr } = await supabase
           .from("registrations")
           .select("id, total, payment_status, status, created_at, event_id, attendee_name, ticket_code")
           .eq("organizer_id", user.id)
           .order("created_at", { ascending: false });
+        if (regsErr) {
+          console.error("[Dashboard] registrations query failed:", regsErr.message);
+        }
         const rs = regs ?? [];
         const ticketsSold = rs.filter(
           (r: any) => r.status === "confirmed" || !r.status,
@@ -230,20 +246,27 @@ export function Section1Dashboard() {
                       {r.attendee_name ?? "—"}
                     </div>
                     <div className="truncate text-xs text-zinc-500">
-                      {r.ticket_code ?? "—"} · ₨ {Number(r.total ?? 0).toLocaleString()}
+                      {r.ticket_code ?? "—"} ·{" "}
+                      {Number(r.total ?? 0) === 0
+                        ? "Free"
+                        : `₨ ${Number(r.total ?? 0).toLocaleString()}`}
                     </div>
                   </div>
                   <span
                     className={
                       "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider " +
                       (r.payment_status === "paid"
-                        ? "bg-emerald-500/15 text-emerald-300"
+                        ? Number(r.total ?? 0) === 0
+                          ? "bg-cyan-500/15 text-cyan-300"
+                          : "bg-emerald-500/15 text-emerald-300"
                         : r.payment_status === "pending"
                           ? "bg-amber-500/15 text-amber-300"
                           : "bg-zinc-500/15 text-zinc-300")
                     }
                   >
-                    {r.payment_status ?? "paid"}
+                    {Number(r.total ?? 0) === 0 && r.payment_status === "paid"
+                      ? "Free"
+                      : (r.payment_status ?? "paid")}
                   </span>
                 </div>
               ))

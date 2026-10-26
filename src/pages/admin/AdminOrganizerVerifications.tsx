@@ -163,6 +163,20 @@ export function AdminOrganizerVerifications() {
         })
         .eq("id", o.owner_id ?? o.id);
       if (profErr) throw profErr;
+
+      // Also flag the user as an organizer on `profiles`. Without this the
+      // "Become an organizer" gate blocks a fully approved organizer out of
+      // their own dashboard.
+      try {
+        const ownerId = o.owner_id ?? o.id;
+        await supabase
+          .from("profiles")
+          .update({ is_organizer: true })
+          .eq("id", ownerId);
+      } catch (e) {
+        console.warn("[verifications] could not set profiles.is_organizer", e);
+      }
+
       // mirror on the legacy table (best effort)
       try {
         await supabase

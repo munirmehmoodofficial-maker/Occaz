@@ -132,7 +132,7 @@ export function Layout() {
         />
 
         {/* Reserve space at the bottom on mobile so content isn't hidden under BottomNav */}
-        <main className="flex-1 pb-20 lg:pb-0">
+        <main className="min-w-0 flex-1 pb-20 lg:pb-0">
           <PageTransition>
             <Outlet />
           </PageTransition>

@@ -433,5 +433,44 @@ update public.opportunities op
    and op.organizer is distinct from o.display_name
    and op.organizer = op.title;
 
+-- ============================================================
+-- 11) SYNC profiles.is_organizer with organizer_profiles
+-- The "Become an organizer" gate checks profiles.is_organizer,
+-- but the onboarding flow only creates an organizer_profiles row.
+-- Keeping the two in sync stops approved organizers from being
+-- locked out of /organizer/*.
+-- ============================================================
+
+update public.profiles p
+   set is_organizer = true
+  from public.organizer_profiles o
+ where o.id = p.id
+   and coalesce(p.is_organizer, false) = false;
+
+create or replace function public.sync_is_organizer_flag()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    update public.profiles set is_organizer = true where id = new.id;
+  elsif tg_op = 'UPDATE' then
+    if new.id is distinct from old.id then
+      update public.profiles set is_organizer = true where id = new.id;
+    end if;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists trg_sync_is_organizer on public.organizer_profiles;
+create trigger trg_sync_is_organizer
+  after insert or update of id or delete
+  on public.organizer_profiles
+  for each row
+  execute function public.sync_is_organizer_flag();
+
 -- Done! All set.
 select 'Occaz setup complete' as status;

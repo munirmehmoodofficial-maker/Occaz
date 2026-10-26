@@ -76,7 +76,29 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
       console.warn("[auth] profile fetch failed", result.error.message);
       return null;
     }
-    return (result.data as Profile | null) ?? null;
+    const profile = (result.data as Profile | null) ?? null;
+    if (!profile) return null;
+
+    // Organizer status can live in EITHER place:
+    //  - profiles.is_organizer          (set by the signup trigger)
+    //  - an organizer_profiles row       (created by the onboarding flow)
+    // If the flag on `profiles` is missing but an organizer profile exists,
+    // treat the user as an organizer — otherwise the "Become an organizer"
+    // gate blocks a real organizer out of their own dashboard.
+    if (!profile.is_organizer) {
+      try {
+        const { data: op } = await supabase
+          .from("organizer_profiles")
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle();
+        if (op) profile.is_organizer = true;
+      } catch {
+        // Non-fatal — fall back to the flag on `profiles`.
+      }
+    }
+
+    return profile;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[auth] profile fetch error", err);
