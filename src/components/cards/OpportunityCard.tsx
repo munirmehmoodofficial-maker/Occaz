@@ -1,4 +1,4 @@
-import { Bookmark, Clock, MapPin, ArrowUpRight } from "lucide-react";
+import { Bookmark, Clock, MapPin, Ticket } from "lucide-react";
 import { Link } from "react-router-dom";
 import clsx from "clsx";
 import { motion } from "framer-motion";
@@ -140,23 +140,27 @@ export function OpportunityCard({
 
           <div className="mt-auto flex items-center justify-between gap-2 pt-3">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              {isOpportunityFree(opp) ? (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-500/25">
-                  Free
-                </span>
-              ) : (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-semibold text-accent-300 ring-1 ring-accent-500/25">
-                  {formatPrice(
-                    cheapestTierPrice(opp) ?? opp.price ?? 0,
-                    opp.currency ?? "PKR",
-                  )}
-                  {opp.feeType === "recurring" && (
-                    <span className="text-[10px] font-normal opacity-75">
-                      /{opp.feePeriod || "period"}
-                    </span>
-                  )}
-                </span>
-              )}
+              {/* Price — plain bold text, matching the event card */}
+              <span
+                className={clsx(
+                  "text-sm font-semibold",
+                  isOpportunityFree(opp)
+                    ? "text-emerald-400"
+                    : "text-[var(--text-primary)]",
+                )}
+              >
+                {isOpportunityFree(opp)
+                  ? "Free"
+                  : formatPrice(
+                      cheapestTierPrice(opp) ?? opp.price ?? 0,
+                      opp.currency ?? "PKR",
+                    )}
+                {opp.feeType === "recurring" && !isOpportunityFree(opp) && (
+                  <span className="text-[10px] font-normal opacity-75">
+                    /{opp.feePeriod || "period"}
+                  </span>
+                )}
+              </span>
               {opp.hasStipend && opp.stipend && (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-500/25">
                   + Stipend
@@ -164,8 +168,8 @@ export function OpportunityCard({
               )}
             </div>
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--bg-card-hover)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)] transition group-hover:bg-white group-hover:text-black">
+              <Ticket className="h-3 w-3" />
               Apply
-              <ArrowUpRight className="h-3 w-3" />
             </span>
           </div>
         </div>
