@@ -312,6 +312,11 @@ function TicketPanel({
   onBook: () => void;
 }) {
   const { push } = useToast();
+  // Free events never ask the attendee for money.
+  const eventFree = isEventFree({
+    price: event.price,
+    ticketTypes: (event as any).ticketTypes ?? (event as any).ticket_types ?? [],
+  });
 
   async function shareEvent() {
     const url = window.location.href;
